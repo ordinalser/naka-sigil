@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Naka Sigil"
+  },
+  "extDesc": {
+    "message": "Provisional SHNAKAS holding weight estimates for Shielded Nakas on Ord Dropz. Always tied to a synced block; live sync off by default."
+  }
+}

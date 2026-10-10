@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Naka Sigil"
+  },
+  "extDesc": {
+    "message": "在 Ord Dropz 显示 Shielded Nakas 的临时持有权重估算，明确标注同步区块，实时同步默认关闭。"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.crx
+*.zip
+!/release/naka-sigil-chrome-v*-h*.zip
+e2e/shots/

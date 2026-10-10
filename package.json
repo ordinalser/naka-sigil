@@ -1,0 +1,16 @@
+{
+  "name": "naka-sigil",
+  "version": "0.9.5",
+  "private": false,
+  "description": "Provisional, block-specific SHNAKAS holding weight estimates for Shielded Nakas on Ord Dropz.",
+  "scripts": {
+    "snapshot": "node scripts/snapshot.js --height tip",
+    "icons": "node scripts/gen-icons.js",
+    "build": "node scripts/build.js",
+    "test": "node --test test/*.test.js",
+    "privacy": "node scripts/privacy.js",
+    "package:chrome": "npm run build && node scripts/package-chrome.js && npm run privacy",
+    "release": "npm run package:chrome && node scripts/release.js"
+  },
+  "license": "Unlicense"
+}

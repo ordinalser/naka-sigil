@@ -1,0 +1,366 @@
+/**
+ * 界面文案：中文 / 英文两套，由用户在弹窗顶部切换，选择存在 chrome.storage.local 的 lang 键，没选过时用英文。
+ * 需要拼接数字的文案写成函数，避免在 messages.json 里维护占位符。
+ * （扩展在 chrome://extensions 里的名称由 _locales 按浏览器界面语言决定，插件无法切换。）
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.ShnakasI18n = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  const ZH = {
+    heldTrait: n=>`零挂单 · ≥${n} 件`,
+    heldRule: '该特征至少 20 件且零挂单：官方加成 +100%。件数来自所选快照目录。',
+    lastSaleShort: '成交',
+    lastSaleBasis: btc=>`最近成交价 ${btc} BTC ÷ 集合地板；不足 20 件且零挂单时适用`,
+    saleUnknown: '成交依据缺失',
+    launchTitle: h=>`奖励启动 · ${h}`,
+    launchBefore: (blocks,eta,basis)=>`以区块 ${basis} 为准：还需 ${blocks} 块 · ${eta}`,
+    launchReached: '所选区块已达到启动高度',
+    launchUnknown: '预计时间未知',
+    launchEta: utc=>`预计 ${utc} UTC`,
+    launchCompact: (h,date)=>`启动 ${h} · 约 ${date} UTC（10 分钟/块）`,
+    launchMethod: '按区块头时间、10 分钟/块估算，非买入截止。准备参与：持有且未挂单；资格未核实。',
+    scopeNote: '临时估算 · 非季度最终权重',
+    scopeActivity: '区块估算 · 非成交时或季度最终权重',
+    scopeTimeUnknown: '时间未知',
+    scopeTimeFuture: '时间超前',
+    scopeSource: {live:'实时',synced:'手动',bundled:'内置'},
+    headwear: 'Hair / headwear',
+    floorUnknownShort: '地板未知',
+    collectionFloorBTC: '集合地板 · BTC',
+    inspectProvisional: '该区块临时估算，非季度最终权重。',
+    formulaTitle: '持有公式估算',
+    formulaColumn: '该区块',
+    listing: {
+      listed: {label:'该区块已挂单',meaning:'挂单期间奖励为零',note:'奖励资格未核实；撤单后下个每周奖励边界恢复。'},
+      unlisted: {label:'该区块未挂单',meaning:'奖励资格未核实',note:'撤单等待期可能持续至下个每周奖励边界。'},
+      unknown: {label:'挂单状态未知',meaning:'奖励资格未核实',note:'快照缺少逐笔挂单，请同步核实；公式值不代表奖励。'}
+    },
+    activityShort: '基于同步区块，非成交时的历史权重。',
+    numberBadge: (label,pct) => `${label} · 编号加成 +${pct}%，已包含在总权重中`,
+    lookupBack: '返回概览',
+    change: {up:'加成上升',down:'加成下降',market:'计价依据变化',unknown:'价格依据缺失',known:'价格依据已知'},
+
+    buyTitle: '成交后持有权重',
+    formulaBefore: '成交前公式值',
+    changedRows: '高亮行：成交前 → 成交后',
+    buyBefore: '挂单中',
+    buyAfter: '成交后',
+    buyRangeNote: '小型零挂单特征缺少成交依据，区间仅为理论估算。',
+    buyRatioNote: '比值：特征价格 ÷ 集合地板',
+    buyBeforeShort: '挂单中',
+    buyAfterShort: '成交后',
+    totalWeight: '总权重',
+    buyUnchanged: '不变',
+    buyAssumptionShort: '仅此挂单成交，其他挂单不变。',
+    buyAssumption: '假设仅该快照挂单成交、其他挂单不变；移除它后重新计算集合与特征地板。',
+    buyUnavailable: '快照缺少逐笔挂单，需同步后才能计算购入情景。',
+    buyNoFloor: '移除此挂单后已无挂单，集合地板不存在，无法计算权重。',
+    buyPrice: '快照价格 · 对地板溢价',
+    buyFloor: '集合地板 · 成交前 → 后',
+    buyPriceNote: '快照挂单价格，不含费用；不是实时成交报价。',
+    buyEligibility: '仅为该区块估算，不是最近一季度最终权重。挂单收益为零，购入不保证立即获奖。',
+    buyBreakdown: '加成明细与价格依据',
+    buyBadgeNote: '持有公式估算，含基础 100%，不代表奖励。成交前公式值 / 成交后：仅此挂单成交，其他挂单不变。挂单期间奖励为零；成交不保证立即获奖。区间仅为理论估算。',
+    title: 'Naka Sigil',
+    weight: '总持有权重估算',
+    bonus: '加成',
+    weightMeaning: '总权重是含基础 100% 的持有公式估算，不代表奖励或奖励资格。',
+    capShort: '上限',
+    weightShort: '总权重',
+    details: '特征明细',
+    activityNote: '总权重为含基础 100% 的持有公式估算，不代表奖励。交易记录旁的数据与挂单状态基于上方同步区块，不是成交时的历史状态。',
+    rulesCaveat: '基础 100% + 特征加成 + 号码加成，最高 400%。零挂单特征：至少 20 件加 +100%；不足 20 件参考最近成交价。季度测量高度与号码口径未核实。',
+    base: '基础',
+    number: 'Shielded 编号',
+    noListing: '无挂单',
+    weightLine: (w, cap) => `持有权重 ${w} · 上限 ${cap}%`,
+    atCap: (cap) => `已封顶 ${cap}%`,
+    cut: (pct) => `超出上限的 +${pct}% 不计`,
+    unmeasured: (k, max) => `${k} 个小型零挂单特征缺少成交依据；每个 +0%～+${max}% 仅为理论区间。`,
+    snapshot: (h, btc) => `快照：区块 ${h} · 集合地板 ${btc} BTC`,
+    snapBlock: (h) => `区块 ${h}`,
+    beforeMeasure: (h) => `区块 ${h} 临时估算；不是最近一季度的最终权重。`,
+    listedZero: '挂单收益为 0；撤单后需等到下一个每周奖励边界恢复。这里显示持有时的权重估算，不代表当前收益。',
+    notInSnapshot: '当前快照未收录这件藏品，请在插件弹窗中手动同步。',
+    floorOf: (btc, n) => `特征地板 ${btc} BTC · ${n} 个挂单`,
+    noFloor: '快照时没有挂单，测不出地板价',
+    numberNone: '不在号码档内',
+    // 弹窗
+    popupRules: '计算规则与限制',
+    popupTrait: '特征地板 ÷ 集合地板',
+    popupNumber: '号码（只取最高一档）',
+    popupCap: '总权重上限',
+    popupSource: '规则原文',
+    popupZeroSource: '零挂单补充规则',
+    popupOpen: '打开 Shielded Nakas 集合页',
+    lookupTitle: '按 Shielded 编号查询',
+    lookupPlaceholder: '输入编号，例如 379',
+    lookupButton: '查权重',
+    lookupInvalid: '请输入有效的非负整数编号，支持 #0、#379。',
+    lookupMissing: (n) => `当前快照未收录 Shielded #${n}。请展开同步设置，更新后重试；不代表这件 NFT 不存在。`,
+    lookupBasis: (h) => `区块 ${h} 的临时估算，不是最近一季度的最终权重。`,
+    lookupUnknown: (n) => `${n} 个特征无地板价，区间仅为理论估算。`,
+    lookupListed: '挂单收益为 0；撤单后需等到下一周奖励边界。',
+    lookupView: '查看藏品 ↗',
+    syncSettings: '手动同步与诊断',
+    liveShortOff: '关闭',
+    liveShortOn: '开启',
+    liveShortError: '同步异常',
+    syncRunningShort: '同步中…',
+    popupSnapshot: '当前计算依据',
+    popupHeight: '已同步区块',
+    popupFloor: '集合地板',
+    popupListings: '有效挂单',
+    popupTraits: '特征（有挂单 / 总数）',
+    popupGenerated: '生成时间（UTC）',
+    dataSource: '数据来源',
+    srcBundled: '内置快照',
+    srcSynced: '手动快照',
+    syncPlaceholder: '区块高度（留空 = 最新）',
+    syncButton: '同步区块',
+    syncHint: () => '留空取索引器最新高度。任何高度均为临时估算；实时开启时优先使用实时数据。',
+    syncStage: { state: '读取链上状态…', build: '汇总地板价…' },
+    syncMeta: (done, total) => `补充新铸造藏品的特征 ${done}/${total}…`,
+    syncDone: (h) => `同步完成：区块 ${h}`,
+    syncError: (msg) => `同步失败：${msg}`,
+    syncInterrupted: '上次同步被中断（后台被浏览器回收），请重新同步',
+    syncBadHeight: '区块高度只能填数字',
+    syncBusy: '已有同步在进行中',
+    restore: '恢复内置快照',
+    legendTitle: '页面徽章颜色（按理论下限）',
+    legendFrom: (n) => `≥ +${n}%`,
+    legendMax: (n) => `+${n}%`,
+    legendColor: { t1: '绿色', t2: '蓝色', t3: '紫色', max: '金色 · 封顶' },
+    syncTitle: '手动同步',
+    srcLive: '实时',
+    diagnostics: '技术详情',
+    liveTitle: '实时同步',
+    liveSub: '默认关闭 · 市场可见时跟随新区块',
+    liveHint: '仅在市场页面可见时每分钟检查新区块。开启后仍是区块估算，不是官方季度结算。',
+    liveOff: '已关闭 · 保留当前快照',
+    liveWaiting: '等待首次更新（打开 ord-dropz 页面后开始）',
+    livePaused: 'ord-dropz 页面未打开，暂停检查',
+    liveOk: (h, age) => `已同步区块 ${h} · ${age}`,
+    liveFail: (reason, min) => `最近一次检查失败：${reason}。${min} 分钟后自动重试`,
+    liveKeep: (h) => `页面继续使用区块 ${h} 的数据`,
+    liveKeepNone: '页面继续使用手动或内置快照',
+    failReason: {
+      'rate-limit': '接口限流',
+      server: '接口服务端出错',
+      http: '接口返回错误',
+      network: '网络不通或请求超时',
+      data: '数据校验没通过',
+    },
+    httpCode: (n) => `（HTTP ${n}）`,
+    blockTimeUnknown: '区块时间未知',
+    blockTimeFuture: '区块时间晚于本机时间',
+    blockTimeAge: (ago) => `区块时间：${ago}`,
+    blockTimeExact: (utc) => `Bitcoin 区块头时间 · ${utc} · Blockstream；并非检测时间`,
+    ago: (ms) => (ms < 60000 ? '不足 1 分钟前' : ms < 3600000 ? `${Math.floor(ms / 60000)} 分钟前` : ms < 86400000 ? `${Math.floor(ms / 3600000)} 小时前` : `${Math.floor(ms / 86400000)} 天前`),
+    liveLine: (h, btc) => `实时数据：区块 ${h} · 集合地板 ${btc} BTC（随行情变化，不是季度固定权重）`,
+    snapBlockLive: (h) => `实时 · 区块 ${h}`,
+  };
+
+  const EN = {
+    heldTrait: n=>`Zero listed · ≥${n} items`,
+    heldRule: 'At least 20 items and none listed: official +100% bonus. Count uses the selected catalog.',
+    lastSaleShort: 'Sale',
+    lastSaleBasis: btc=>`Last sale ${btc} BTC ÷ collection floor; for zero-listed traits with fewer than 20 items`,
+    saleUnknown: 'Sale basis missing',
+    launchTitle: h=>`Rewards start · ${h}`,
+    launchBefore: (blocks,eta,basis)=>`${blocks} blocks from #${basis} · ${eta}`,
+    launchReached: 'Selected block has reached the start height',
+    launchUnknown: 'ETA unavailable',
+    launchEta: utc=>`Est. ${utc} UTC`,
+    launchCompact: (h,date)=>`Start ${h} · ~${date} UTC (10m/block)`,
+    launchMethod: 'Header time + 10 min/block; not a buying deadline. Hold unlisted; eligibility unverified.',
+    scopeNote: 'Provisional · Not final quarterly weight',
+    scopeActivity: 'Not sale-time or final quarterly weight',
+    scopeTimeUnknown: 'Time unknown',
+    scopeTimeFuture: 'Time ahead',
+    scopeSource: {live:'Live',synced:'Manual',bundled:'Bundled'},
+    headwear: 'Hair / headwear',
+    floorUnknownShort: 'Unknown floor',
+    collectionFloorBTC: 'Floor · BTC',
+    inspectProvisional: 'Block estimate, not final quarterly weight.',
+    formulaTitle: 'Holding formula',
+    formulaColumn: 'At this block',
+    listing: {
+      listed: {label:'Listed at this block',meaning:'No rewards while listed',note:'Eligibility unverified. Delisting resumes at the next weekly reward boundary.'},
+      unlisted: {label:'Unlisted at this block',meaning:'Eligibility unverified',note:'A delisting cooldown may apply until the next weekly reward boundary.'},
+      unknown: {label:'Listing status unknown',meaning:'Eligibility unverified',note:'Individual listings are missing; sync to verify. Formula weight is not rewards.'}
+    },
+    activityShort: 'Synced-block estimate, not historical sale-time weight.',
+    numberBadge: (label,pct) => `${label} · number bonus +${pct}%, already included in total weight`,
+    lookupBack: 'Overview',
+    change: {up:'Bonus up',down:'Bonus down',market:'Price basis changed',unknown:'Price basis missing',known:'Price basis known'},
+
+    buyTitle: 'Holding weight after sale',
+    formulaBefore: 'Before-sale formula',
+    changedRows: 'Highlighted: before → after sale',
+    buyBefore: 'Listed',
+    buyAfter: 'After sale',
+    buyRangeNote: 'Small zero-listed traits lack sale data; ranges are theoretical.',
+    buyRatioNote: 'Trait price ÷ collection floor',
+    buyBeforeShort: 'Listed',
+    buyAfterShort: 'After sale',
+    totalWeight: 'Total weight',
+    buyUnchanged: 'Unchanged',
+    buyAssumptionShort: 'Only this listing sells; others unchanged.',
+    buyAssumption: 'Only this snapshot listing sells; all others stay unchanged. Collection and trait floors are recalculated after removing it.',
+    buyUnavailable: 'This snapshot lacks individual listings. Sync to calculate a purchase scenario.',
+    buyNoFloor: 'No listings remain after this sale. The collection floor is undefined, so weight cannot be calculated.',
+    buyPrice: 'Snapshot price · floor premium',
+    buyFloor: 'Collection floor · before → after',
+    buyPriceNote: 'Snapshot listing price, fees excluded; not an executable live quote.',
+    buyEligibility: 'Estimates at this block, not final quarterly weights. Listed NFTs earn zero; buying does not guarantee immediate rewards.',
+    buyBreakdown: 'Bonus breakdown & snapshot price',
+    buyBadgeNote: 'Holding formula, including the 100% base, not rewards. Before-sale formula / After sale: only this listing sells; others unchanged. No rewards while listed; buying does not confirm eligibility. Ranges are theoretical.',
+    title: 'Naka Sigil',
+    weight: 'Total holding weight estimate',
+    bonus: 'Bonus',
+    weightMeaning: 'Total weight is a holding-formula estimate including the 100% base, not rewards or eligibility.',
+    capShort: 'Cap',
+    weightShort: 'Weight',
+    details: 'Trait breakdown',
+    activityNote: 'Holding-formula estimates include the 100% base, not rewards. Activity values and listing status use the synced block above, not the historical state at the time of sale.',
+    rulesCaveat: '100% base + trait + number bonuses, capped at 400%. Zero-listed traits: ≥20 items get +100%; smaller traits use last sales. Quarter height and numbering remain unverified.',
+    base: 'Base',
+    number: 'Shielded #',
+    noListing: 'No listings',
+    weightLine: (w, cap) => `Holding weight ${w} · cap ${cap}%`,
+    atCap: (cap) => `Capped at ${cap}%`,
+    cut: (pct) => `+${pct}% above the cap is not counted`,
+    unmeasured: (k, max) => `${k} small zero-listed trait(s) lack sale data. +0%–+${max}% each is theoretical.`,
+    snapshot: (h, btc) => `Snapshot: block ${h} · collection floor ${btc} BTC`,
+    snapBlock: (h) => `Block ${h}`,
+    beforeMeasure: (h) => `Provisional at block ${h}; not the latest quarter’s final weight.`,
+    listedZero: 'Earnings are zero while listed. Delisting resumes rewards at the next weekly boundary. Holding weight is not current earnings.',
+    notInSnapshot: 'Missing from this snapshot. Sync manually in the extension popup.',
+    floorOf: (btc, n) => `Trait floor ${btc} BTC · ${n} listed`,
+    noFloor: 'No listings at the snapshot; floor unknown',
+    numberNone: 'No number tier',
+    popupRules: 'Rules & limitations',
+    popupTrait: 'Trait floor ÷ collection floor',
+    popupNumber: 'Number (highest tier only)',
+    popupCap: 'Total weight cap',
+    popupSource: 'Source',
+    popupZeroSource: 'Zero-listing supplement',
+    popupOpen: 'Open the Shielded Nakas collection',
+    lookupTitle: 'Find by Shielded number',
+    lookupPlaceholder: 'Enter number, e.g. 379',
+    lookupButton: 'Check weight',
+    lookupInvalid: 'Enter a non-negative whole number, e.g. #0 or #379.',
+    lookupMissing: (n) => `Shielded #${n} is not in this snapshot. Open sync settings, update and retry. This does not mean the NFT does not exist.`,
+    lookupBasis: (h) => `Provisional at block ${h}; not the latest quarter’s final weight.`,
+    lookupUnknown: (n) => `${n} trait floor(s) unavailable. This range is theoretical.`,
+    lookupListed: 'Listed earns 0; delisting waits for the next weekly boundary.',
+    lookupView: 'View item ↗',
+    syncSettings: 'Manual sync & diagnostics',
+    liveShortOff: 'Off',
+    liveShortOn: 'On',
+    liveShortError: 'Sync error',
+    syncRunningShort: 'Syncing…',
+    popupSnapshot: 'Calculation snapshot',
+    popupHeight: 'Synced block',
+    popupFloor: 'Collection floor',
+    popupListings: 'Active listings',
+    popupTraits: 'Traits (listed / total)',
+    popupGenerated: 'Generated (UTC)',
+    dataSource: 'Data source',
+    srcBundled: 'Bundled snapshot',
+    srcSynced: 'Manual snapshot',
+    syncPlaceholder: 'Block height (empty = latest)',
+    syncButton: 'Sync block',
+    syncHint: () => 'Empty = latest indexed block. Every height is provisional. Live data takes priority when enabled.',
+    syncStage: { state: 'Reading on-chain state…', build: 'Computing floors…' },
+    syncMeta: (done, total) => `Fetching traits of newly minted pieces ${done}/${total}…`,
+    syncDone: (h) => `Synced: block ${h}`,
+    syncError: (msg) => `Sync failed: ${msg}`,
+    syncInterrupted: 'The last sync was interrupted (background worker was stopped); please sync again',
+    syncBadHeight: 'Block height must be a number',
+    syncBusy: 'A sync is already running',
+    restore: 'Restore bundled snapshot',
+    legendTitle: 'Badge colors (theoretical lower bound)',
+    legendFrom: (n) => `≥ +${n}%`,
+    legendMax: (n) => `+${n}%`,
+    legendColor: { t1: 'Green', t2: 'Blue', t3: 'Purple', max: 'Gold · cap' },
+    syncTitle: 'Manual sync',
+    srcLive: 'Live',
+    diagnostics: 'Technical details',
+    liveTitle: 'Live sync',
+    liveSub: 'Off by default · follows blocks while market is visible',
+    liveHint: 'Checks once a minute while the market is visible. Live values remain block estimates, not official quarterly settlements.',
+    liveOff: 'Off · using the selected snapshot',
+    liveWaiting: 'Waiting for the first update (starts once an ord-dropz page is open)',
+    livePaused: 'No ord-dropz page open; checks paused',
+    liveOk: (h, age) => `Synced block ${h} · ${age}`,
+    liveFail: (reason, min) => `Last check failed: ${reason}. Retrying in ${min} min`,
+    liveKeep: (h) => `Pages keep using block ${h} data`,
+    liveKeepNone: 'Pages keep using the manual or bundled snapshot',
+    failReason: {
+      'rate-limit': 'rate limited',
+      server: 'server error',
+      http: 'the API returned an error',
+      network: 'network unreachable or timed out',
+      data: 'data validation failed',
+    },
+    httpCode: (n) => ` (HTTP ${n})`,
+    blockTimeUnknown: 'Block time unknown',
+    blockTimeFuture: 'Block timestamp ahead of local clock',
+    blockTimeAge: (ago) => `Block time: ${ago}`,
+    blockTimeExact: (utc) => `Bitcoin header timestamp · ${utc} · Blockstream; not check time`,
+    ago: (ms) => (ms < 60000 ? '<1 min ago' : ms < 3600000 ? `${Math.floor(ms / 60000)} min ago` : ms < 86400000 ? `${Math.floor(ms / 3600000)} h ago` : `${Math.floor(ms / 86400000)} d ago`),
+    liveLine: (h, btc) => `Live data: block ${h} · collection floor ${btc} BTC (follows the market; not the fixed quarterly weight)`,
+    snapBlockLive: (h) => `Live · block ${h}`,
+  };
+
+  const LANGS = Object.freeze({ zh: ZH, en: EN });
+  const DEFAULT_LANG = 'en'; // New installations default to English; preserve an explicit saved preference.
+  const STORAGE_KEY = 'lang';
+
+  /** 存储里的语言值 → 语言代码。没选过（undefined）用默认英文；损坏的设置回到默认英文。 */
+  function resolveLang(stored) {
+    return typeof stored === 'string' && Object.prototype.hasOwnProperty.call(LANGS, stored) ? stored : DEFAULT_LANG;
+  }
+
+  function pick(lang) {
+    if (!Object.prototype.hasOwnProperty.call(LANGS, lang)) throw new Error(`不认识的语言：${lang}`);
+    return LANGS[lang];
+  }
+
+  /** 聪 → BTC 字符串，去掉末尾的 0（111000 → "0.00111"）。 */
+  function btc(sats) {
+    return (sats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function int(n) {
+    return n.toLocaleString('en-US');
+  }
+
+  /** Every snapshot is an estimate. A height alone never certifies a quarterly settlement. */
+  function blockTimestamp(s) {
+    const b=s?.blockTime;
+    return b && b.height === s?.height && typeof b.hash === 'string' && /^[0-9a-f]{64}$/.test(b.hash) && Number.isSafeInteger(b.timestamp) && b.timestamp >= 1231006505 && b.timestamp <= 0xffffffff ? b.timestamp : null;
+  }
+  function blockAge(T, s, now=Date.now()) {
+    const ts=blockTimestamp(s);
+    if(ts === null) return T.blockTimeUnknown;
+    const delta=now-ts*1000;
+    return delta < 0 ? T.blockTimeFuture : T.blockTimeAge(T.ago(delta));
+  }
+  function blockTimeTitle(T, s) {
+    const ts=blockTimestamp(s);
+    return ts === null ? T.blockTimeUnknown : T.blockTimeExact(new Date(ts*1000).toISOString().replace('T',' ').replace('.000Z',' UTC'));
+  }
+  function blockBasis(T, s, now=Date.now()) { return `${int(s.height)} (${blockAge(T,s,now)})`; }
+  function measureNote(T, snapshotHeight, s) {
+    return T.beforeMeasure(s ? blockBasis(T,s) : int(snapshotHeight));
+  }
+
+  return { LANGS, DEFAULT_LANG, STORAGE_KEY, resolveLang, pick, btc, int, blockTimestamp, blockAge, blockTimeTitle, blockBasis, measureNote, ZH, EN };
+});
