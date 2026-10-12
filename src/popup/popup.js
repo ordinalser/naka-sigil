@@ -1,6 +1,6 @@
 /**
  * 弹窗：顶部「中文 | EN」切换语言（默认英文）；「实时 / 指定区块」模式（默认实时）与最近一次检查的结果 / 失败原因；
- * 当前显示的数据与奖励启动规划；编号查询；每档成交后权重的最低挂价；规则。指定区块在弹层里设置（交给后台 sw/sync-sw.js 执行）。
+ * 当前显示的数据与奖励启动规划；编号查询；已选比较；规则。指定区块在弹层里设置（交给后台 sw/sync-sw.js 执行）。
  * 弹窗本身不发网络请求，关掉弹窗也不会打断同步；任何同步失败都只显示原因，页面继续按已有数据工作。
  */
 (() => {
@@ -48,9 +48,6 @@
     $('modeFixed').title = T.syncHint();
     $('fixedTitle').textContent=T.fixedTitle;$('fixedCancel').textContent=T.cancel;
     $('snapTitle').textContent = T.popupSnapshot;
-    $('ladderTitle').textContent = T.ladderTitle;
-    $('ladderUnit').textContent = T.ladderUnit;
-    $('ladderTitle').title = `${T.ladderSub}\n${T.ladderNote}`; // explanation on hover keeps the list quiet
     $('rulesTitle').textContent = T.popupRules;
     $('lookupTitle').textContent = T.lookupTitle;
     $('lookupBack').textContent=T.lookupBack;
@@ -174,12 +171,23 @@
   }
 
   function timedBasis(T,snap) { const n=el('p','lookup-basis lookup-basis--time',T.lookupBasis(I.blockBasis(T,snap.snapshot))); n.title=I.blockTimeTitle(T,snap.snapshot); return n; }
+  function renderLookupContext(T,snap) {
+    for(const basis of $('lookupResult').querySelectorAll('.naka-purchase__basis')) {
+      basis.replaceChildren(el('span','lookup-height',T.snapBlock(I.int(snap.snapshot.height))),el('span','lookup-time',I.blockAge(T,snap.snapshot)));
+      basis.title=I.blockTimeTitle(T,snap.snapshot);
+    }
+    for(const chip of $('lookupResult').querySelectorAll('.lookup-mode')) {
+      chip.textContent=state.liveEnabled?T.modeLive:T.modeFixed;
+      chip.setAttribute('aria-label',`${T.modeTitle}: ${chip.textContent}`);
+      chip.title=$('liveState').title;
+      chip.dataset.state=$('liveState').dataset.state;
+    }
+  }
   let lookupRendered = null;
   function renderLookup(T, snap) {
     document.body.classList.toggle('has-lookup',state.lookupFocus);$('lookupBack').hidden=!state.lookupFocus;
     if (lookupRendered?.snap === snap && lookupRendered.raw === state.lookupRaw && lookupRendered.lang === state.lang) {
       for(const n of $('lookupResult').querySelectorAll('.lookup-basis--time')) { n.textContent=T.lookupBasis(I.blockBasis(T,snap.snapshot)); n.title=I.blockTimeTitle(T,snap.snapshot); }
-      for(const n of $('lookupResult').querySelectorAll('.naka-purchase__basis')) {n.textContent=T.snapBlock(I.blockBasis(T,snap.snapshot));n.title=I.blockTimeTitle(T,snap.snapshot);}
       return;
     }
     lookupRendered = {snap, raw:state.lookupRaw, lang:state.lang};
@@ -203,7 +211,7 @@
     const head=el('div','lookup-head'), link=el('a','lookup-link',T.lookupView);
     link.href=`https://ord-dropz.xyz/secondary/item/${found.id}?collection=${snap.collection.slug}`;
     link.target='_blank'; link.rel='noopener noreferrer';
-    // The compare action lives in the query footer: a full-width control instead of a crowded card header.
+    // The action follows the full result, in the same layout flow as its evidence.
     $('lookupCompare').dataset.id=found.id;$('lookupCompare').hidden=false;
     head.append(el('strong','',`Shielded #${found.number}`),link);
     const rank=globalThis.NakaPurchase.numberBadge(found.number,T);if(rank)head.insertBefore(rank,link);
@@ -211,6 +219,9 @@
     card.dataset.listing=found.listing;
     const notice=scenario.state==='no-floor'?T.buyNoFloor:null;
     card.append(head,scenario.state==='ready'?globalThis.NakaPurchase.render(model,found.id,T,I):globalThis.NakaPurchase.renderCurrent(r,snap.snapshot,T,I,{notice,listing:found.listing}));
+    const purchase=card.querySelector('.naka-purchase'),context=el('div','lookup-context');
+    context.append(purchase.querySelector('.naka-purchase__basis'),el('span','lookup-mode'));
+    purchase.prepend(context);
     box.append(card);
   }
 
@@ -222,43 +233,15 @@
     button.dataset.lang = state.lang;
   }
 
-  /** Lowest ask for each reachable after-sale weight in the selected snapshot; a row opens its full lookup. */
-  let ladderRendered = null;
-  function renderLadder(T, snap) {
-    const picked = comparisonIds.join();
-    if (ladderRendered?.snap === snap && ladderRendered.lang === state.lang && ladderRendered.picked === picked) return;
-    ladderRendered = { snap, lang: state.lang, picked };
-    const box = $('ladderRows');
-    if (!Array.isArray(snap.offers)) { box.replaceChildren(el('li', 'ladder-empty', T.ladderNoOffers)); return; }
-    const steps = EXP.ladder(snap, globalThis.NakaPurchase.create(snap));
-    if (steps.length === 0) { box.replaceChildren(el('li', 'ladder-empty', T.ladderNone)); return; }
-    const c = globalThis.NakaExploreUI.pick(state.lang);
-    box.replaceChildren(...steps.map((e) => {
-      const item = el('li'), row = el('button', 'ladder-row'), selected = comparisonIds.includes(e.id);
-      const weightText = R.formatWeight(e.result), price = I.btc(e.sale.price);
-      row.type = 'button';
-      const weight = el('span', `ladder-weight naka-tone-${TIER.boundTier(e.result.lo)}`, weightText), ask = el('span', 'ladder-price', price);
-      const number = el('span', 'ladder-number', `#${e.number}`);
-      if (selected) { const tag = el('i', 'ladder-tag', '✓'); tag.title = c.inCompare; tag.setAttribute('aria-hidden', 'true'); number.append(tag); }
-      row.append(weight, number, ask, el('span', 'ladder-go', '›'));
-      row.lastChild.setAttribute('aria-hidden', 'true');
-      // The accessible name states the step in words, including the unit shown only in the header.
-      row.setAttribute('aria-label', T.ladderRowLabel(weightText, e.number, price) + (selected ? ` · ${c.inCompare}` : ''));
-      row.title = T.ladderRowTitle(e.number);
-      row.addEventListener('click', () => { $('lookupNumber').value = String(e.number); showLookup(String(e.number)); });
-      item.append(row);
-      return item;
-    }));
-  }
-
   function render() {
     const T = I.pick(state.lang);
     renderStatic(T);
     renderLive(T);
     const snap = renderSnapshot(T);
     renderLookup(T, snap);
+    renderLookupContext(T,snap);
     if (!$('lookupCompare').hidden) paintLookupCompare($('lookupCompare'));
-    renderLadder(T, snap);
+    $('discoveryHint').textContent=T.discoveryHint;const numbers=comparisonIds.map(id=>snap.items[id]?.[0]).filter(n=>n!==undefined);$('selectedNumbers').replaceChildren(...numbers.map(n=>el('span','selected-number','#'+n)));$('selectedNumbers').hidden=!numbers.length;
     renderStatus(T);
   }
 

@@ -49,6 +49,6 @@ v0.10.3 使用 **2026-10-08** 发布的[主规则](https://x.com/Ob1_Wan_Satoshi
 
 ## Block mode in Compare / 比较页的区块模式
 
-The installed Compare page uses the same **Live / Fixed block** mode as the popup and market; it has no separate update control. In Live mode, a visible Compare tab keeps the shared automatic checks running, and new blocks replace the data on every surface. In Fixed block mode nothing updates automatically. Filtering, selection and image enlargement do not call the collection API. The no-install demo never updates; its bundled snapshot is labeled as such.
+The installed Compare page uses the same **Live / Fixed block** mode as the popup and market; neither mode offers a manual refresh control. In Live mode, a visible Compare tab keeps the shared automatic checks running, and new blocks replace the data on every surface. In Fixed block mode nothing updates automatically. Filtering, selection and image enlargement do not call the collection API. The no-install demo never updates; its bundled snapshot is labeled as such.
 
-插件比较页与弹窗、市场页共用**实时 / 指定区块**模式，不设单独的更新按钮。实时模式下，比较页可见时同样会维持自动检查，新区块到来时所有页面一起更新；指定区块模式不自动更新。筛选、选择和放大图片都不请求集合 API。免安装演示不会更新，并明确标注为内置快照。
+插件比较页与弹窗、市场页共用**实时 / 指定区块**模式，均不设置手动更新入口。实时模式下，比较页可见时同样会维持自动检查，新区块到来时所有页面一起更新；指定区块模式不自动更新。筛选、选择和放大图片都不请求集合 API。免安装演示不会更新，并明确标注为内置快照。

@@ -1,5 +1,29 @@
 # Validation record
 
+## v0.10.6 — full-height overview, local review 2026-10-13
+
+- The overview shares spare height between the block card and Compare, keeping the lookup field prominent and Rules above the footer. No content is added to fill space. Query layout, calculations and synchronization are unchanged.
+- **120 overview states** pass in EN/ZH, Live/Fixed, zero to four selections, before/after rewards start and failed-check states, at 380×600 and 380×480. The 600px overview has no inner overflow or empty bottom spacer; lookup remains visible on short screens. Expanded Rules scroll without changing the popup height.
+- The prior 13,308 query-layout checks remain applicable: this change is scoped to the overview. A targeted query check also passes. Packages and screenshots are updated locally; no commit, push or upload.
+
+## v0.10.5 — balanced lookup layout, local review 2026-10-12
+
+- Query navigation contains only Overview and language. Shared Live/Fixed state is shown beside the calculation block/time; mode settings remain on Overview. Switching stored mode updates the query's cached result context without losing the number. No manual refresh is added anywhere.
+- The field, full result and Compare action share one vertical flow. The result uses spare height for its trait rows, with larger total-weight digits and readable trait names. The action no longer sits below an empty footer gap. Comfortable 600px and compact 480px layouts retain all evidence and cautions.
+- **13,308 catalog query layouts** pass: all 3,327 NFTs in EN/ZH at both 380×600 and 380×480. Checks cover the full caution inside the card, no action overlap, no document/scroll-container overflow, mode consistency and return navigation. Long names, listing states and weight ranges are included.
+- The actual native **380×600 Chrome action popup** passes Rules, number queries, languages and Overview. Both projects pass **99/99 unit tests**. Calculation rules, worker synchronization and the comparison workspace are unchanged in this revision.
+- Public README screenshots and local review materials are refreshed. Build/source/privacy checks apply to the new v0.10.5 packages. This revision remains local: no commit, push, upload, deployment or post.
+
+## v0.10.4 — local review 2026-10-12
+
+- Audited v0.10.3 (a94d5b5). Retained the Find your Naka copy, shared selected/add/remove/full comparison states, query toolbar/footer and block planning context. The shared calculation engine and snapshot reconstruction are unchanged.
+- Live and Fixed remain the only synchronization modes. Compare has no manual refresh button or message handler: Live follows automatic checks and Fixed retains its selected height. The proposed refresh restoration was withdrawn before final packaging. **99/99 tests** pass in both projects.
+- Removed the popup weight-ladder presentation, replacing its second table with one Compare entry and selected numbers. No cost/value ranking is presented. All help cursors are removed from the popup.
+- Dedicated browser checks pass automatic next-height synchronization, Fixed confirmation/cancel/validation, identical Live/Fixed overview positions, first-screen lookup at 380×480/600, EN/ZH Compare at 320/390/800/1440, and **6,654 EN/ZH query layouts** at 380×480. A subpixel header-coordinate tolerance of 1px avoids mistaking fractional rendering for clipping.
+- Actual public-market screenshots are captured at H971111 and added to docs/screenshots; they contain no connected wallet/account or personal browser chrome. README embeds four reviewed images, with equal English/Chinese installation and SHA-256 information. Public packaging explicitly allowlists the images and rejects PNG metadata/trailing payloads.
+- Native action-popup checks found a small query overflow at 600px that the former 480px-only compact styling did not expose. Query spacing is reduced without removing evidence; the actual native 380×600 regression now passes Rules, EN/ZH queries, long names, listing states and Overview.
+- This is an uncommitted local revision on top of the existing v0.10.3 commit. No commit, push, deployment, upload or post is performed.
+
 ## v0.10.3 — reviewed 2026-10-12
 
 - **99/99 unit tests** pass. The Compare refresh path (button, background message and per-batch verification record) is removed with its six tests; new tests cover the lowest-ask-per-weight list (monotonic asks and weights, no cheaper listing reaching a listed weight, every listing matched or beaten, empty without individual listings or a post-sale floor), the shared comparison control state and English/Chinese key parity of the comparison copy. Formula rules, snapshot data and source selection are unchanged.

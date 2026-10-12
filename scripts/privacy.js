@@ -7,7 +7,8 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const downloads = require('./package-chrome.js');
 const ROOT = path.join(__dirname, '..');
-const files = [
+const screenshots=['market','compare','popup','lookup'].map(n=>'docs/screenshots/'+n+'.png');
+const files = [...screenshots,
   'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
   '.gitignore', 'LICENSE', 'README.md', 'package.json',
   'docs/DESIGN.md', 'docs/ADVERSARIAL_AUDIT.md', 'docs/RULES_AUDIT.md', 'docs/PRIVACY.md', 'docs/VALIDATION.md',
@@ -89,6 +90,15 @@ const { render, encodePNG } = require('./gen-icons.js');
 for (const size of [16,32,48,128]) {
   const canonical=encodePNG(size,render(size));
   assert(fs.readFileSync(path.join(ROOT,`src/icons/icon${size}.png`)).equals(canonical), 'Noncanonical icon content');
+}
+// Reviewed screenshots may contain only image data, never comments, profiles or trailing payloads.
+for(const rel of screenshots){
+ const b=fs.readFileSync(path.join(ROOT,rel));assert(b.length<8000000&&b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'Invalid screenshot PNG');
+ let at=8,ended=false,header=false;
+ while(at<b.length){assert(at+12<=b.length,'Truncated screenshot');const size=b.readUInt32BE(at),type=b.toString('ascii',at+4,at+8);assert(['IHDR','IDAT','IEND','sRGB'].includes(type)&&at+12+size<=b.length,'Screenshot metadata forbidden');
+  if(type==='IHDR'){assert(!header&&at===8&&size===13,'Invalid screenshot header');header=true;assert(b.readUInt32BE(at+8)>0&&b.readUInt32BE(at+8)<=4000&&b.readUInt32BE(at+12)>0&&b.readUInt32BE(at+12)<=4000,'Invalid screenshot dimensions');}
+  at+=size+12;if(type==='IEND'){assert(size===0&&at===b.length,'Screenshot trailing data forbidden');ended=true;break;}
+ }assert(header&&ended,'Incomplete screenshot');
 }
 const build = fs.readFileSync(path.join(ROOT, 'scripts/build.js'), 'utf8');
 const key = build.match(/const CHROME_KEY = '([^']+)'/)[1];
