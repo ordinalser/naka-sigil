@@ -6,9 +6,9 @@ const SRC = require('../src/lib/source.js');
 const fixture = height => ({ format:1, collection:{slug:'shielded-nakas-mupv6wja',name:'Shielded Nakas',cid:'public',rulesInscriptionId:'rules',numberStart:0}, snapshot:{height,indexerHeight:200,collectionFloor:100,listings:1,generatedAt:'2026-10-09T00:00:00Z'},traits:[['Hair','Red',125,1]],items:{['a'.repeat(64)+'i0']:[0,0]} });
 const BUNDLED = fixture(100), LIVE=fixture(200), MANUAL=fixture(150);
 
-test('实时开关：没设置过默认关闭；非布尔值安全关闭', () => {
-  assert.equal(SRC.LIVE_DEFAULT, false);
-  assert.equal(SRC.resolveLive(undefined), false);
+test('实时开关：没设置过默认实时；非布尔值安全关闭', () => {
+  assert.equal(SRC.LIVE_DEFAULT, true);
+  assert.equal(SRC.resolveLive(undefined), true);
   assert.equal(SRC.resolveLive(false), false);
   assert.equal(SRC.resolveLive('yes'), false);
   assert.equal(SRC.resolveLive(null), false);

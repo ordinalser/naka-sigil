@@ -5,6 +5,7 @@ const {digitsPath,SHIELD,GAZE}=require('../src/lib/pixel.js');
 test('Pixel artwork uses bounded integer geometry and preserves every height digit',()=>{
   const n=digitsPath('970,502');assert.equal(n.width,38);assert.match(n.d,/^M/);
   assert.equal(digitsPath('1').width,5);assert.throws(()=>digitsPath('<script>'));
+  assert.equal(digitsPath('0.0013').width,31); // BTC prices: five 5-wide digits, a 1-wide point, five 1px gaps
   assert.match(SHIELD,/^M/);assert.match(GAZE,/^M/);assert.doesNotMatch(SHIELD+GAZE,/[CQSAcqsa.]/);
 });
 

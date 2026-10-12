@@ -1,6 +1,6 @@
 /**
- * 弹窗：顶部「中文 | EN」切换语言（默认英文）；「实时同步」开关（默认关闭）与最近一次检查的结果 / 失败原因；
- * 当前显示的数据；「手动同步」按钮（交给后台 sw/sync-sw.js 执行）；规则与颜色图例。
+ * 弹窗：顶部「中文 | EN」切换语言（默认英文）；「实时 / 指定区块」模式（默认实时）与最近一次检查的结果 / 失败原因；
+ * 当前显示的数据与奖励启动规划；编号查询；每档成交后权重的最低挂价；规则。指定区块在弹层里设置（交给后台 sw/sync-sw.js 执行）。
  * 弹窗本身不发网络请求，关掉弹窗也不会打断同步；任何同步失败都只显示原因，页面继续按已有数据工作。
  */
 (() => {
@@ -11,7 +11,9 @@
   const SRC = globalThis.ShnakasSource;
   const PIXEL = globalThis.NakaPixel;
   const LOOKUP = globalThis.ShnakasLookup;
-  const K = SRC.KEYS;
+  const TIER = globalThis.ShnakasTier;
+  const K = SRC.KEYS, EXP=globalThis.NakaExplore;
+  let comparisonIds=[];
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -24,36 +26,40 @@
   // 当前状态：语言、本地同步的快照、同步状态；任一变化都整体重画（弹窗内容很少，重画开销可以忽略）
   const state = {
     lang: I.DEFAULT_LANG, manual: undefined, status: undefined, localError: null,
-    lookupRaw: null, lookupFocus:false, liveEnabled: SRC.LIVE_DEFAULT, live: undefined, liveStatus: undefined, visibleAt: undefined,
+    lookupRaw: null, lookupFocus:false, fixedPending:false, liveEnabled: SRC.LIVE_DEFAULT, live: undefined, liveStatus: undefined, visibleAt: undefined,
   };
 
   function renderStatic(T) {
     document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : 'en';
     for (const b of $('langSwitch').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.lang === state.lang));
     $('title').textContent = T.title;
+    $('tagline').textContent = T.tagline;
+    // Compare count: four pixel pips (filled = selected) beside the label, matching the Compare page toolbar.
+    const cc = globalThis.NakaExploreUI.pick(state.lang), pips = el('span', 'foot-pips');
+    pips.setAttribute('aria-hidden', 'true');
+    pips.append(...Array.from({ length: EXP.MAX }, (_, i) => el('i', i < comparisonIds.length ? 'is-on' : '')));
+    $('compare').replaceChildren(pips, el('span', '', cc.compare), el('span', 'foot-count', `${comparisonIds.length}/${EXP.MAX}`), el('span', 'foot-go', '↗'));
+    $('compare').setAttribute('aria-label', `${cc.open} · ${cc.count(comparisonIds.length)}`);
     $('sigil').replaceChildren(PIXEL.sigil('pixel-sigil'));
-    $('liveTitle').textContent = T.liveTitle;
-    $('liveDiagnosticTitle').textContent = T.diagnostics;
-    $('syncDiagnosticTitle').textContent = T.diagnostics;
-    $('liveSub').textContent = T.liveSub;
-    $('liveHint').textContent = T.liveHint;
-    $('liveHint').hidden = !state.liveEnabled;
-    $('liveToggle').checked = state.liveEnabled;
+    $('liveTitle').textContent = T.modeTitle;
+    $('modeLive').textContent=T.modeLive;$('modeFixed').textContent=T.modeFixed;
+    $('modeLive').setAttribute('aria-pressed',String(state.liveEnabled));$('modeFixed').setAttribute('aria-pressed',String(!state.liveEnabled));
+    $('modeLive').title = T.liveHint;
+    $('modeFixed').title = T.syncHint();
+    $('fixedTitle').textContent=T.fixedTitle;$('fixedCancel').textContent=T.cancel;
     $('snapTitle').textContent = T.popupSnapshot;
+    $('ladderTitle').textContent = T.ladderTitle;
+    $('ladderUnit').textContent = T.ladderUnit;
+    $('ladderTitle').title = `${T.ladderSub}\n${T.ladderNote}`; // explanation on hover keeps the list quiet
     $('rulesTitle').textContent = T.popupRules;
     $('lookupTitle').textContent = T.lookupTitle;
     $('lookupBack').textContent=T.lookupBack;
     $('lookupNumber').placeholder = T.lookupPlaceholder;
     $('lookupBtn').textContent = T.lookupButton;
-    $('syncSettingsTitle').textContent = T.syncSettings;
-    $('syncMode').textContent = state.liveEnabled ? T.liveShortOn : T.liveShortOff;
-    $('syncMode').dataset.enabled = String(state.liveEnabled);
-    $('syncTitle').textContent = T.syncTitle;
     $('syncHeight').placeholder = T.syncPlaceholder;
     $('syncHeight').setAttribute('aria-label', T.syncPlaceholder);
-    $('syncBtn').textContent = T.syncButton;
+    $('syncBtn').textContent = T.fixedConfirm;
     $('syncHint').textContent = T.syncHint();
-    $('restore').textContent = T.restore;
 
     const tile = (top, bottom) => {
       const n = el('div', 'tile');
@@ -86,15 +92,29 @@
     $('currentHeight').replaceChildren(el('span', 'sr-only', I.int(s.height)), PIXEL.digits(I.int(s.height), 'pixel-height'));
     $('currentHeight').setAttribute('aria-label', I.int(s.height));
     $('snapSource').textContent = sourceText;
-    const kv = [
-      [T.popupFloor, `${I.btc(s.collectionFloor)} BTC`],
-      [T.popupListings, I.int(s.listings)],
+    // Reward start is planning context for the selected block: remaining blocks plus a header-time date.
+    const launch = R.launchStatus(s);
+    const launchSub = launch.state === 'reached' ? T.launchAt(I.int(launch.height))
+      : launch.eta === null ? T.launchUnknown : T.launchDate(new Date(launch.eta).toISOString().slice(0, 10));
+    // Numbers use the block height's bitmap digits; a reached start is a word, so it stays text.
+    const stats = [
+      { label: T.popupFloor, value: I.btc(s.collectionFloor), pixels: true, unit: 'BTC', sub: null },
+      { label: T.popupListings, value: I.int(s.listings), pixels: true, unit: null, sub: null },
+      launch.state === 'reached'
+        ? { label: T.launchStat, value: T.launchReachedShort, pixels: false, unit: null, sub: launchSub }
+        : { label: T.launchStat, value: I.int(launch.remaining), pixels: true, unit: T.blocksUnit, sub: launchSub },
     ];
-    $('snap').replaceChildren(...kv.map(([k, v]) => {
-      const row = el('div', 'row');
-      row.append(el('dt', '', k), el('dd', '', v));
+    const rows = stats.map(({ label, value, pixels, unit, sub }) => {
+      const row = el('div', 'row'), dd = el('dd');
+      if (pixels) dd.append(el('span', 'sr-only', value), PIXEL.digits(value, 'stat-pixels'));
+      else dd.textContent = value;
+      if (unit !== null) dd.append(el('span', 'stat-unit', unit));
+      row.append(el('dt', '', label), dd);
+      if (sub !== null) row.append(el('dd', 'stat-sub', sub));
       return row;
-    }));
+    });
+    rows[2].title = `${T.launchTitle(I.int(launch.height))}\n${T.launchMethod}`;
+    $('snap').replaceChildren(...rows);
     $('snap').dataset.source = source;
     $('blockAge').textContent = I.blockAge(T,s);
     $('blockAge').title = I.blockTimeTitle(T,s);
@@ -102,7 +122,6 @@
     $('measureNote').textContent = T.inspectProvisional;
     $('measureNote').title = note ?? ''; 
     $('measureNote').hidden = note === null;
-    $('restore').hidden = !(SRC.compatibleSnapshot(state.manual, BUNDLED));
     return snap;
   }
 
@@ -113,32 +132,20 @@
     const live = SRC.compatibleSnapshot(state.live, BUNDLED) ? state.live : undefined;
     const dataLine = live === undefined ? null : T.liveOk(I.int(live.snapshot.height), I.blockAge(T,live.snapshot,now));
     const visible = state.visibleAt !== undefined && now - state.visibleAt <= SRC.VISIBLE_MS;
-    let kind;
-    let text;
-    let keep = null;
-    let detail = null;
-    if (!state.liveEnabled) { kind = 'muted'; text = T.liveOff; }
+    // label: the short line beside the mode buttons; tip: the full explanation on hover.
+    let kind, label, tip;
+    if (!state.liveEnabled) { kind = 'muted'; label = T.fixedWatching; tip = T.liveOff; }
     else if (st !== undefined && st.state === 'error') {
       kind = 'error';
-      text = T.liveFail(T.failReason[st.kind] + (st.status === null ? '' : T.httpCode(st.status)), st.waitMin);
-      keep = live === undefined ? T.liveKeepNone : T.liveKeep(I.int(live.snapshot.height));
-      detail = st.message;
-    } else if (!visible) { kind = 'muted'; text = dataLine === null ? T.livePaused : `${T.livePaused} · ${dataLine}`; }
-    else if (dataLine === null) { kind = 'muted'; text = T.liveWaiting; }
-    else { kind = 'ok'; text = dataLine; }
-    if(state.liveEnabled && kind === 'error') { $('syncMode').textContent=T.liveShortError; $('syncMode').dataset.error='true'; }
-    else delete $('syncMode').dataset.error;
-    $('liveToggle').title = text;
-    $('syncMode').title = text;
+      label = T.liveFail(T.failReason[st.kind] + (st.status === null ? '' : T.httpCode(st.status)), st.waitMin);
+      tip = [label, live === undefined ? T.liveKeepNone : T.liveKeep(I.int(live.snapshot.height)), st.message].join('\n');
+    } else if (dataLine === null) { kind = 'muted'; label = visible ? T.liveWaiting : T.livePaused; tip = label; }
+    else { kind = visible ? 'ok' : 'muted'; label = T.liveWatching; tip = visible ? dataLine : `${T.livePaused} · ${dataLine}`; }
     const box = $('liveState');
-    box.textContent = text;
-    box.hidden = !state.liveEnabled;
+    box.textContent = label;
+    box.title = tip;
     box.className = `live-state live-state--${kind}`;
     box.dataset.state = !state.liveEnabled ? 'off' : st === undefined ? 'none' : st.state;
-    $('liveKeep').textContent = keep === null ? '' : keep;
-    $('liveKeep').hidden = keep === null;
-    $('liveDetail').textContent = detail === null ? '' : detail;
-    $('liveDiagnostic').hidden = detail === null;
   }
 
   function showStatus(kind, text) {
@@ -146,22 +153,22 @@
     box.replaceChildren(...(kind === 'running' ? [el('span', 'spinner')] : []), el('span', '', text));
     box.className = `footnote status status--${kind}`;
     box.dataset.state = kind;
+    box.title = '';
     box.hidden = false;
   }
 
   function renderStatus(T) {
+    if(!$('fixedDialog').open){$('syncStatus').hidden=true;return;}
     const st = SRC.statusOf(state.status, 'manual');
-    $('syncDiagnostic').hidden = !st || st.state !== 'error';
-    $('syncDetail').textContent = st?.state === 'error' ? st.message : '';
-    const running = st !== undefined && st.state === 'running';
-    // Manual progress belongs to its own status; never relabel the live switch.
+    const running = state.fixedPending;$('fixedCancel').disabled=running;
+    // Fixed-block loading progress stays in its dialog; it never relabels the mode line.
     $('syncBtn').disabled = running;
     $('syncHeight').disabled = running;
     if (state.localError !== null) { showStatus('error', T[state.localError]); return; }
-    if (st === undefined) { $('syncStatus').hidden = true; return; }
+    if (!state.fixedPending && state.localError===null && (!st || st.state!=='error')) { $('syncStatus').hidden = true; return; }
     if (st.state === 'running') showStatus('running', st.stage === 'meta' ? T.syncMeta(st.done, st.total) : T.syncStage[st.stage]);
     else if (st.state === 'done') showStatus('done', T.syncDone(I.int(st.height)));
-    else if (st.state === 'error') showStatus('error', T.syncError(T.failReason[st.kind] || T.failReason.data));
+    else if (st.state === 'error') { showStatus('error', T.syncError(T.failReason[st.kind] || T.failReason.data)); $('syncStatus').title = st.message; }
     else if (st.state === 'interrupted') showStatus('interrupted', T.syncInterrupted);
     else throw new Error(`未知的同步状态：${st.state}`);
   }
@@ -178,6 +185,7 @@
     lookupRendered = {snap, raw:state.lookupRaw, lang:state.lang};
     const box = $('lookupResult');
     box.replaceChildren(); box.hidden = state.lookupRaw === null;
+    $('lookupCompare').hidden = true; // shown again only for a found NFT
     $('lookupNumber').removeAttribute('aria-invalid');
     if (box.hidden) return;
     const found = LOOKUP.query(snap, state.lookupRaw);
@@ -195,6 +203,8 @@
     const head=el('div','lookup-head'), link=el('a','lookup-link',T.lookupView);
     link.href=`https://ord-dropz.xyz/secondary/item/${found.id}?collection=${snap.collection.slug}`;
     link.target='_blank'; link.rel='noopener noreferrer';
+    // The compare action lives in the query footer: a full-width control instead of a crowded card header.
+    $('lookupCompare').dataset.id=found.id;$('lookupCompare').hidden=false;
     head.append(el('strong','',`Shielded #${found.number}`),link);
     const rank=globalThis.NakaPurchase.numberBadge(found.number,T);if(rank)head.insertBefore(rank,link);
     const model=globalThis.NakaPurchase.create(snap),scenario=model.get(found.id);
@@ -204,22 +214,62 @@
     box.append(card);
   }
 
+  /** Add, remove (when selected) or explain a full selection, repainted in place so focus and pointer state survive. */
+  function paintLookupCompare(button) {
+    const st = EXP.compareState(comparisonIds, button.dataset.id);
+    if (button.dataset.compare === st && button.dataset.lang === state.lang) return;
+    globalThis.NakaExploreUI.paintCompare(button, st, globalThis.NakaExploreUI.pick(state.lang));
+    button.dataset.lang = state.lang;
+  }
+
+  /** Lowest ask for each reachable after-sale weight in the selected snapshot; a row opens its full lookup. */
+  let ladderRendered = null;
+  function renderLadder(T, snap) {
+    const picked = comparisonIds.join();
+    if (ladderRendered?.snap === snap && ladderRendered.lang === state.lang && ladderRendered.picked === picked) return;
+    ladderRendered = { snap, lang: state.lang, picked };
+    const box = $('ladderRows');
+    if (!Array.isArray(snap.offers)) { box.replaceChildren(el('li', 'ladder-empty', T.ladderNoOffers)); return; }
+    const steps = EXP.ladder(snap, globalThis.NakaPurchase.create(snap));
+    if (steps.length === 0) { box.replaceChildren(el('li', 'ladder-empty', T.ladderNone)); return; }
+    const c = globalThis.NakaExploreUI.pick(state.lang);
+    box.replaceChildren(...steps.map((e) => {
+      const item = el('li'), row = el('button', 'ladder-row'), selected = comparisonIds.includes(e.id);
+      const weightText = R.formatWeight(e.result), price = I.btc(e.sale.price);
+      row.type = 'button';
+      const weight = el('span', `ladder-weight naka-tone-${TIER.boundTier(e.result.lo)}`, weightText), ask = el('span', 'ladder-price', price);
+      const number = el('span', 'ladder-number', `#${e.number}`);
+      if (selected) { const tag = el('i', 'ladder-tag', '✓'); tag.title = c.inCompare; tag.setAttribute('aria-hidden', 'true'); number.append(tag); }
+      row.append(weight, number, ask, el('span', 'ladder-go', '›'));
+      row.lastChild.setAttribute('aria-hidden', 'true');
+      // The accessible name states the step in words, including the unit shown only in the header.
+      row.setAttribute('aria-label', T.ladderRowLabel(weightText, e.number, price) + (selected ? ` · ${c.inCompare}` : ''));
+      row.title = T.ladderRowTitle(e.number);
+      row.addEventListener('click', () => { $('lookupNumber').value = String(e.number); showLookup(String(e.number)); });
+      item.append(row);
+      return item;
+    }));
+  }
+
   function render() {
     const T = I.pick(state.lang);
     renderStatic(T);
     renderLive(T);
     const snap = renderSnapshot(T);
     renderLookup(T, snap);
-    $('launchInfo').replaceChildren(globalThis.NakaPurchase.renderLaunch(snap.snapshot,T,I,state.lookupFocus));
+    if (!$('lookupCompare').hidden) paintLookupCompare($('lookupCompare'));
+    renderLadder(T, snap);
     renderStatus(T);
   }
 
   Promise.all([
-    chrome.storage.local.get([K.manual, K.live, K.liveEnabled, K.liveStatus, 'syncStatus', I.STORAGE_KEY]),
+    chrome.storage.local.get([K.manual, K.live, K.liveEnabled, K.liveStatus, 'syncStatus', I.STORAGE_KEY, EXP.KEY]),
     chrome.storage.session.get(SRC.SESSION_VISIBLE),
   ]).then(([got, ses]) => {
+    comparisonIds=EXP.normalize(got[EXP.KEY]);
     state.lang = I.resolveLang(got[I.STORAGE_KEY]);
     state.manual = got[K.manual];
+    if(SRC.compatibleSnapshot(state.manual,BUNDLED))$('syncHeight').value=String(state.manual.snapshot.height);
     state.live = got[K.live];
     state.liveEnabled = SRC.resolveLive(got[K.liveEnabled]);
     state.liveStatus = got[K.liveStatus];
@@ -234,29 +284,51 @@
       return;
     }
     if (area !== 'local') return;
+    if(has(changes,EXP.KEY)) comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);
     if (has(changes, I.STORAGE_KEY)) state.lang = I.resolveLang(changes[I.STORAGE_KEY].newValue);
     if (has(changes, K.manual)) state.manual = changes[K.manual].newValue;
     if (has(changes, K.live)) state.live = changes[K.live].newValue;
     if (has(changes, K.liveEnabled)) state.liveEnabled = SRC.resolveLive(changes[K.liveEnabled].newValue);
     if (has(changes, K.liveStatus)) state.liveStatus = changes[K.liveStatus].newValue;
-    if (has(changes, 'syncStatus')) { state.status = changes.syncStatus.newValue; state.localError = null; }
+    if (has(changes, 'syncStatus')) { state.status = changes.syncStatus.newValue; state.localError = null;if(state.fixedPending&&['done','error','interrupted'].includes(state.status?.state)){state.fixedPending=false;if(state.status.state==='done'){$('fixedDialog').close();$('modeFixed').focus();}} }
     render();
   });
 
-  $('liveToggle').addEventListener('change', (e) => chrome.storage.local.set({ [K.liveEnabled]: e.target.checked }));
+  $('compare').addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare'}));
+  $('lookupCompare').addEventListener('click', async () => {
+    const button = $('lookupCompare'), c = globalThis.NakaExploreUI.pick(state.lang);
+    if (button.dataset.compare === 'full') { chrome.runtime.sendMessage({ type: 'shn-open-compare' }); return; }
+    button.disabled = true;
+    try {
+      const res = await chrome.runtime.sendMessage({ type: 'shn-compare', action: 'toggle', id: button.dataset.id }); if (!res?.ok) throw Error('save');
+      comparisonIds = res.ids; render();
+      if (res.state === 'missing') { button.textContent = c.missing; delete button.dataset.compare; }
+    } catch { button.textContent = c.addError; button.disabled = false; delete button.dataset.compare; }
+  });
+
+  $('modeLive').addEventListener('click',async()=>{state.liveEnabled=true;state.localError=null;render();await chrome.storage.local.set({[K.liveEnabled]:true});beat();});
+  $('modeFixed').addEventListener('click',()=>{state.localError=null;state.status=undefined;const selected=SRC.choose({liveEnabled:state.liveEnabled,live:state.live,manual:state.manual},BUNDLED).snap;$('syncHeight').value=String(selected.snapshot.height);$('fixedDialog').showModal();render();$('syncHeight').focus();$('syncHeight').select();});
+  $('fixedCancel').addEventListener('click',()=>{if(!state.fixedPending){$('fixedDialog').close();$('modeFixed').focus();}});
+  $('fixedDialog').addEventListener('cancel',e=>{if(state.fixedPending)e.preventDefault();});
+
+  function beat(){if(document.visibilityState==='visible'&&chrome.runtime.id)chrome.runtime.sendMessage({type:'shn-visible'}).catch(()=>{});}
+  beat();setInterval(beat,SRC.HEARTBEAT_MS);document.addEventListener('visibilitychange',beat);
 
   $('langSwitch').addEventListener('click', (e) => {
     const b = e.target instanceof Element ? e.target.closest('button[data-lang]') : null;
     if (b && b.dataset.lang !== state.lang) chrome.storage.local.set({ [I.STORAGE_KEY]: b.dataset.lang });
   });
 
+  function showLookup(raw) {
+    state.lookupFocus = true;
+    state.lookupRaw = raw;
+    render(); document.querySelector('.popup-scroll').scrollTop = 0;
+  }
   $('lookupForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const raw = $('lookupNumber').value, number = LOOKUP.parseNumber(raw);
-    state.lookupFocus=true;
-    state.lookupRaw = number === null ? raw : String(number);
-    if(number !== null) $('lookupNumber').value = String(number);
-    render(); document.querySelector('.popup-scroll').scrollTop=0;
+    if (number !== null) $('lookupNumber').value = String(number);
+    showLookup(number === null ? raw : String(number));
   });
   $('lookupBack').addEventListener('click',()=>{state.lookupFocus=false;state.lookupRaw=null;$('lookupNumber').value='';render();});
   $('lookupNumber').addEventListener('input', () => {
@@ -267,14 +339,18 @@
   $('syncForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const raw = $('syncHeight').value.trim();
-    if (raw !== '' && !/^\d+$/.test(raw)) { state.localError = 'syncBadHeight'; render(); return; }
-    const res = await chrome.runtime.sendMessage({ type: 'shn-sync', height: raw === '' ? null : Number(raw) });
-    if (res.ok) return; // 进度由 syncStatus 的存储变化驱动
+    if (raw === '') {state.localError='fixedRequired';render();return;}
+    if (!/^\d+$/.test(raw)) { state.localError = 'syncBadHeight'; render(); return; }
+    if(!Number.isSafeInteger(Number(raw))){state.localError='syncBadHeight';render();return;}
+    state.fixedPending=true;state.status={state:'running',stage:'state'};state.localError=null;render();
+    let res;try{res=await chrome.runtime.sendMessage({ type: 'shn-set-fixed', height: Number(raw) });}catch{res={ok:false,error:'busy'};}
+    if (res.ok) return;
+    state.fixedPending=false; // 进度由 syncStatus 的存储变化驱动
     if (res.error === 'busy') state.localError = 'syncBusy';
+    else if (res.error === 'live-mode') state.localError='fixedRequired';
     else if (res.error === 'bad-height') state.localError = 'syncBadHeight';
     else throw new Error(`后台返回了未知错误：${res.error}`);
     render();
   });
 
-  $('restore').addEventListener('click', () => chrome.storage.local.remove([K.manual, 'syncStatus']));
 })();

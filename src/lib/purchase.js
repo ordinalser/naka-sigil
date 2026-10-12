@@ -38,12 +38,11 @@
     return {snapshot:snap.snapshot,get};
   }
   const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  function renderLaunch(snapshot,T,I,compact=false) {
-    const launch=R.launchStatus(snapshot),box=node('aside',`naka-launch${compact?' naka-launch--compact':''}`);
+  function renderLaunch(snapshot,T,I) {
+    const launch=R.launchStatus(snapshot),box=node('aside','naka-launch');
     box.dataset.state=launch.state;box.dataset.basis=String(snapshot.height);box.title=T.launchMethod;
     const utc=launch.eta===null?null:new Date(launch.eta).toISOString().slice(0,10);
-    if(compact)box.append(node('span','',utc?T.launchCompact(I.int(launch.height),utc.slice(0,10)):T.launchTitle(I.int(launch.height))+' · '+(launch.state==='reached'?T.launchReached:T.launchUnknown)));
-    else box.append(node('strong','',T.launchTitle(I.int(launch.height))),node('p','',launch.state==='reached'?T.launchReached:T.launchBefore(I.int(launch.remaining),utc?T.launchEta(utc):T.launchUnknown,I.int(snapshot.height))),node('small','',T.launchMethod));
+    box.append(node('strong','',T.launchTitle(I.int(launch.height))),node('p','',launch.state==='reached'?T.launchReached:T.launchBefore(I.int(launch.remaining),utc?T.launchEta(utc):T.launchUnknown,I.int(snapshot.height))),node('small','',T.launchMethod));
     return box;
   }
   function numberTag(number) {

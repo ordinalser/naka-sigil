@@ -10,18 +10,15 @@
 <body>
   <header class="head">
     <div id="sigil" class="sigil-frame" aria-hidden="true"></div>
-    <div class="brand"><h1 id="title"></h1><p class="sub">SHIELDED NAKAS · BLOCK ESTIMATES</p></div>
+    <div class="brand"><h1 id="title"></h1><p id="tagline" class="sub"></p></div>
     <div id="langSwitch" class="segmented" role="group" aria-label="Language / 语言">
       <button type="button" data-lang="zh">中文</button><button type="button" data-lang="en">EN</button>
     </div>
   </header>
 
-  <section class="live-section live-primary">
-    <label class="row row--switch" for="liveToggle">
-      <span class="switch-text"><span class="live-heading"><span id="liveTitle" class="row-title"></span><span id="syncMode" class="settings-mode" role="status" aria-live="polite"></span></span><span id="liveSub" class="row-sub"></span></span>
-      <input id="liveToggle" class="switch" type="checkbox" role="switch" aria-labelledby="liveTitle" aria-describedby="liveState">
-    </label>
-    <p id="liveState" class="live-state"></p>
+  <section class="live-section live-primary" aria-labelledby="liveTitle">
+    <h2 id="liveTitle" class="sr-only"></h2>
+    <div class="mode-line"><button id="lookupBack" class="lookup-back" type="button" hidden></button><div class="mode-options" role="group" aria-labelledby="liveTitle"><button id="modeLive" type="button"></button><button id="modeFixed" type="button"></button></div><p id="liveState" class="live-state" role="status"></p></div>
   </section>
 
   <main class="popup-scroll">
@@ -33,35 +30,18 @@
     <dl id="snap" class="snapshot-stats"></dl>
   </section>
 
-  <div id="launchInfo"></div>
   <section class="lookup-section" aria-labelledby="lookupTitle">
     <form id="lookupForm">
-      <div class="lookup-form-head"><label id="lookupTitle" for="lookupNumber"></label><button id="lookupBack" class="text-btn" type="button" hidden></button></div>
+      <label id="lookupTitle" class="px-title" for="lookupNumber"></label>
       <div class="lookup-controls"><span class="lookup-prefix" aria-hidden="true">#</span><input id="lookupNumber" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24"><button id="lookupBtn" class="btn" type="submit"></button></div>
     </form>
     <div id="lookupResult" aria-live="polite" hidden></div>
   </section>
 
-  <details id="syncSettings" class="settings-section">
-    <summary><span id="syncSettingsTitle"></span></summary>
-  <section class="sync-section" aria-labelledby="syncTitle">
-    <h2 id="syncTitle"></h2>
-    <form id="syncForm">
-      <input id="syncHeight" class="field" inputmode="numeric" autocomplete="off" spellcheck="false">
-      <button id="syncBtn" class="btn" type="submit"></button>
-    </form>
-    <p id="syncStatus" class="footnote status" role="status" aria-live="polite" hidden></p>
-    <details id="syncDiagnostic" class="diagnostic" hidden><summary id="syncDiagnosticTitle"></summary><p id="syncDetail" class="live-detail"></p></details>
-    <p id="syncHint" class="footnote"></p>
-    <button id="restore" class="text-btn" type="button" hidden></button>
+  <section class="ladder-section" aria-labelledby="ladderTitle">
+    <div class="ladder-head"><h2 id="ladderTitle" class="px-title"></h2><span id="ladderUnit" class="ladder-unit"></span></div>
+    <ol id="ladderRows" class="ladder-rows"></ol>
   </section>
-
-  <section class="live-diagnostics">
-    <p id="liveKeep" class="live-keep" hidden></p>
-    <details id="liveDiagnostic" class="diagnostic" hidden><summary id="liveDiagnosticTitle"></summary><p id="liveDetail" class="live-detail"></p></details>
-    <p id="liveHint" class="footnote" hidden></p>
-  </section>
-  </details>
 
   <details class="rules-section">
     <summary id="rulesTitle"></summary>
@@ -74,8 +54,13 @@
     <a id="zeroSource" class="text-btn" target="_blank" rel="noopener noreferrer"></a>
   </details>
   </main>
-  <footer class="foot"><a id="open" target="_blank" rel="noopener noreferrer"></a></footer>
+  <footer class="foot"><button id="lookupCompare" class="lookup-compare" type="button" hidden></button><button id="compare" type="button"></button><a id="open" target="_blank" rel="noopener noreferrer"></a></footer>
+  <dialog id="fixedDialog" aria-labelledby="fixedTitle">
+    <h2 id="fixedTitle"></h2><p id="syncHint" class="footnote"></p>
+    <div id="fixedControls"><form id="syncForm"><input id="syncHeight" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="12"><div class="fixed-actions"><button id="fixedCancel" class="text-btn" type="button"></button><button id="syncBtn" class="btn" type="submit"></button></div></form></div>
+    <p id="syncStatus" class="footnote status" role="status" aria-live="polite" hidden></p>
+  </dialog>
   <script src="../data/snapshot.js"></script><script src="../lib/rules.js"></script>
-  <script src="../lib/tier.js"></script><script src="../lib/purchase.js"></script><script src="../lib/lookup.js"></script><script src="../lib/pixel.js"></script><script src="../lib/i18n.js"></script><script src="../lib/source.js"></script><script src="popup.js"></script>
+  <script src="../lib/tier.js"></script><script src="../lib/purchase.js"></script><script src="../lib/lookup.js"></script><script src="../lib/pixel.js"></script><script src="../lib/i18n.js"></script><script src="../lib/source.js"></script><script src="../lib/explore.js"></script><script src="../lib/explore-ui.js"></script><script src="popup.js"></script>
 </body>
 </html>

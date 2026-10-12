@@ -21,9 +21,11 @@ Public inscription IDs are collection identifiers, not a list of the developer�
 
 ## Runtime permissions and network
 
-`storage` stores snapshots/settings locally. `alarms` schedules optional minute checks. Background API host permissions are `shielded-mint-server-production.up.railway.app` for collection data and `blockstream.info` for block header time. Content scripts match only `ord-dropz.xyz`. Blockstream requests contain only a block height; no NFT lookup, wallet address or ownership data is transmitted. The bundled timestamp works offline. Time requests occur only during an explicitly requested manual sync or opted-in live sync; opening the popup or querying a number makes no request.
+`storage` stores snapshots/settings and up to four comparison inscription IDs locally. Clear removes the comparison list. Number lookup text is not persisted. `alarms` schedules minute checks in Live mode (the new-install default); Fixed mode clears the alarm. Saved explicit modes are preserved. Background API host permissions are `shielded-mint-server-production.up.railway.app` for collection data and `blockstream.info` for block header time. Content scripts match only `ord-dropz.xyz`. Blockstream requests contain only a block height; no NFT lookup, wallet address or ownership data is transmitted. The bundled timestamp works offline. Time requests occur during fixed-height loads or Live updates. A visible popup, Compare or market can trigger a Live check by default. The number itself is not sent; queries and comparison calculations add no API call. Fixed mode pauses automatic requests and rejects latest-refresh messages.
 
-There are no analytics or telemetry endpoints. Network traffic happens after manual sync or opt-in live sync while a market page is visible. Ordinary HTTP request metadata, including IP address, is visible to the public API operator. The extension cannot control that operator’s retention policy.
+The comparison workspace and standalone demo optionally request NFT thumbnails from `ordinals.com/content/` with no referrer; inscription IDs and ordinary request metadata reach that public host. An offline pixel fallback is supplied. The demo makes no collection API requests or uploads and does not use extension storage.
+
+There are no analytics or telemetry endpoints. Network traffic happens after an explicit fixed-height load or while Live mode has a visible market, Compare or popup. New installs use Live by default; choose Fixed to pause automatic checks. Ordinary HTTP request metadata, including IP address, is visible to the public API operator. The extension cannot control that operator’s retention policy.
 
 ## Release checks
 

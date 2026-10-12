@@ -4,7 +4,7 @@
  *
  * 权限：storage（存放同步得到的数据与设置）、alarms（实时同步每分钟检查一次新区块）、
  * shielded 协议接口的主机权限（后台读取链上状态）。内容脚本只匹配 ord-dropz.xyz，自身不发网络请求；
- * 后台只在实时同步开着且有 ord-dropz 页面可见时、或用户点「手动同步」时联网。
+ * 后台只在实时模式且有市场、比较页或弹窗可见时，或在弹窗确认载入指定区块时联网。
  */
 'use strict';
 const fs = require('node:fs');
@@ -45,13 +45,14 @@ const manifest = {
   content_scripts: [{
     // 整站匹配：站点是 Next.js 单页应用，从首页点进集合页不会重新注入脚本，脚本自己按路由决定是否工作
     matches: ['https://ord-dropz.xyz/*'],
-    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'content/content.js'],
+    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'lib/explore.js', 'lib/explore-ui.js', 'content/content.js'],
     css: ['content/content.css', 'lib/purchase.css'],
     run_at: 'document_idle',
   }],
 };
 
 const FILES = [
+  'lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
   'data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'lib/snapshot-core.js', 'sw/sync-sw.js',
   'content/content.js', 'content/content.css',
   'popup/popup.html', 'popup/popup.js', 'popup/popup.css',

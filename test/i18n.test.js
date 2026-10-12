@@ -31,11 +31,11 @@ test('聪转 BTC 去掉末尾的 0，整数加千分位', () => {
   assert.equal(int(970493), '970,493');
 });
 
-test('所有高度均明确显示估算口径，不能把超过起始高度当作官方季度最终权重', () => {
+test('季度前后都使用区块公式措辞，季度结算指定官方快照高度', () => {
   for (const height of [970000, 971699, 971700, 985000]) {
-    assert.match(measureNote(ZH, height), /不是最近一季度的最终权重/);
+    assert.match(measureNote(ZH, height), /季度结算使用官方快照区块/);
     assert.ok(measureNote(ZH, height).includes(int(height)));
-    assert.match(measureNote(EN, height), /not the latest quarter/);
+    assert.match(measureNote(EN, height), /quarterly weights use the official snapshot block/);
   }
 });
 
@@ -49,5 +49,5 @@ test('Block age uses only height-bound header time, handles days, future clocks 
   assert.equal(I.blockAge(EN,{...s,height:970503}),EN.blockTimeUnknown);
   assert.equal(I.blockAge(EN,{height:970502,generatedAt:s.generatedAt}),EN.blockTimeUnknown);
   assert.match(I.blockTimeTitle(EN,s),/UTC.*not check time/);
-  assert.match(I.measureNote(EN,s.height,s),/970,502 \(Block time:.*not the latest quarter/);
+  assert.match(I.measureNote(EN,s.height,s),/970,502 \(Block time:.*quarterly weights use the official snapshot block/);
 });

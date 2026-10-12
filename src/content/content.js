@@ -1,6 +1,6 @@
 /**
  * 内容脚本：在 ord-dropz 的 Shielded Nakas 集合页与藏品详情页标注 SHNAKAS 奖励权重。
- * 数据（lib/source.js 的 choose）：实时同步开着且已有实时数据 → 实时；否则手动同步的数据；都没有 → 内置快照。
+ * 数据（lib/source.js 的 choose）：实时模式且已有实时数据 → 实时；否则指定区块的数据；都没有 → 内置快照。
  * 监听存储变化，同步完成后已打开的页面原地刷新。同步失败时存储里的旧数据不变，页面照旧工作。
  * 内容脚本自身不发网络请求；页面可见时给后台发心跳（实时同步只在有页面在看时才检查新区块）。
  *
@@ -30,7 +30,9 @@
   const TIER = globalThis.ShnakasTier;
   const SRC = globalThis.ShnakasSource;
   if (!BUNDLED || !R || !I || !TIER || !SRC) throw new Error('SHNAKAS：快照、规则、文案、分级或数据来源模块未加载（检查 manifest 的脚本顺序）');
-  const K = SRC.KEYS;
+  const K = SRC.KEYS, EXP=globalThis.NakaExplore;
+  let comparisonIds=[], minimum=0, exploreLang='en';
+  const exploreCopy=()=>globalThis.NakaExploreUI.pick(exploreLang);
 
   const DISPLAY_METRIC = 'total-holding-weight';
   const CONTENT_PREFIX = 'https://ordinals.com/content/';
@@ -61,7 +63,8 @@
 
   /** 弹窗顶部切换的界面语言；没选过时为英文。 */
   function useLang(stored) {
-    T = I.pick(I.resolveLang(stored));
+    exploreLang=I.resolveLang(stored);
+    T = I.pick(exploreLang);
     refresh();
   }
 
@@ -130,6 +133,7 @@
     const head=el('div',cls),brand=el('span','shn-inspect-brand');brand.append(lockIcon('shn-badge__icon'),el('span','shn-eyebrow',T.title));
     head.append(brand);
     const r=resultFor(id);if(r){const number=el('span','shn-inspect-number',`#${r.number.value}`),tag=globalThis.NakaPurchase.numberBadge(r.number.value,T);head.append(number);if(tag)head.append(tag);}
+    if(r) head.append(compareButton(id));
     return head;
   }
 
@@ -162,7 +166,8 @@
     b.tabIndex = 0;
     b.dataset.shnHeight = String(SNAP.snapshot.height);
     const description=scenario?.state==='ready' ? `${T.buyTitle}: ${T.formulaBefore} ${R.formatWeight(scenario.before)}, ${T.buyAfter} ${R.formatWeight(scenario.result)}. ${T.buyBadgeNote}` : scenario?.state==='no-floor'?`${T.buyAfter} —. ${T.buyNoFloor}`:`${T.weight} ${text}.`;
-    b.setAttribute('aria-label', `${description} ${T.listing[listing].label}: ${T.listing[listing].meaning}. ${T.weightMeaning}${numberTag?' '+numberTag.getAttribute('aria-label')+'.':''} ${I.measureNote(T,SNAP.snapshot.height)}`);
+    // markCompared() composes the accessible name from this description and the comparison selection.
+    b.dataset.shnDescription = `${description} ${T.listing[listing].label}: ${T.listing[listing].meaning}. ${T.weightMeaning}${numberTag?' '+numberTag.getAttribute('aria-label')+'.':''} ${I.measureNote(T,SNAP.snapshot.height)}`;
   }
 
   /** 让槽位里恰好有一个归属正确的徽章，返回它。 */
@@ -172,10 +177,12 @@
     const b = all[0];
     if (b) {
       if (b.dataset.shnMetric !== DISPLAY_METRIC || b.dataset.shnId !== id || b.dataset.shnGen !== String(GEN) || !b.classList.contains(`shn-badge--${kind}`)) fillBadge(b, id, kind);
+      markCompared(b);
       return b;
     }
     const nb = el('span');
     fillBadge(nb, id, kind);
+    markCompared(nb);
     slot.appendChild(nb);
     return nb;
   }
@@ -342,9 +349,8 @@
     surface.append(inspectionHead(badge.dataset.shnId,'shn-pop__head'),inspectionFor(badge.dataset.shnId,badge.classList.contains('shn-badge--activity')));
     const pointer=el('span','shn-pop__pointer');pointer.setAttribute('aria-hidden','true');
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svg.setAttribute('shape-rendering','crispEdges');
     const group=document.createElementNS(svg.namespaceURI,'g');
-    for(const cls of ['shn-pop__pointer-edge','shn-pop__pointer-fill']) {
+    for(const cls of ['shn-pop__pointer-fill','shn-pop__pointer-edge']) {
       const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('class',cls);group.append(path);
     }
     svg.append(group);pointer.append(svg);pop.replaceChildren(surface,pointer);
@@ -368,7 +374,8 @@
     if(['left','top','width','height'].some(k=>v[k]!==popViewport[k]))hidePop();
   }
   function positionPop() {
-    const M=8,G=12,v=viewportRect();popViewport=v;
+    // The bubble touches its badge (G=0), so the pointer moves straight from badge to inspection with no gap to cross.
+    const M=8,G=0,v=viewportRect();popViewport=v;
     const clamp=(n,lo,hi)=>Math.max(lo,Math.min(n,hi));
     const visibleRect=node=>{
       const r=node.getBoundingClientRect(),out={left:Math.max(r.left,v.left),right:Math.min(r.right,v.right),top:Math.max(r.top,v.top),bottom:Math.min(r.bottom,v.bottom)};
@@ -381,6 +388,8 @@
     };
     const a=visibleRect(popFor);let target=visibleRect(popFor.querySelector('.shn-buy-preview,.shn-badge__weight')??popFor);
     if(a.right<=a.left || a.bottom<=a.top){hidePop();return false;}
+    // A selected badge's "✓ Compare" tab sits on top of it and belongs to its hover area; the bubble clears it.
+    if(popFor.matches('.shn-badge--grid[data-shn-compared],.shn-badge--vault[data-shn-compared]')) a.top=Math.max(v.top,a.top-parseFloat(getComputedStyle(popFor,'::before').height));
     if(target.right<=target.left || target.bottom<=target.top)target=a;
     const surface=pop.querySelector('.shn-pop__surface');
     pop.style.width=`${Math.max(1,Math.floor(Math.min(420,v.width-2*M)))}px`;
@@ -392,24 +401,37 @@
     const limit=Math.max(1,Math.floor(Math.min(v.height-2*M,side==='top'||side==='bottom'?room[side]:v.height-2*M)));
     surface.style.maxHeight=`${limit}px`;
     const h=pop.offsetHeight,cx=(target.left+target.right)/2,cy=(target.top+target.bottom)/2;
-    const left=side==='right'?a.left-G-w:side==='left'?a.right+G:clamp(cx-w/2,v.left+M,v.right-w-M);
-    const top=side==='bottom'?a.top-G-h:side==='top'?a.bottom+G:clamp(cy-h/2,v.top+M,v.bottom-h-M);
-    pop.style.left=`${Math.round(left)}px`;pop.style.top=`${Math.round(top)}px`;pop.dataset.shnSide=side;
-    const rect=pop.getBoundingClientRect(),vertical=side==='top'||side==='bottom';
-    const tip=Math.round((vertical?cx-rect.left:cy-rect.top));
-    const base=clamp(tip,11,(vertical?w:h)-11),start=Math.floor(Math.min(base-9,tip-1)),length=Math.ceil(Math.max(base+9,tip+1)-start);
-    const x=tip-start,l=base-start-9,r=base-start+9;
-    const l1=Math.round((x-1)*2/3+l/3),l2=Math.round((x-1)/3+l*2/3),r1=Math.round((x+1)*2/3+r/3),r2=Math.round((x+1)/3+r*2/3);
-    const pointer=pop.querySelector('.shn-pop__pointer'),svg=pointer.firstChild,group=svg.firstChild;
-    pointer.style.left=`${vertical?start:side==='left'?-G:w-2}px`;
-    pointer.style.top=`${!vertical?start:side==='top'?-G:h-2}px`;
-    pointer.style.width=`${vertical?length:14}px`;pointer.style.height=`${vertical?14:length}px`;
-    svg.setAttribute('viewBox',`0 0 ${vertical?length:14} ${vertical?14:length}`);
-    group.setAttribute('transform',side==='bottom'?'translate(0 14) scale(1 -1)':side==='left'?'matrix(0 1 1 0 0 0)':side==='right'?'matrix(0 1 -1 0 14 0)':'');
-    group.children[0].setAttribute('d',`M${x-1} 2H${x+1}V4H${r1}V7H${r2}V10H${r}V14H${l}V10H${l2}V7H${l1}V4H${x-1}Z`);
-    group.children[1].setAttribute('d',`M${x} 5H${Math.max(x,r1-1)}V8H${r2-1}V11H${r-1}V14H${l+1}V11H${l2+1}V8H${Math.min(x,l1+1)}V5Z`);
-    pointer.dataset.shnTip=String(x);
+    // Round toward the badge so the shared edge never opens a sub-pixel gap.
+    const left=side==='right'?Math.ceil(a.left-w):side==='left'?Math.floor(a.right):Math.round(clamp(cx-w/2,v.left+M,v.right-w-M));
+    const top=side==='bottom'?Math.ceil(a.top-h):side==='top'?Math.floor(a.bottom):Math.round(clamp(cy-h/2,v.top+M,v.bottom-h-M));
+    pop.style.left=`${left}px`;pop.style.top=`${top}px`;pop.dataset.shnSide=side;
+    drawTail(side,a,w,h);
     return true;
+  }
+
+  /**
+   * Speech-bubble tail beside the badge on the shared edge, curling toward it. Canonical shape in (u along the edge,
+   * n outward) units: base u 0..11 on the edge, tip at u 17, n 12. It goes before the badge when the bubble edge has
+   * room there, otherwise after it (mirrored); with no room on either side the bubble needs no tail.
+   */
+  function drawTail(side,a,w,h) {
+    const pointer=pop.querySelector('.shn-pop__pointer'),svg=pointer.firstChild,[fill,edge]=svg.firstChild.children;
+    const rect=pop.getBoundingClientRect(),vertical=side==='top'||side==='bottom',span=vertical?w:h,CLEAR=10;
+    const near=vertical?a.left-rect.left:a.top-rect.top,far=vertical?a.right-rect.left:a.bottom-rect.top;
+    const before=near-19,after=far+19;
+    let s0,dir;
+    if(before>=CLEAR){s0=before;dir=1;}
+    else if(after<=span-CLEAR){s0=after;dir=-1;}
+    else {pointer.style.display='none';pop.dataset.shnTail='none';return;}
+    const map=(u,n)=>{const p=s0+dir*u;return side==='bottom'?[p,h+n]:side==='top'?[p,-n]:side==='right'?[w+n,p]:[-n,p];};
+    const pt=(u,n)=>map(u,n).map(x=>Math.round(x*10)/10).join(' ');
+    const curve=`M${pt(0,0)}C${pt(2,6)} ${pt(8,11)} ${pt(17,12)}C${pt(12,8)} ${pt(11,4)} ${pt(11,0)}`;
+    fill.setAttribute('d',`M${pt(0,-2.5)}L${curve.slice(1)}L${pt(11,-2.5)}Z`);
+    edge.setAttribute('d',curve);
+    pointer.style.display='';
+    pointer.style.left='0px';pointer.style.top='0px';pointer.style.width=`${w}px`;pointer.style.height=`${h}px`;
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    pop.dataset.shnTail=dir===1?'before':'after';
   }
 
   document.addEventListener('mouseover', (e) => {
@@ -474,6 +496,70 @@
     anchor.after(bar);
   }
 
+  // ------------------------------------------------------------ 比较选择：按钮、徽章标记与工具栏计数同步显示
+
+  /** Selection changed (here, in the popup or in Compare): repaint every control, badge marker and the count. */
+  function updateCompare() {
+    for(const b of document.querySelectorAll('.shn-compare-add')) paintCompareButton(b);
+    for(const b of document.querySelectorAll('.shn-badge')) markCompared(b);
+    updateCompareCount();
+  }
+  function updateCompareCount() {
+    const open=document.querySelector('.shn-tools__open');if(!open)return;
+    const text=`${exploreCopy().compare} (${comparisonIds.length}/${EXP.MAX}) ↗`;if(open.textContent!==text)open.textContent=text;
+  }
+  /** Add, remove (when selected) or explain a full selection; never a silent disabled state. */
+  function paintCompareButton(b) {
+    const state=EXP.compareState(comparisonIds,b.dataset.id);
+    if(b.dataset.compare===state && b.dataset.lang===exploreLang) return;
+    globalThis.NakaExploreUI.paintCompare(b,state,exploreCopy());b.dataset.lang=exploreLang;
+  }
+  /** Selected NFTs are marked on every badge, so the selection is visible without opening an inspection. */
+  function markCompared(b) {
+    const selected=comparisonIds.includes(b.dataset.shnId),c=exploreCopy();
+    if(!selected) { if(b.dataset.shnCompared!==undefined) delete b.dataset.shnCompared; }
+    else if(b.dataset.shnCompared!==c.inCompareTag) b.dataset.shnCompared=c.inCompareTag;
+    const label=selected?`${b.dataset.shnDescription} ${c.inCompare}.`:b.dataset.shnDescription;
+    if(b.getAttribute('aria-label')!==label) b.setAttribute('aria-label',label);
+  }
+  function compareButton(id) {
+    const b=el('button','shn-compare-add');
+    b.type='button';b.dataset.id=id;paintCompareButton(b);
+    b.addEventListener('click',async ev=>{
+      ev.preventDefault();ev.stopPropagation();
+      if(b.dataset.compare==='full'){chrome.runtime.sendMessage({type:'shn-open-compare'});return;}
+      b.disabled=true;
+      try{
+        const res=await chrome.runtime.sendMessage({type:'shn-compare',action:'toggle',id});if(!res?.ok)throw Error('save');
+        comparisonIds=res.ids;updateCompare();
+        if(res.state==='missing'){b.textContent=exploreCopy().missing;delete b.dataset.compare;}
+      }catch{b.textContent=exploreCopy().addError;b.disabled=false;delete b.dataset.compare;}
+    });return b;
+  }
+  function scanTools(onCollection,onActivity) {
+    const active=onCollection&&!onActivity,scope=document.querySelector('.shn-scope');
+    let tools=document.querySelector('.shn-tools');
+    if(!active||!scope){tools?.remove();for(const n of document.querySelectorAll('.shn-filtered'))n.classList.remove('shn-filtered');return;}
+    const c=exploreCopy();
+    if(!tools||tools.dataset.gen!==String(GEN)){
+      tools?.remove();tools=el('div','shn-tools');tools.dataset.gen=String(GEN);
+      const label=el('label','',c.filter),select=el('select','shn-tools__filter');
+      for(const v of [0,150,200,250,300,350,400]){const o=el('option','',v?`${v}%`:c.any);o.value=String(v);select.append(o);}select.value=String(minimum);select.title=c.filterNote;select.setAttribute('aria-label',c.filter);
+      select.addEventListener('change',()=>{minimum=Number(select.value);scan();});label.append(select);
+      const count=el('span','shn-tools__count'),open=el('button','shn-tools__open');open.type='button';open.title=c.open;
+      open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare'}));tools.append(label,count,open);scope.append(tools);
+    }
+    const roots=new Set();let total=0,shown=0;
+    for(const b of document.querySelectorAll('.shn-badge--grid,.shn-badge--list')){
+      const root=b.parentElement?.parentElement;if(!root||roots.has(root))continue;roots.add(root);total++;
+      const matches=EXP.matches(EXP.entry(SNAP,PURCHASE,b.dataset.shnId),minimum);
+      root.classList.toggle('shn-filtered',!matches);if(matches)shown++;
+    }
+    for(const root of document.querySelectorAll('.shn-filtered'))if(!roots.has(root))root.classList.remove('shn-filtered');
+    const count=tools.querySelector('.shn-tools__count'),text=minimum&&shown===0?c.noMatches:c.shown(shown,total);if(count.textContent!==text)count.textContent=text;
+    tools.title=c.filterNote;updateCompareCount();
+  }
+
   function scan() {
     const path = location.pathname;
     const c = COLLECTION_PATH.exec(path);
@@ -490,6 +576,7 @@
     }
     for (const b of document.querySelectorAll('.shn-badge')) if (!keepBadges.has(b)) b.remove();
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
+    scanTools(onCollection,onActivity);
     if (popFor && (!popFor.isConnected || popFor.dataset.shnId !== popId || popFor.dataset.shnGen !== popGen)) hidePop();
     else if(popFor) positionPop();
   }
@@ -500,7 +587,8 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.manual, K.live, K.liveEnabled, I.STORAGE_KEY]).then((got) => {
+  chrome.storage.local.get([K.manual, K.live, K.liveEnabled, I.STORAGE_KEY, EXP.KEY]).then((got) => {
+    comparisonIds=EXP.normalize(got[EXP.KEY]);
     useLang(got[I.STORAGE_KEY]);
     stored.liveEnabled = SRC.resolveLive(got[K.liveEnabled]);
     stored.live = got[K.live];
@@ -511,11 +599,12 @@
     });
     scan();
   });
-  // 弹窗里同步完成、恢复内置快照或切换语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
+  // 实时数据更新、载入指定区块、切换模式或语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     const has = (k) => Object.prototype.hasOwnProperty.call(changes, k);
     const dataChanged = has(K.manual) || has(K.live) || has(K.liveEnabled);
+    if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
     if (!dataChanged && !has(I.STORAGE_KEY)) return;
     if (has(I.STORAGE_KEY)) useLang(changes[I.STORAGE_KEY].newValue);
     if (has(K.liveEnabled)) stored.liveEnabled = SRC.resolveLive(changes[K.liveEnabled].newValue);

@@ -1,6 +1,46 @@
 # Validation record
 
-Version 0.9.5, reviewed 2026-10-10.
+## v0.10.3 — reviewed 2026-10-12
+
+- **99/99 unit tests** pass. The Compare refresh path (button, background message and per-batch verification record) is removed with its six tests; new tests cover the lowest-ask-per-weight list (monotonic asks and weights, no cheaper listing reaching a listed weight, every listing matched or beaten, empty without individual listings or a post-sale floor), the shared comparison control state and English/Chinese key parity of the comparison copy. Formula rules, snapshot data and source selection are unchanged.
+- Popup, Compare and market changes were checked as rendered screenshots of the real page files with a stubbed `chrome.*` API in headless Chrome: popup at 380×600 and 380×480 in EN/ZH, Live, Fixed block and failed-check states, number query with add / selected / full controls and list markers; Compare at 1440px and in a 390px frame with four, two and no selections; a minimal collection-grid fixture loading the real content scripts for badge markers and the three inspection control states. These were **not** run against the live Ord Dropz site or the native `chrome.action` popup in this revision.
+- First popup screen: mode buttons lead their row apart from the language switch; the block card adds blocks to rewards start with an approximate date; number lookup stays on the first screen at 380×480; the lowest-ask list scrolls below it. The former diagnostics section and "restore bundled snapshot" are removed; failure details remain in the status tooltip.
+- Comparison loop: full selections explain themselves and open Compare instead of greying out; selected NFTs can be removed from the market inspection and popup; market badges, popup list rows and Compare catalog cards mark selected NFTs; adding an already-selected number on Compare reports it instead of removing it.
+- Follow-up in the same version: compare tab spans the full badge width; inspections share an edge with their badge and use a curved speech-bubble tail (checked at 3× in the market fixture, bubble below and beside the badge); popup query mode uses one toolbar row and a footer compare action; card stats use bitmap digits (decimal point glyph added and tested); the weight ladder is a quiet regular-weight list without bars; the footer Compare entry uses pixel pips and an n/4 count. Screenshots: overview EN/ZH with marked ladder rows, query add/selected/full at 380×600 and 380×480.
+- Copy follows **Find your Naka / 找到你的 Naka**; text that referred to removed controls (manual sync, sync settings, update latest) is rewritten, and 27 unreferenced popup/inspection strings are removed.
+
+## v0.10.2 — reviewed 2026-10-12
+
+- **101/101 unit tests** pass, including atomic confirmed Fixed selection and failure/wrong-height retention. Opening or cancelling the height dialog does not change the shared mode or snapshot; confirmation activates Fixed only after the requested snapshot loads successfully.
+- Live and Fixed share the same overview geometry: mode, block card, number lookup. The transient dialog has an accessible title, focused height input, Cancel, loading/error status and confirmation. During a confirmed load, dismissal is disabled until completion; failure keeps the previous mode/data and allows retry.
+- Runtime calculation rules and pixel-height rendering are unchanged. The prior records below describe their own versions. New screenshots-only review and packages are prepared locally.
+
+## v0.10.1 — reviewed 2026-10-12
+
+- **99/99 unit tests** pass. Live is the new-install default; explicit saved preferences are preserved. Tests cover visible-workspace heartbeats, same-height batch verification, Fixed-mode latest rejection without API calls, mode changes during requests, queued fixed-height synchronization and failure retention. Formula rules are unchanged.
+- The isolated browser verifies automatic next-height updates without clicking Update latest, disabled Up to date for a freshly verified batch, disabled Fixed block in Compare and backend rejection, historical-height loading, matching source/height across popup and Compare, aligned input focus, and first-screen lookup at 380×480 and 380×600.
+- Prominent popup and Compare heights use the same original pixel digit paths, gold color and grouped number format. EN/ZH Compare headers fit 320/390/800/1440px without clipping the block or update control. The real native Chrome action popup remains 380×600 through rules, number queries, language changes and Overview.
+- All **6,654 EN/ZH catalog query layouts** fit 380×480. Query results omit the overview-only launch line; all calculation evidence remains visible. Quarter wording refers to the official snapshot block without treating a user-entered height or reward-start height as certified.
+- Actual public-market screenshots use **H971094**, 205 listings and a 125,000 sat floor. The integrated market toolbar fits one desktop row and two narrow-screen rows. Comparison screenshots show actual listed candidates, prices, after-sale totals and trait changes. **Screenshots only** are prepared for this revision, outside the public project.
+- The reproducible bundled snapshot remains **H971025**. Prior v0.10.0 pointer and Activity checks below document unchanged geometry/calculation behavior; their counts are not new v0.10.1 runs.
+- Public/private runtime and test files are synchronized byte-for-byte with distinct fixed extension IDs. Packaging validates 88 allowlisted release files and a 59-file exact-byte source archive, including the bilingual installation guide and SHA-256. Local screenshots, browser helpers, profiles, credentials and the private checkpoint are excluded.
+
+The record below describes the prior release, including its former Live-off workflow and video. Those media are superseded by the v0.10.1 screenshots-only local review.
+
+## v0.10.0 — reviewed 2026-10-12
+
+- **94/94 unit tests** pass in public and private projects. New checks cover four-candidate corruption/cap recovery and serialized additions, independent sale evaluation order, conservative minimum endpoints, final-listing unavailability, exact-batch verification expiry, explicit-refresh source selection without changing live preference, unstable-batch retry, synchronization locks, failure retention and interrupted-refresh retry recovery.
+- The shared snapshot is **H971025**, 3,327 items, 197 offers, collection floor150,000 sats. Every offered candidate uses the unchanged shared rules/purchase engine. The supported rule revision remains2026-10-08; only public schema fields are retained.
+- New comparison/browser checks pass four columns, fifth-selection rejection, removal/re-addition, cross-tab popup persistence, catalog BTC asks ordered from lowest to highest, explicit latest refresh with Live still off, enlarged artwork/Escape/viewport bounds, conservative filtering, EN/ZH and390/800/1280/1440 widths without document overflow. The portable single-file demo is verified independent of extension storage and makes zero collection API calls.
+- **6,654 catalog query layouts** pass in EN/ZH at380×480. No-floor after-sale total and trait values remain unavailable, with the before-sale formula retained.
+- Final full isolated browser suite passes defaults/offline startup, all listing/source/query/failure states, keyboard/touch/mobile and route cleanup. The actual market verifies **63 badges and2,052 Activity rows** against the selected-block engine, with no React DOM conflicts.
+- The pointer matrix passes **314 cases**, all four sides and64 constrained-scroll cases, partial/ancestor clipping, exact transformed tip alignment, origin identity, immediate dismissal, bridge, SPA shift and Escape.
+- Market screenshots and the local video use actual isolated browser interaction and an explicitly refreshed public snapshot; the recording basis is kept in the local review folder, outside this public project. Historical demonstration prices are not presented as executable orders.
+- Public packaging validates both fixed identities, synchronized runtime/test bytes, canonical shared portable demo, public-only snapshot schema, allowlists, current install/source ZIP bytes and SHA-256. Browser helpers/profiles/credentials/media/checkpoints remain excluded. No commit, push, deployment or posting is part of this local revision.
+
+The record below is the **prior v0.9.5 validation**, not a claim that its historical counts describe the current bundle.
+
+## Prior v0.9.5 — reviewed 2026-10-10.
 
 ## Calculation and state
 

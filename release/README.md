@@ -2,7 +2,7 @@
 
 [English](#install) · [中文](#中文说明)
 
-[**Download Naka Sigil v0.9.5 for Chrome**](./naka-sigil-chrome-v0.9.5-h970502.zip)
+[**Download Naka Sigil v0.10.3 for Chrome**](./naka-sigil-chrome-v0.10.3-h971025.zip)
 
 No Node.js or compilation required. Requires Chrome 105 or later.
 
@@ -22,8 +22,8 @@ Replace the files in your existing extension folder with the new extracted files
 
 ## Package details
 
-- Version: **0.9.5**
-- Bundled snapshot: **block 970,502**, not the current chain tip. Manual sync is available; live sync defaults off.
+- Version: **0.10.3**
+- Bundled snapshot: **block 971,025**, not the current chain tip. Live mode is the default while the market, Compare or popup is visible. Fixed block mode pauses automatic updates; enter the official quarterly snapshot height. Saved explicit modes are preserved.
 - SHA-256 checksum: [SHA256SUMS](./SHA256SUMS)
 - Public extension ID: **bcihombccpheaimcgldamaggokpgpidl**
 
@@ -31,7 +31,7 @@ The download is generated from this project's runtime. It contains no browser pr
 
 ## 中文说明
 
-[**下载适用于 Chrome 的 Naka Sigil v0.9.5**](./naka-sigil-chrome-v0.9.5-h970502.zip)
+[**下载适用于 Chrome 的 Naka Sigil v0.10.3**](./naka-sigil-chrome-v0.10.3-h971025.zip)
 
 无需 Node.js 或自行编译。需要 Chrome 105 或更新版本。
 
@@ -51,8 +51,8 @@ The download is generated from this project's runtime. It contains no browser pr
 
 ### 安装包信息
 
-- 版本：**0.9.5**
-- 内置快照：**区块 970,502**，不是当前链上最新高度。支持手动同步；实时同步默认关闭。
+- 版本：**0.10.3**
+- 内置快照：**区块 971,025**，不是当前链上最新高度。默认实时模式，市场、比较页或弹窗可见时自动检查；指定区块模式暂停自动更新，可填写官方季度快照高度。已有明确模式选择会保留。
 - SHA-256 校验文件：[SHA256SUMS](./SHA256SUMS)
 - 公开版扩展 ID：**bcihombccpheaimcgldamaggokpgpidl**
 

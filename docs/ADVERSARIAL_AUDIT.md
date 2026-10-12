@@ -29,7 +29,7 @@ Lookup accepts a non-negative safe integer with an optional `#`, including zero,
 - Schema validation cannot authenticate a malicious but internally consistent API response. No consensus/proof verification or payout engine is implemented.
 - The official quarterly measurement block, rare-trait sale aggregation and numbering convention remain unresolved as documented in RULES_AUDIT.md.
 - A network request already sent cannot be unsent when live sync is disabled; the returned batch is discarded. A fully completed write before disable remains cached but is not the selected source while disabled.
-- Browser/OS termination can interrupt manual sync; the next worker detects the interrupted record. Existing good snapshots remain available.
+- Browser/OS termination can interrupt a fixed-block load; the next worker detects the interrupted record. Existing good snapshots remain available.
 - DOM fixtures exercise Vault placement without connecting a real wallet. Real market layout can change; reconciliation handles the inspected structures and removes out-of-scope annotations.
 - Privacy scanning uses explicit file/field allowlists and known patterns. It is not a proof against arbitrary steganography or future edits.
 
@@ -41,7 +41,7 @@ Block freshness no longer uses `generatedAt` or check time. Optional public head
 
 ## Single-sale simulation (0.8.0)
 
-Individual public listing pairs must exactly reproduce every stored trait floor/count and collection floor/count. Duplicate, missing, malformed and inconsistent offers fail source validation. Legacy snapshots without offers remain valid and disclose that scenarios require a sync. Each model/cache belongs to one selected snapshot. Simulations remove only the selected ID, preserve tied floors, recompute all relevant aggregates and use the existing exact rule engine. Last trait listing, last collection listing, missing floors, number tiers, cap and unchanged input data are tested. All 205 bundled listing scenarios are cross-checked against an independently reconstructed remaining-listing model.
+Individual public listing pairs must exactly reproduce every stored trait floor/count and collection floor/count. Duplicate, missing, malformed and inconsistent offers fail source validation. Legacy snapshots without offers remain valid and disclose that scenarios require a sync. Each model/cache belongs to one selected snapshot. Simulations remove only the selected ID, preserve tied floors, recompute all relevant aggregates and use the existing exact rule engine. Last trait listing, last collection listing, missing floors, number tiers, cap and unchanged input data are tested. All 197 current bundled listing scenarios are cross-checked against an independently reconstructed remaining-listing model.
 
 The scenario is a conditional estimate at its own block, never a trade quote, payout or quarter forecast. Unknown-floor ranges are not confidence intervals. Holding weight changes are expressed in percentage points only for two exact results; ranges are shown as ranges without a guessed point change. Activity does not show purchase badges or panels.
 
@@ -55,7 +55,7 @@ Missing offers never imply unlisted; status is selected-block status, including 
 
 ## Primary controls and instant dismissal (0.9.3)
 
-Live synchronization remains opt-in, but its fixed primary control is visible without expanding settings or scrolling. Query mode combines it with language controls. Manual progress never replaces the live control's state label. Pointer exit dismisses inspection synchronously, even if the originating badge retains focus; there is no timer or fade. Keyboard focus/Enter/Space, touch, Escape and viewport/outside dismissal remain supported. The listed state always explains zero rewards while listing; its one prominent simulated-sale total and smaller before-sale formula reference use the same total-weight metric. Zero number-bonus rows are omitted as redundant; applicable number bonuses remain explicit.
+Live is the new-install default; an explicit saved Fixed preference remains intact. Both mode controls are visible without expanding settings. Fixed pauses automatic checks and discards in-flight live results; Compare has no separate refresh path. Heartbeats from all three visible surfaces prevent Compare-only stale data. Query mode combines modes with language controls. Manual progress never replaces the live control's state label. Pointer exit dismisses inspection synchronously, even if the originating badge retains focus; there is no timer or fade. Keyboard focus/Enter/Space, touch, Escape and viewport/outside dismissal remain supported. The listed state always explains zero rewards while listing; its one prominent simulated-sale total and smaller before-sale formula reference use the same total-weight metric. Zero number-bonus rows are omitted as redundant; applicable number bonuses remain explicit.
 
 ## Concise market context (0.9.4)
 
@@ -66,3 +66,9 @@ Labels use **After sale / 成交后** consistently; the result is the same total
 A decorative stepped pointer and active-badge outline associate each inspection with its precise origin; rank tickets do not displace the normal weight target. Four-side placement uses visible viewport bounds and clipped ancestors. Frame corner clearance is independent of pointer-tip alignment, including partially visible badges. If the weight tile is entirely clipped but a ticket remains visible, the visible badge region is used; a fully clipped origin is dismissed.
 
 The frame never covers its originating badge. When no adjacent side can fit the complete ledger, evidence scrolls inside a bounded surface while the source and primary total remain visible. A pointer hover bridge preserves inspection without adding a close delay. Resizing and SPA changes re-evaluate geometry; stale viewport notifications are ignored when their geometry already matches the positioned panel. The pointer is hidden from assistive technology. Calculation inputs, sale model, block basis and reward limits remain unchanged.
+
+## Comparison selection and Compare refresh removal (0.10.3)
+
+The separate Compare refresh path (button, background message and per-batch verification record) was removed; Compare follows the shared Live / Fixed block mode, so there is one data path to reason about. Adding a number on Compare previously toggled an already-selected NFT off; it now reports the existing selection. A full selection no longer disables add controls without explanation: market and popup controls state the limit and open Compare, and the Compare catalog explains it above the cards. Selection state is derived from one pure function (`compareState`) shared by every surface, and badge markers update in place without rebuilding inspections, so focus and pointer state survive.
+
+The inspection used to sit 12px from its badge, so moving the pointer into it crossed empty space and closed it unless the path went through the stepped pointer. The bubble now shares an edge with the badge (rounded toward it, and above a selected badge's tab, which is part of the badge's hover area), replacing the pointer bridge; the decorative curved tail never intercepts the pointer.

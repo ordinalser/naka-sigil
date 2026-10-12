@@ -21,14 +21,14 @@
   });
   const SESSION_VISIBLE = 'visibleAt'; // chrome.storage.session：最近一次有 ord-dropz 页面可见的时间
 
-  const LIVE_DEFAULT = false;            // 默认关闭实时同步
+  const LIVE_DEFAULT = true;            // New installs follow live blocks; explicit saved fixed mode is preserved.
   const CHECK_MS = 60 * 1000;           // 每分钟最多检查一次 /pulse
   const HEARTBEAT_MS = 45 * 1000;       // 页面可见时每 45 秒报一次心跳
   const VISIBLE_MS = 100 * 1000;        // 100 秒内收到过心跳才算「有页面在看」（容得下一次心跳延迟）
   const BACKOFF_MAX_MIN = 30;
 
-  /** Invalid stored preferences fail closed; only an explicit boolean true opts in. */
-  function resolveLive(stored) { return stored === true; }
+  /** Missing preferences use the live default; malformed values fall back to fixed mode. */
+  function resolveLive(stored) { return stored === undefined ? LIVE_DEFAULT : stored === true; }
 
   /** Validate persisted data before any consumer dereferences it. Storage is not a trust boundary. */
   function isSnapshot(s, format = 1) {

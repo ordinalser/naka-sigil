@@ -8,12 +8,14 @@ const { execFileSync } = require('node:child_process');
 const downloads = require('./package-chrome.js');
 const ROOT = path.join(__dirname, '..');
 const files = [
+  'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
   '.gitignore', 'LICENSE', 'README.md', 'package.json',
   'docs/DESIGN.md', 'docs/ADVERSARIAL_AUDIT.md', 'docs/RULES_AUDIT.md', 'docs/PRIVACY.md', 'docs/VALIDATION.md',
   'scripts/build.js', 'scripts/snapshot.js', 'scripts/gen-icons.js', 'scripts/privacy.js', 'scripts/release.js', 'scripts/package-chrome.js',
   'test/purchase.test.js', 'test/lookup.test.js', 'test/worker.test.js', 'test/pixel.test.js', 'test/i18n.test.js', 'test/rules.test.js', 'test/snapshot.test.js', 'test/source.test.js', 'test/tier.test.js',
 ];
 const source = [
+  'lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
   'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'data/snapshot.js', 'lib/rules.js', 'lib/snapshot-core.js', 'lib/source.js', 'lib/i18n.js', 'lib/tier.js',
   'content/content.js', 'content/content.css', 'popup/popup.html', 'popup/popup.css', 'popup/popup.js',
   'sw/sync-sw.js', '_locales/en/messages.json', '_locales/zh_CN/messages.json',
@@ -81,6 +83,7 @@ assert(fs.readFileSync(path.join(ROOT,'release/README.md'),'utf8')===downloads.r
 assert(fs.readFileSync(path.join(ROOT,'release/SHA256SUMS'),'utf8')===downloads.checksum(downloadBytes), 'Download checksum mismatch');
 assert(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'))).name === 'naka-sigil', 'Unexpected package identity');
 validateSnapshot();
+assert(fs.readFileSync(path.join(ROOT,'demo/naka-sigil-demo.html'),'utf8')===require('./package-demo.js').render(), 'Portable demo differs from shared runtime');
 // Canonical bytes reject PNG metadata, extra chunks and hidden alternate pixel data.
 const { render, encodePNG } = require('./gen-icons.js');
 for (const size of [16,32,48,128]) {
@@ -101,7 +104,7 @@ if (fs.existsSync(manifestPath)) {
   assert(Object.keys(m).sort().join()===manifestKeys.sort().join(), 'Unexpected manifest fields');
   assert(m.manifest_version===3 && m.minimum_chrome_version==='105' && m.default_locale==='en' && m.name==='__MSG_extName__' && m.description==='__MSG_extDesc__' && m.version===require('../package.json').version, 'Unexpected manifest metadata');
   assert(JSON.stringify(m.background)===JSON.stringify({service_worker:'sw/sync-sw.js'}), 'Unexpected background entry');
-  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
+  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','lib/explore.js','lib/explore-ui.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
   assert(JSON.stringify(m.content_scripts)===JSON.stringify(scripts), 'Unexpected content script configuration');
 
   assert(JSON.stringify(m.permissions)===JSON.stringify(['storage','alarms']), 'Unexpected permissions');
