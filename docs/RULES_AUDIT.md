@@ -1,68 +1,85 @@
 # SHNAKAS rules audit
 
-Review date: 2026-10-10. Scope: formula, data provenance, displayed meaning, source selection and privacy. This is an implementation review, not certification of quarterly rewards.
+Reviewed 2026-10-15 for v0.11.0. Current evidence corrects the single-sale proxy. Earlier quarterly wording remains unresolved; no quarterly snapshot heights have been confirmed. A weight is a block-specific formula, not an accrued reward balance or a claim-eligibility certificate.
 
-## Evidence
+## Primary evidence
 
-1. [Original weight announcement and graphic](https://x.com/Ob1_Wan_Satoshi/status/2108018318141755694), retrieved through X search with image understanding. A focused follow-up confirmed the delisting cooldown is in the same announcement. No explicit correction to the numerical thresholds was found in the returned author posts; search completeness cannot be guaranteed.
-2. [Live market](https://ord-dropz.xyz/secondary/collections/shielded-nakas-mupv6wja): collection header, listing grid and Activity DOM inspected directly. Item identity comes from inscription IDs, not title numbers.
-3. [Public collection API](https://shielded-mint-server-production.up.railway.app/api/shielded/collection): `global.start = 0`, range ending 3332, collection ID `a1e7879252940f5e`. Its referenced [collection rules inscription](https://ordinals.com/content/896803ff66162b1956ccaa3a15723e9c3acd3cbfd81acadbc94812c3ad4fb3cci0) is identified by the API; the API-returned `rules` object concerns minting/collection parameters and does not contain the SHNAKAS quarterly weight formula. This is not proof of a reward snapshot.
-4. [Official zero-listing supplement](https://x.com/Ob1_Wan_Satoshi/status/2108032971617997133), rechecked on 2026-10-10 through X search with image understanding: traits with 20+ pieces and zero listings receive +100%; smaller traits use last sales. The earlier audit missed this reply and incorrectly treated every zero-listed trait as an unresolved range.
-5. Public `/state` retrieved for historical reconstruction. It is an indexer response, not an independently verified consensus proof.
+- [On-chain reward programme](https://ordinals.com/content/30adf5233d1a0eec4d3c836f195e3966acf634cf96634444358ccfe8c7c961a9i0): start971700, weekBlocks1008, weeks78, base4/cap16 in25%units; three-sale parameter for rare zero-listed traits. Inscribed programme indexed at971338.
+- [Official current weights](https://shielded-api.ord-dropz.xyz/api/shielded/rewards/weights/now): per-piece percentage/rate and per-trait source/units/canonical supply, with a height and collection floor.
+- [Official wallet](https://ord-dropz.xyz/wallet) and its publicly served engine: per-block weighting; listed pieces stop accruing; completed held weeks remain claimable even after a sale; delisting resumes at a reward-week boundary. Private claim pays the base; revealing a piece enables its full weight. Claims pay network fees without consuming relay credits.
+- [Developer documentation](https://ord-dropz.xyz/developers), [public protocol source](https://github.com/Fl1ntstowned/shielded-ordinals) and its API docs: public listing tickets; private sends hide asset/balance details. The inspected main revision3cdbdfd predates reward implementation, so it does not resolve the three-sale aggregation.
+- The [original announcement](https://x.com/Ob1_Wan_Satoshi/status/2108018318141755694) and [zero-listing reply](https://x.com/Ob1_Wan_Satoshi/status/2108032971617997133) remain historical sources. Their quarterly timing must not override the current chain/API/wallet evidence.
 
-## Formula: confirmed vs inferred
+## Findings and corrections
 
-| Area | Result | Implementation |
-| --- | --- | --- |
-| Base and cap | Announcement specifies 100% base, 400% total cap | Bound after summing; bonus = total minus base |
-| Trait thresholds | 1.25 / 1.5 / 2 / 3× yield 25 / 50 / 75 / 100% | Descending tiers; `BigInt` cross-products; equality qualifies |
-| Trait stacking | Each trait counts | Sum distinct art traits; reject duplicates |
-| Number tiers | Sub 10 / 100 / 1K; highest tier only | `<10`, `<100`, `<1000`; first qualifying tier |
-| Number convention | Announcement does not explicitly resolve title vs Shielded asset number | Match market `global.start + assetId`; label Shielded # and disclose assumption |
-| Quarter timing | Measured at quarter start; exact block unspecified | `measureHeight = null`; no inferred official measurement height |
-| Reward start | Announcement gives block 971700 | Keep `startBlock`; never derive snapshot finality from it |
-| Listed / delisted | Listed pieces earn zero; eligibility resumes at the next weekly boundary after delisting | Explicit selected-block listing status and zero-reward strip; holding formula is separate from eligibility/payout |
-| Zero-listed trait | Supplement: ≥20 pieces +100%; smaller traits use last sales | Catalog count; most recent confirmed trait sale proxy; missing/ambiguous sale data alone retain theoretical bounds |
-| Historical trade row | No historical calculation is performed per sale | Activity explicitly uses the currently synced block |
+| Area | Current rule / implementation |
+| --- | --- |
+| Base, cap, trait thresholds | 100% base;400% cap;1.25/1.5/2/3 inclusive ratios add25/50/75/100%; integer cross-products |
+| Number bonus | Shielded global.start +assetId; strictly below10/100/1000 adds200/100/50%; highest tier only |
+| Timing | Block-formula previews;1,008-block reward weeks; quarterly snapshot heights unconfirmed |
+| Common zero-listed traits | Canonical programme supply≥20 adds100% |
+| Rare zero-listed traits | Current same-block official units replace the incorrect most-recent-single-sale proxy |
+| Hypothetical / historical rare traits | Median of the three most recent confirmed sales (two sales: their mean; one: that sale; none: 0%) against the collection floor; a hypothetical sale is the newest. Agrees with every official sales/none-sourced trait at971546 and971547. Same-block order ambiguity keeps per-trait bounds; no sale history keeps0–100% |
+| Weekly allocation | Official preview split: poolPerWeek266,640 SHNAKAS ÷ all3,333 catalog pieces' units (100% =4 units) × my units. Not-yet-minted catalog pieces are included; matches official K and v |
+| Listing / eligibility | Formula remains distinct from rewards; listing stops accrual, delisting waits for the next reward week; completed held weeks remain claimable |
+| Private / revealed claim | Private claim pays base100%; full weight requires revealing the piece. Weight is not a payout balance |
+| Relay credits | Public current-listing tickets only, separate from weight. Unknown unlisted balance is not inferred |
+| Activity | Selected-block formula, not the weight at each historical sale |
 
-## Findings fixed
+At block **971484**, independently reconstructed **214** active listings and **150000sats** floor match the official endpoint. Before correction,60 of3327 minted catalog pieces differed, involving16 rare zero-listed trait branches. After attaching a validated same-height public basis, **3327/3327** totals agree. The official programme contains3333 catalog entries; canonical trait supply includes the six not yet minted in this snapshot. Per-piece details requested by the user are retained only in private local audit materials.
 
-- **False quarterly finality:** the previous implementation stopped its estimate warning at an inferred block 971699. Every snapshot now retains a provisional/unverified-quarter notice, including much later heights. Manual sync is no longer called “Quarterly sync.”
-- **Silent market drift:** live sync now defaults off; opting in remains possible. The source and actual data height update together.
-- **Bonus vs total confusion:** listed grid/list badges lead with simulated-sale total holding weight; a smaller before-sale formula total remains in inspections; all other primary values also show total weight including the base. Bonuses are confined to the labeled calculation breakdown. Detail comparisons never mix a bonus with a total.
-- **Listing/formula ambiguity:** every inspection marks listed/unlisted/unknown at the selected block. Listed nonzero totals are explicitly holding-formula estimates, with a prominent no-rewards status; the primary total and its smaller before-sale reference retain the same metric. Unlisted does not certify eligibility, and legacy snapshots lacking individual offers cannot establish unlisted status. Activity status is synced-block status, not historical trade-time status.
-- **Earnings eligibility omitted:** the delisting weekly-boundary condition is now displayed with the zero-income listing condition. Formula output is not labeled current earnings.
-- **Missed zero-listing supplement (fixed in 0.9.2):** common zero-listed traits now receive +100%; rare traits use confirmed last-sale data. A hypothetical single sale supplies its own sale price, so removing its last listing is calculable. Only missing/ambiguous sale evidence retains a theoretical interval. Catalog supply and single-most-recent-sale aggregation are implementation assumptions; the latter is not explicitly specified by the short reply.
-- **Potential duplicate counting:** duplicate art attributes and reintroduced `Shielded #` art traits are rejected. Metadata containing the internal trait-key separator is rejected.
-- **Missing Activity coverage:** use row link inscription IDs, including unloaded thumbnails; observe changed links to handle row reuse. A persistent notice distinguishes snapshot estimates from historical sale-time weights.
+## Validation contract
 
-Additional hardening and adversarial cases are documented in [ADVERSARIAL_AUDIT.md](ADVERSARIAL_AUDIT.md).
-
-## Data checks
-
-Using the public state response whose `lastHeight` was **970646**, reconstruction at the bundled height **970502** matched:
-
-| Check | Bundled | Reconstructed |
-| --- | --- | --- |
-| Effective listings | 205 | 205 |
-| Collection floor | 110000 sats | 110000 sats |
-| All trait floors and listing counts | — | Exact equality |
-| All item numbers and trait mappings | 3327 pieces | Exact equality |
-
-This establishes consistency for that tested point. It does not prove every historic price is immutable, quarterly measurement timing, current ownership, reward eligibility, or final payouts. The raw event log was used locally for verification and is not bundled.
-
-Unit tests cover thresholds exactly on and one sat below each boundary, non-divisible ratios, number boundaries 0/9/10/99/100/999/1000, trait sums, cap overflow, absent floors, duplicate traits, source priority, default settings, all-height provisional notices, historical listing close boundaries, metadata identity checks, live read races, request failures and backoff.
+The official basis is accepted only if height/floor/traits agree, sources and units are well formed, canonical supplies cover known items, and every known piece total matches independently applied thresholds, number bonus and cap. A successful inconsistent response fails synchronization and preserves prior data. An unavailable endpoint keeps independently valid floors with explicit rare-trait uncertainty. Fixed historical blocks never borrow current-tip units. No collection or wallet query is added when selecting, filtering or looking up a number.
 
 ## Remaining limits
 
-- Exact official quarter measurement heights and the exact sale aggregation used for small zero-listed traits remain unresolved. Numbering convention is the market-compatible implementation assumption.
-- Historical price accuracy depends on immutable prices or complete repricing history. No unsupported “exact historical official weight” claim is made.
-- APIs can lag, reorganize or change schema. Mismatches fail closed and preserve previous data; snapshots are not independently verified against Bitcoin.
-- The collection catalog uses the available mapping and cannot establish historical mint availability or ownership.
-- The extension has no weekly eligibility state machine, payout distribution, or verified official-quarter data import. Until authoritative data is implemented, it never labels its estimates final.
+The immutable programme specifies three sales but no published aggregation. The median rule is inferred from complete agreement with official data at two blocks while every tested alternative misses at least one trait; it is evidence, not a published specification. A same-block order of tied sales is not public, so such windows keep bounds. Weekly allocation uses the official preview split; eligibility waiting, listing during the week, private claims and the pool actually distributed are not modelled. Historical ask reconstruction still depends on event completeness and immutable prices. API state is not an independently replayed Bitcoin consensus proof. No wallet ownership, private balance, accrued rewards, partial-week retention or individual claim eligibility is inferred by the extension.
 
-## Listing status and launch (0.9.2)
+## 中文
 
-A nonzero listed holding-formula score is never active reward weight. Query/inspection status explicitly says listed earns no rewards; unlisted does not certify eligibility. Market cards lead with simulated-sale holding weight, while the inspection retains a smaller before-sale formula total and inline changed-input evidence with the same metric. Activity remains synced-block holding formula, without a sale preview. Legacy snapshots without offers show unknown status.
+本轮依据当前链上规则和官方钱包／API核对区块公式预览，奖励周为1,008块；季度快照高度未确认；挂单停止新增，撤单等待下一奖励周，此前完整持有周仍可领取。隐私领取为基础100%，全部权重需展示藏品领取。
 
-971700 is the rewards start, not a verified quarterly measurement or buying cutoff. Planning uses selected header time plus remaining blocks ×600 seconds, rounded to an approximate UTC date. It never reads a wall clock as chain height or certifies eligibility before/after that date. Official delisting cooldown is not silently extended to new buyers.
+同区块971484的214笔挂单、150000聪地板已独立复原；旧单笔成交代理导致60枚差异，改为经过完整校验的同高度官方特征依据后3327枚全部一致。小型零挂单特征在假设成交、撤单或历史区块中，按最近三笔成交价的中位数（两笔取平均、一笔取该笔、无成交为0%）计算；该口径在971546与971547两个区块与官方全部按成交计分的特征一致，但官方未公开说明。同一区块成交顺序不确定时保留该特征的上下界。中继额度是随藏品转移的预付中继次数，和权重、奖励余额分开；只显示公开当前挂单余额，不推断未挂单隐私余额。用户指定持仓及截图不进入开源目录。
+
+
+## Listing-removal and real-trade audit — v0.11.0
+
+The official current-weight endpoint reports formula percentages for both listed and unlisted pieces; it does not make listed pieces eligible for rewards. At971484 the3327 matches comprise214 listed and3113 unlisted pieces. A second independently reconstructed capture at971509 matches all3327 known totals, including198 listed and3129 unlisted pieces.
+
+Sale and cancellation both remove the selected ask and can change collection/trait floors. A sale adds a sale record; cancellation does not. They are separate action models and must not share invented sale evidence or imply identical rare-trait results. Missing authoritative rare zero-listing aggregation remains a range. Owned standalone wallet cards/detail artwork show After delisting and Listed formula; wallet market cards remain After sale. This matches public component structure without reading wallet labels, balances, providers or storage. A structure change falls back to the ordinary market view rather than guessing ownership. Delisting weight is not immediate rewards: accrual resumes at the next reward week.
+
+Real-event replay reconstructs the prior block's active asks and removes only the sold listing. It compares against separately captured official weights while checking relevant floors and individual trait contributions. **#1035 sold in971484:125% predicted,125% official at the same block**, with all relevant inputs equal after accounting for the other block events. A second same-input comparison is #2270:200% predicted at971461,200% official at971484; its observation is later, not an immediate post-sale API sample. Recent #1028 (971508) and #2529 (971505) predict300% and250%, matching official971509 totals and each trait contribution, but collection floors changed meanwhile; these are supporting observations, not isolated same-block proofs. Samples with changed inputs or merely overlapping ranges are not counted as exact validation. The public endpoint supplies current weights; the attempted numeric suffix reports week sums, not arbitrary historical block weights. No exact three-sale aggregation is inferred from coincidental matches.
+
+中文：全目录核对包含已挂单与未挂单的当前公式值，未证明挂单有收益。成交／撤单都移除挂单，但只有成交新增成交记录；自己的钱包卡片显示撤单后，钱包市场保持成交后。真实交易验证严格区分同区块、输入相同的核对与稍后观察，不能用之后地板变化造成的差异判定算法错误，也不能把范围包含实际值算作精确验证。小型零挂单特征仍有未公开的聚合细节，保持范围。
+
+
+## v0.11.0 — programme phases, weekly waiting and historical lookup
+
+Official X search on2026-10-15 found the original quarterly re-reading wording in the October8 announcement, but no confirmed quarterly snapshot heights. Current wallet text and block-formula previews do not alone settle whether future quarterly settlement exists. The plugin therefore supplies **no invented quarter selectors**. Confirmed **reward-week starts are not weight snapshots**.
+
+The immutable programme sets start971700, weekBlocks1008, weeks78 and claimUntil1102740. Independent extraction of the deployed client's weekAt / firstWeekOf / lastClaimableWeek matches316 boundary cases: first counted block971701; week1 spans971701–972708; week2 and the first claim boundary start972709. Final counted block1050324; all78weeks complete at1050325. Header-time plus600seconds/block is only an ETA, never a fixed wall-clock start.
+
+Public sales/cancellations can establish a minimum waiting boundary for a new holding record. A same-week public exit and current unlisted status mean no accrual that week; the earliest next boundary is shown. At the final reward week no later eligible week is promised. No known exit means weekly eligibility is unverified: private transfers and ownership cannot be inferred. Listed state remains a selected-block fact, not a fabricated weekly payout balance. Historical loading retains only the latest public exit ID/height/kind. Live reads listing records from /state on each new block for sale history (see the v0.11.0 sale-history section) and still never infers absence of private transfers.
+
+At block reuses the fixed-block dialog: a number and height are entered together. The result prioritizes the actual block formula, not the after-sale estimate. Confirmation switches the shared mode/data and query atomically; cancel/failure preserves the previous mode and result. Reached reward-week shortcuts are newest first; future points are disabled and include remaining blocks/ETA. A source's current height/mode remains visible across popup, market, wallet and Compare.
+
+中文：季度快照高度未确认，不把周界当季度快照。启动锚点971700，首个计奖971701；每周1008块，第一周到972708，首次领取及第二周边界972709。按当前官方客户端函数核对316个边界案例；本轮重新下载的新客户端函数虽更名，周界算法仍一致。当前挂单显示本区块不累计；公开事件证明同周等待时才显示本周不累计及最早边界。未挂单不自动证明周资格，最后一周不会承诺不存在的下周收益。历史查询一次输入编号与区块，确认才同步切换指定模式；失败或取消保持原状。
+
+## v0.11.0 — recent-sales rule, sale history and weekly allocation basis
+
+**Rare zero-listed traits.** For every trait the official current-weight endpoint marks as `sales` or `none`, the three most recent confirmed sales (from public `/state` listing records) were compared with the official bonus. At971546 all83 sales-sourced traits agree with the median; mean, minimum, latest-only and maximum miss1,1,8 and9 respectively. Traits with two sales agree with the mean of the two (for example599,000 and150,000 sats give374,500, a75% tier, the official value); one sale uses that sale; all9 zero-sale traits are0%. At the bundled block971547 all92 sales/none traits agree again; this is a fixed regression test. Any aggregation within the three prices would lie between their lowest and highest tier; that bound held for all77 traits with three sales at971546.
+
+**Sale history.** `/state` SOLD records carry `soldHeight`; it equals the buying note height for all2,232 sales, and `claimHeight` equals the claim note height for all1,554 cancellations. Snapshots keep each trait's three newest sales plus any tied with the third in the same block. The official market page itself loads `/state` and `/listings` on each new block; Live does the same once per new block (about2.6 MB, listing records only, no notes). A different height or a failed read leaves the history absent, so affected hypothetical branches stay ranges instead of going stale.
+
+**Allocation basis.** The endpoint reports `K` (the sum of every catalog piece's units), `v` (base units per unit per block) and each piece's `perBlock = units × v`; `v = floor(poolPerWeek ÷1008 ÷ K)`. The plugin's units for the3,327 minted pieces equal the official per-piece units exactly; the other50 units at971546 belong to six catalog pieces not yet minted (1612, 1613, 2816, 2817, 2881, 2889), whose traits come from the programme's piece table. Including them, the plugin reproduces K =28,881 and v =915,909 at971546 and971547. Weekly allocation = my units ÷ K ×266,640 SHNAKAS. Only holdings not listed at the block count. A purchase or delisting re-evaluates my holdings and K together.
+
+**Effect.** In the bundled block, after-sale and after-delisting results for all183 listings are exact numbers; previously rare-trait branches showed ranges for about a third of listings.
+
+中文：v0.11.0 用公开 `/state` 成交记录核对官方按成交计分的稀有特征：971546 区块 83 个全部与“最近三笔成交价中位数”一致（两笔取平均、一笔取该笔、零成交为0%），平均数、最低价、最近一笔、最高价分别有 1、1、8、9 个不符；971547 区块 92 个按成交／零成交计分的特征再次全部一致，并写入回归测试。成交高度直接取自 `soldHeight`，与 notes 推算结果 2,232 笔全部一致。分配口径按官方预览：全部 3,333 枚的权重单位平分每周 266,640 SHNAKAS；插件计入尚未铸造的 6 枚后，K 与 v 与官方完全一致。内置区块 183 个挂单的成交后和撤单后结果全部为确定值。
+
+## v0.11.0 — exact weekly figure
+
+The weights endpoint reports `v` as an integer: v = floor(poolPerWeek ÷ 1008 ÷ K), and `perBlock = units × v`. Weekly allocation now uses exactly that integer rate (units × v × 1008 ÷ 10⁸) instead of pool × units ÷ K, which differed by up to 0.001 SHNAKAS. At block 971,553 the plugin's K = 28,947 equals the official K, v = 913,821 equals the official v, and every 150% piece (6 units) gives 5,482,926 per block, the official `perBlock` for such pieces. A live snapshot whose sale history failed to load, or was written by an older version, is rebuilt on the next check at the same height instead of keeping ranges for the whole block.
+
+中文：官方接口的 `v` 是整数，v = floor(每周奖池 ÷ 1008 ÷ K)，每枚 `perBlock = 单位 × v`。每周分配改为按这个整数速率计算（单位 × v × 1008 ÷ 10⁸），不再用 奖池 × 单位 ÷ K（两者最多相差 0.001 SHNAKAS）。971,553 区块插件 K = 28,947、v = 913,821 与官方一致，150% 的藏品（6 单位）每块 5,482,926，与官方对这类藏品给出的 `perBlock` 相同。实时快照若成交记录加载失败或由旧版本写入，同一区块下次检查时会重新生成，不再整块保留范围。

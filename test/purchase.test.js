@@ -25,11 +25,11 @@ test('Removing the unique collection floor recalculates both floors before apply
   assert.equal(x.result.traits[0].floor,150);assert.equal(x.result.lo.weight,100); // 150/125=1.2, not old 1.5
   assert.equal(x.result.hi.weight,100);assert.equal(x.premium,'0.0%');assert.equal(JSON.stringify(s),before);
 });
-test('Trait floor can rise after sale; rare zero-listed traits use the simulated sale price',()=>{
+test('Trait floor can rise after sale; one simulated sale cannot determine the three-sale aggregation',()=>{
   const s=fixture([150,200,100]);let x=P.create(s).get(id(0));
   assert.equal(x.afterFloor,100);assert.equal(x.result.traits[0].floor,200);assert.equal(x.result.lo.weight,175);
   x=P.create(s).get(id(2));assert.equal(x.afterFloor,150);assert.equal(x.result.traits[0].floor,null);
-  assert.equal(x.result.lo.weight,100);assert.equal(x.result.hi.weight,100);assert.equal(x.result.unmeasured,0);assert.equal(x.result.traits[0].method,'last-sale');
+  assert.equal(x.result.lo.weight,100);assert.equal(x.result.hi.weight,200);assert.equal(x.result.unmeasured,1);assert.equal(x.result.traits[0].method,'missing-sale');
 });
 test('Tied collection/trait floors retain the remaining listing and include exact equality thresholds',()=>{
   const s=fixture([125,125,100]);const x=P.create(s).get(id(0));
@@ -38,7 +38,7 @@ test('Tied collection/trait floors retain the remaining listing and include exac
 });
 test('Unknown traits retain cap and highest-only number bonus; unavailable/unlisted/no-floor are distinct',()=>{
   const s=fixture([100,200],[[0,1],[0]],[0,1000]);const x=P.create(s).get(id(0));
-  assert.equal(x.result.lo.weight,300);assert.equal(x.result.hi.weight,300);assert.equal(x.result.number.pct,200);
+  assert.equal(x.result.lo.weight,300);assert.equal(x.result.hi.weight,400);assert.equal(x.result.number.pct,200);
   assert.equal(P.create({...s,offers:undefined}).get(id(0)).state,'unavailable');
   assert.equal(P.create(s).get('missing').state,'unlisted');
   assert.equal(P.create(fixture([100],[[0]],[0])).get(id(0)).state,'no-floor');
@@ -61,7 +61,7 @@ test('All bundled purchase scenarios match independently rebuilt remaining-listi
   for(const [id,price]of s.offers) {
     const remaining=s.offers.filter(([other])=>other!==id),floor=Math.min(...remaining.map(([,p])=>p));
     const [number,...indexes]=s.items[id];
-    const traits=indexes.map(idx=>{const [type,value]=s.traits[idx],prices=remaining.filter(([other])=>s.items[other].slice(1).includes(idx)).map(([,p])=>p);return {type,value,floor:prices.length?Math.min(...prices):null,listed:prices.length,supply:Object.values(s.items).filter(row=>row.slice(1).includes(idx)).length,lastSale:price};});
+    const traits=indexes.map(idx=>{const [type,value]=s.traits[idx],prices=remaining.filter(([other])=>s.items[other].slice(1).includes(idx)).map(([,p])=>p);return {type,value,floor:prices.length?Math.min(...prices):null,listed:prices.length,supply:[...Object.values(s.items),...(s.pending??[])].filter(row=>row.slice(1).includes(idx)).length,saleHistory:s.saleHistory.find(([i])=>i===idx)?.[1]??[],pendingSale:price};});
     const expected=R.evaluate({number,traits},floor),actual=model.get(id);
     assert.equal(actual.price,price);assert.equal(actual.afterFloor,floor);assert.equal(R.formatWeight(actual.result),R.formatWeight(expected));
     assert.equal(model.get(id),actual,'cache is tied to one snapshot model');
@@ -82,4 +82,28 @@ test('Trait changes distinguish bonus direction, lost floors and market changes 
 test('Number chips show only the highest qualifying tier, including zero and strict upper boundaries',()=>{
   for(const [number,label]of [[0,'Sub10'],[9,'Sub10'],[10,'Sub100'],[99,'Sub100'],[100,'Sub1K'],[999,'Sub1K']])assert.equal(P.numberTag(number).label,label);
   assert.equal(P.numberTag(1000),null);
+});
+
+
+test('Relay credits preserve known zero, never infer an unlisted balance or count as weight',()=>{
+  const s=fixture([100,200]);s.credits=[[id(0),0],[id(1),3]];
+  assert.equal(P.relayCredits(s,id(0)),0);assert.equal(P.create(s).get(id(1)).credits,3);
+  assert.equal(P.relayCredits(s,id(2)),null);assert.equal(P.relayCredits({...s,credits:undefined},id(0)),null);
+  assert.equal(R.formatWeight(P.create(s).get(id(1)).result),R.formatWeight(P.create({...s,credits:undefined}).get(id(1)).result));
+});
+
+
+test('Cancellation removes only an owned listing without inventing a sale or reusing rare official units',()=>{
+  const s=fixture([100,200],[[0],[1],...Array.from({length:19},()=>[0])]);
+  const cancel=P.create(s,{action:'cancel'}),sale=P.create(s),a=cancel.get(id(0)),b=sale.get(id(0));
+  assert.equal(a.action,'cancel');assert.equal(b.action,'sale');
+  assert.equal(a.before.lo.weight,100);assert.equal(a.result.lo.weight,200);
+  assert.equal(a.afterFloor,200);assert.equal(a.result.traits[0].method,'held');
+  assert.equal(a.result.traits[0].pendingSale,undefined,'delisting is not a trade');
+  assert.equal(b.result.traits[0].pendingSale,100);
+  assert.equal(cancel.get(id(0)),a);assert.notEqual(a,b,'distinct action caches');
+  const rare=fixture([100,200],[[0],[1]]);rare.rewardBasis={height:100,traits:[[0,0,'ask',1],[1,0,'ask',1]]};
+  const r=P.create(rare,{action:'cancel'}).get(id(0));assert.equal(r.result.exact,false);assert.equal(r.result.traits[0].officialPct,undefined);assert.equal(r.result.traits[0].pendingSale,undefined);
+  assert.equal(P.create(fixture([100],[[0]]),{action:'cancel'}).get(id(0)).state,'no-floor');
+  assert.throws(()=>P.create(s,{action:'unknown'}));
 });

@@ -60,10 +60,45 @@
         used.add(i);
       }
     }
-    if(s.sales!==undefined) {
-      if(!Array.isArray(s.sales)||s.sales.length>s.traits.length)return false;
+    // The former single-sale field is a different rule basis; such data is replaced by a fresh sync.
+    if(s.sales!==undefined)return false;
+    if(s.saleHistory!==undefined) {
+      if(!Array.isArray(s.saleHistory)||s.saleHistory.length>s.traits.length)return false;
       const seen=new Set();
-      for(const sale of s.sales){if(!Array.isArray(sale)||sale.length!==3||!uint(sale[0])||sale[0]>=s.traits.length||seen.has(sale[0])||!uint(sale[1])||sale[1]===0||!uint(sale[2])||sale[2]>h.height)return false;seen.add(sale[0]);}
+      for(const entry of s.saleHistory){
+        if(!Array.isArray(entry)||entry.length!==2||!uint(entry[0])||entry[0]>=s.traits.length||seen.has(entry[0])||!Array.isArray(entry[1])||!entry[1].length||entry[1].length>20)return false;
+        seen.add(entry[0]);let prev=Infinity;
+        for(const sale of entry[1]){if(!Array.isArray(sale)||sale.length!==2||!uint(sale[0])||sale[0]===0||!uint(sale[1])||sale[1]>h.height||sale[1]>prev)return false;prev=sale[1];}
+        // Beyond three, only sales tied with the third (same block) may remain.
+        if(entry[1].length>3&&entry[1].some(([,height])=>height<entry[1][2][1]))return false;
+      }
+    }
+    if(s.pending!==undefined) {
+      if(!Array.isArray(s.pending)||!s.pending.length||s.pending.length+keys.length>10000)return false;
+      for(const row of s.pending){
+        if(!Array.isArray(row)||row.length<2||!uint(row[0])||row[0]<c.numberStart||numbers.has(row[0]))return false;
+        numbers.add(row[0]);const used=new Set();
+        for(const i of row.slice(1)){if(!uint(i)||i>=s.traits.length||used.has(i))return false;used.add(i);}
+      }
+    }
+    if(s.rewardBasis!==undefined) {
+      const b=s.rewardBasis;
+      if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).sort().join()!=='height,traits'||b.height!==h.height||!Array.isArray(b.traits)||b.traits.length!==s.traits.length)return false;
+      const counts=new Array(s.traits.length).fill(0);for(const row of Object.values(s.items))for(const idx of row.slice(1))counts[idx]++;
+      const seen=new Set();for(const row of b.traits){if(!Array.isArray(row)||row.length!==4)return false;const[idx,pct,source,supply]=row;
+        if(!uint(idx)||idx>=s.traits.length||seen.has(idx)||![0,25,50,75,100].includes(pct)||!['ask','sales','zeroListed','none'].includes(source)||!uint(supply)||supply<counts[idx]||supply>10000)return false;
+        const floor=s.traits[idx][2];if(floor!==null?source!=='ask':source==='ask'||source==='zeroListed'&&(supply<20||pct!==100)||['sales','none'].includes(source)&&supply>=20||source==='none'&&pct!==0)return false;
+        seen.add(idx);
+      }
+    }
+    if(s.rewardEvents!==undefined){
+      if(!Array.isArray(s.rewardEvents)||s.rewardEvents.length>Object.keys(s.items).length)return false;
+      const seen=new Set();for(const e of s.rewardEvents){if(!Array.isArray(e)||e.length!==3||!Object.hasOwn(s.items,e[0])||seen.has(e[0])||!uint(e[1])||e[1]>h.height||!['sale','cancel','exit'].includes(e[2]))return false;seen.add(e[0]);}
+    }
+    if(s.credits!==undefined){
+      if(!Array.isArray(s.credits)||!Array.isArray(s.offers)||s.credits.length>s.offers.length)return false;
+      const listed=new Set(s.offers.filter(Array.isArray).map(o=>o[0])),seen=new Set();
+      for(const credit of s.credits){if(!Array.isArray(credit)||credit.length!==2||!listed.has(credit[0])||seen.has(credit[0])||!uint(credit[1]))return false;seen.add(credit[0]);}
     }
     if (s.offers !== undefined) {
       if(!Array.isArray(s.offers) || s.offers.length !== h.listings) return false;

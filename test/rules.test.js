@@ -2,16 +2,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { RULES, MAX_TRAIT_PCT, traitTier, numberTier, evaluate, formatBonus, formatWeight } = require('../src/lib/rules.js');
-test('Official zero-listing supplement: 20 items get +100%, 19 use last sale, and no sale retains uncertainty',()=>{
+test('Zero-listed common traits get 100%; rare traits require same-block official basis instead of one sale',()=>{
   const t={type:'Hair',value:'X',floor:null,listed:0};
   const calc=x=>evaluate({number:1000,traits:[{...t,...x}]},100);
   assert.equal(calc({supply:20}).lo.weight,200);assert.equal(calc({supply:20,lastSale:1}).traits[0].method,'held');
-  assert.equal(calc({supply:19,lastSale:125}).lo.weight,125);
+  assert.equal(calc({supply:19,lastSale:125}).exact,false,'a single sale is not the current three-sale rule');
+  assert.equal(calc({supply:19,officialPct:25,officialSource:'sales'}).lo.weight,125);
+  assert.equal(calc({supply:19,officialPct:0,officialSource:'none'}).lo.weight,100);
   assert.equal(calc({supply:19,lastSale:124}).lo.weight,100);
-  assert.equal(calc({supply:1,lastSale:300}).lo.weight,200);
+  assert.equal(calc({supply:1,lastSale:300}).hi.weight,200);
+  assert.equal(calc({supply:1,officialPct:100,officialSource:'sales'}).lo.weight,200);
   assert.equal(calc({supply:19}).exact,false);assert.equal(calc({supply:19}).traits[0].method,'missing-sale');
   assert.equal(calc({supply:20,floor:100,listed:1}).lo.weight,100,'active floor takes priority over supply');
-  assert.throws(()=>calc({supply:-1}));assert.throws(()=>calc({supply:19,lastSale:0}));
+  assert.throws(()=>calc({supply:-1}));assert.throws(()=>calc({supply:19,officialPct:12,officialSource:'sales'}));
 });
 test('Reward-start planning uses the selected block, not the wall clock or an invented measurement height',()=>{
   const R=require('../src/lib/rules.js');
@@ -124,7 +127,8 @@ test('规则常量与推文一致', () => {
   assert.equal(RULES.basePct, 100);
   assert.equal(RULES.capPct, 400);
   assert.equal(RULES.startBlock, 971700);
-  assert.equal(RULES.measureHeight, null); // 官方未公布确切季度测量高度
+  assert.equal(RULES.weekBlocks,1008);assert.equal(RULES.recentSales,3);
+  assert.equal(RULES.measureHeight, null); // no fixed quarterly measurement is inferred from rewards start
   assert.deepEqual(RULES.traitTiers.map((t) => [t.num / t.den, t.pct]), [[3, 100], [2, 75], [1.5, 50], [1.25, 25]]);
   assert.deepEqual(RULES.numberTiers.map((t) => [t.below, t.pct]), [[10, 200], [100, 100], [1000, 50]]);
 });
@@ -152,4 +156,39 @@ test('Displayed ratio cannot round a below-threshold floor into a qualifying tie
   assert.equal(formatRatio(9007199254740988,7205759403792791),'1.24×');
   assert.equal(traitTier(9007199254740988,7205759403792791).pct,0);
   assert.equal(formatRatio(123456789,1000000),'123×');assert.equal(formatRatio(1,3),'0.33×');
+});
+
+test('Reward phases match official start+1 and 1008-block week boundaries',()=>{
+  const {rewardPhase,RULES}=require('../src/lib/rules');const S=RULES.startBlock,W=RULES.weekBlocks,E=S+W*RULES.weeks;
+  const p=h=>rewardPhase({height:h,blockTime:{height:h,timestamp:1000000}});
+  assert.equal(p(S-1).state,'before');assert.equal(p(S-1).remaining,1);
+  assert.equal(p(S).state,'boundary');assert.equal(p(S).next,S+1);
+  assert.deepEqual([p(S+1).week,p(S+1).first,p(S+1).last,p(S+1).next],[1,S+1,S+W,S+W+1]);
+  assert.equal(p(S+W).week,1);assert.equal(p(S+W).remaining,1);
+  assert.equal(p(S+W+1).week,2);assert.equal(p(S+W+1).remaining,W);
+  assert.equal(p(E).week,78);assert.equal(p(E+1).state,'ended');assert.equal(p(RULES.claimUntil+1).state,'closed');
+  assert.equal(p(S+1).eta,(1000000+W*600)*1000);
+  assert.equal(rewardPhase({height:S+1,blockTime:{height:S,timestamp:1}}).eta,null);
+});
+test('Every reward week is contiguous; shortcuts are boundaries rather than quarterly snapshots',()=>{
+  const {rewardBoundaries,rewardPhase,RULES}=require('../src/lib/rules'),points=rewardBoundaries();
+  assert.equal(points.length,79);assert.equal(points[0].height,RULES.startBlock);
+  for(let n=1;n<=78;n++){const b=points[n],p=rewardPhase({height:b.height});assert.equal(b.week,n);assert.equal(p.week,n);assert.equal(p.last-p.first+1,1008);if(n<78)assert.equal(points[n+1].height,p.last+1);}
+  assert.ok(points.every(p=>!Object.hasOwn(p,'quarter')));
+});
+test('Public exits establish waiting only; current unlisted state never certifies weekly eligibility',()=>{
+  const {rewardContext,RULES}=require('../src/lib/rules');const S=RULES.startBlock,W=RULES.weekBlocks;
+  const snap={snapshot:{height:S+500},rewardEvents:[['known',S+200,'cancel']]};
+  assert.equal(rewardContext(snap,'known','unlisted').state,'waiting');assert.equal(rewardContext(snap,'known','unlisted').eligibleAt,S+W+1);
+  assert.equal(rewardContext(snap,'known','listed').state,'listed');assert.equal(rewardContext(snap,'private','unlisted').state,'unverified');
+  assert.equal(rewardContext({...snap,snapshot:{height:S+W+1}},'known','unlisted').state,'unverified');
+  assert.equal(rewardContext({...snap,snapshot:{height:S}},'known','listed').state,'not-started');
+  for(const kind of ['sale','cancel','exit'])assert.equal(rewardContext({...snap,rewardEvents:[['known',S+W+1,kind]],snapshot:{height:S+W+1}},'known','unlisted').eligibleAt,S+W*2+1);
+  assert.equal(rewardContext({...snap,rewardEvents:[['known',S,'cancel']]},'known','unlisted').state,'unverified');
+});
+
+
+test('An exit in the final reward week must not promise a restart beyond the programme',()=>{
+ const {RULES,rewardContext}=require('../src/lib/rules'),h=RULES.startBlock+(RULES.weeks-1)*RULES.weekBlocks+2;
+ assert.equal(rewardContext({snapshot:{height:h},rewardEvents:[['piece',h-1,'cancel']]},'piece','unlisted').state,'no-future-week');
 });

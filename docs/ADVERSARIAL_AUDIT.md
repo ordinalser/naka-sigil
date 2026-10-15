@@ -1,5 +1,9 @@
 # Adversarial implementation audit
 
+## Current revision — v0.11.0, 2026-10-15
+
+Current block-formula evidence corrects single-sale assumptions in older audit records below. Quarterly snapshot heights remain unconfirmed; older statements that the quarterly arrangement was abolished are not established. Same-height official reward units must match height, floor, catalog and every known piece total; mismatches preserve the previous snapshot. Rare hypothetical zero-listing cases never borrow current units; they use the recent-sales median rule verified against every official sales-sourced trait at two blocks, and keep bounds when same-block order decides the window or sale history is absent. Sale history must be newest first, at or below the snapshot height and limited to three plus ties; a different-height or failed `/state` read leaves it absent. Weekly allocation requires positive programme units and includes unminted catalog pieces, matching the official K. Credits require active listing identity and a nonnegative integer; absent is unknown, zero remains zero. Wallet artwork identity validates official origin, exact path, collection parameter and known asset mapping; no title, mosaic, pending tile or private balance inference is allowed. See RULES_AUDIT.md and VALIDATION.md for current evidence and checks.
+
 Version 0.8.0, 2026-10-09. This review covers the extension's calculation inputs, persisted state, synchronization and injected UI. It does not establish official quarterly weights or independently verify the indexer.
 
 | Finding | Effect before hardening | Resolution and verification |
@@ -27,7 +31,7 @@ Lookup accepts a non-negative safe integer with an optional `#`, including zero,
 ## Residual limits
 
 - Schema validation cannot authenticate a malicious but internally consistent API response. No consensus/proof verification or payout engine is implemented.
-- The official quarterly measurement block, rare-trait sale aggregation and numbering convention remain unresolved as documented in RULES_AUDIT.md.
+- The official quarterly measurement block and numbering convention remain unresolved; the rare-trait median is inferred from official data, not a published specification, as documented in RULES_AUDIT.md.
 - A network request already sent cannot be unsent when live sync is disabled; the returned batch is discarded. A fully completed write before disable remains cached but is not the selected source while disabled.
 - Browser/OS termination can interrupt a fixed-block load; the next worker detects the interrupted record. Existing good snapshots remain available.
 - DOM fixtures exercise Vault placement without connecting a real wallet. Real market layout can change; reconciliation handles the inspected structures and removes out-of-scope annotations.

@@ -17,6 +17,8 @@
  *   金库视图（卡片 / 挂单 / 浮层）是 shielded 专属组件：本集合页上照常标注，其它页面只标注快照里的藏品；
  *   市场视图（网格 / 列表）只在本集合页标注，其它页面上同样结构的卡片属于别的集合。
  *   - 详情页 /secondary/item/<铭文ID>：右栏是 h1 所在 .surface 卡片的父容器 → 明细面板插在标题卡之后
+ * 独立 /wallet：新版 button.sv-tile > .aspect-square 与 .ps-art 大图，仅按已知铭文 ID 标注。
+ * 集合拼图、奖励、待到账、创建/恢复、支付确认界面不注入；资产列表前显示统一区块依据。
  * 卡片名称上的编号不可靠（站点把资产 0/1/2 显示成 #1/#2/#3），一律按铭文 ID 查快照。
  *
  * 每次扫描都是「对账」：该有的徽章/面板补上或改对，扫描里没认领的一律删掉（离开集合页、节点被复用到
@@ -31,6 +33,8 @@
   const SRC = globalThis.ShnakasSource;
   if (!BUNDLED || !R || !I || !TIER || !SRC) throw new Error('SHNAKAS：快照、规则、文案、分级或数据来源模块未加载（检查 manifest 的脚本顺序）');
   const K = SRC.KEYS, EXP=globalThis.NakaExplore;
+  const HOLD=globalThis.NakaPortfolio;let holdings=[], boostOnly=false;const impactCache=new Map();
+  function portfolioImpact(id,action='sale'){const key=action+id;if(!impactCache.has(key))impactCache.set(key,HOLD.impact(SNAP,holdings,id,action,action==='cancel'?CANCELLATION:PURCHASE));return impactCache.get(key);}
   let comparisonIds=[], minimum=0, exploreLang='en';
   const exploreCopy=()=>globalThis.NakaExploreUI.pick(exploreLang);
 
@@ -38,6 +42,7 @@
   const CONTENT_PREFIX = 'https://ordinals.com/content/';
   const ID_RE = /^[0-9a-f]{64}i\d+$/;
   const COLLECTION_PATH = /^\/secondary\/collections\/([^/]+)\/?$/;
+  const WALLET_PATH = /^\/wallet\/?$/;
   const ITEM_PATH = /^\/secondary\/item\/([0-9a-f]{64}i\d+)\/?$/;
   const SLUG = BUNDLED.collection.slug;
 
@@ -45,6 +50,7 @@
 
   let SNAP = BUNDLED;
   let PURCHASE = globalThis.NakaPurchase.create(BUNDLED);
+  let CANCELLATION = globalThis.NakaPurchase.create(BUNDLED,{action:'cancel'});
   let SOURCE = 'bundled'; // 'live' | 'synced' | 'bundled'
   const stored = { liveEnabled: SRC.LIVE_DEFAULT, live: undefined, manual: undefined };
   let T = I.pick(I.DEFAULT_LANG); // 读到存储里的语言设置前不会渲染任何东西，这里只是占位
@@ -56,6 +62,7 @@
     const picked = SRC.choose(stored, BUNDLED);
     SNAP = picked.snap;
     PURCHASE = globalThis.NakaPurchase.create(SNAP);
+    CANCELLATION = globalThis.NakaPurchase.create(SNAP,{action:'cancel'});
     SOURCE = picked.source;
     cache.clear();
     refresh();
@@ -69,7 +76,7 @@
   }
 
   function refresh() {
-    GEN += 1;
+    GEN += 1;impactCache.clear();
   }
 
   // ------------------------------------------------------------ 计算（按铭文 ID 缓存）
@@ -106,7 +113,7 @@
     time.title=I.blockTimeTitle(T,snapshot);
     const activity=bar.dataset.shnActivity==='true';
     const launch=globalThis.NakaPurchase.renderLaunch(snapshot,T,I);
-    const detail=[I.measureNote(T,snapshot.height,snapshot),I.blockTimeTitle(T,snapshot),activity?T.activityNote:Array.isArray(SNAP.offers)?T.buyBadgeNote:T.weightMeaning,...[...launch.children].map(n=>n.textContent)].join('\n');
+    const detail=[I.measureNote(T,snapshot.height,snapshot),I.blockTimeTitle(T,snapshot),activity?T.activityNote:bar.dataset.shnOwner==='true'?T.cancelScopeNote:Array.isArray(SNAP.offers)?T.buyBadgeNote:T.weightMeaning,...[...launch.children].map(n=>n.textContent)].join('\n');
     if(bar.title!==detail)bar.title=detail;
     const note=bar.querySelector('.shn-scope__detail');
     if(note.textContent!==detail)note.textContent=detail;
@@ -122,75 +129,91 @@
 
   const lockIcon = cls => globalThis.NakaPixel.sigil(cls);
 
-  function inspectionFor(id,activity=false) {
+  function inspectionFor(id,activity=false,action='sale') {
+    const model=action==='cancel'?CANCELLATION:PURCHASE;
     const r=resultFor(id);if(!r)return el('p','shn-pop__missing',T.notInSnapshot);
-    const scenario=activity?null:PURCHASE.get(id);
-    if(scenario?.state==='ready')return globalThis.NakaPurchase.render(PURCHASE,id,T,I);
-    const notice=scenario?.state==='no-floor'?T.buyNoFloor:null;
-    return globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,listing:globalThis.NakaPurchase.listingStatus(SNAP,id)});
+    const scenario=activity?null:model.get(id);
+    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I);if(holdings.length){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
+    const notice=scenario?.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
+    return globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,rewardContext:R.rewardContext(SNAP,id,globalThis.NakaPurchase.listingStatus(SNAP,id)),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id)});
   }
   function inspectionHead(id,cls) {
     const head=el('div',cls),brand=el('span','shn-inspect-brand');brand.append(lockIcon('shn-badge__icon'),el('span','shn-eyebrow',T.title));
     head.append(brand);
     const r=resultFor(id);if(r){const number=el('span','shn-inspect-number',`#${r.number.value}`),tag=globalThis.NakaPurchase.numberBadge(r.number.value,T);head.append(number);if(tag)head.append(tag);}
-    if(r) head.append(compareButton(id));
+    if(r){
+      const c=exploreCopy(),held=holdings.includes(id),own=el('button','shn-compare-add shn-holding-add',held?c.inHoldings:c.addHolding);
+      own.type='button';own.title=held?c.holdingRemoveHint:c.holdingHint;own.setAttribute('aria-pressed',String(held));
+      own.addEventListener('click',ev=>{ev.stopPropagation();ev.preventDefault();chrome.runtime.sendMessage({type:'shn-holdings',ids:[id],remove:held});});
+      head.append(compareButton(id),own);
+    }
     return head;
   }
 
   // ------------------------------------------------------------ 徽章（网格 / 列表）
 
-  function fillBadge(b, id, kind) {
+  function fillBadge(b, id, kind, action='sale') {
+    const model=action==='cancel'?CANCELLATION:PURCHASE,afterLabel=action==='cancel'?T.cancelAfter:T.buyAfterShort;
     const r = resultFor(id);
-    const scenario=(kind==='grid' || kind==='list') ? PURCHASE.get(id) : null;
+    const scenario=(kind==='grid' || kind==='list' || kind==='wallet'||kind==='vault'||kind==='listed') ? model.get(id) : null;
     const primary=scenario?.state==='ready'?scenario.result:scenario?.state==='no-floor'?null:r;
     b.className = `shn-badge shn-badge--${kind} ${classesOf(primary)}`;
     b.dataset.shnId = id;
     b.dataset.shnMetric = DISPLAY_METRIC;
     const listing=globalThis.NakaPurchase.listingStatus(SNAP,id);b.dataset.shnListing=listing;
-    b.dataset.shnGen = String(GEN);
-    b.dataset.shnScenario=scenario?.state==='ready'?'sale':scenario?.state==='no-floor'?'sale-unavailable':'holding';
+    b.dataset.shnGen = String(GEN);b.dataset.shnAction=action;
+    b.dataset.shnScenario=scenario?.state==='ready'?action:scenario?.state==='no-floor'?action+'-unavailable':'holding';
     if (primary) { b.dataset.shnWeightLo = String(primary.lo.weight); b.dataset.shnWeightHi = String(primary.hi.weight); }
     else { delete b.dataset.shnWeightLo; delete b.dataset.shnWeightHi; }
     const text = primary ? R.formatWeight(primary) : '—';
     const currentWeight=el('span','shn-badge__weight');
     const value=primary?globalThis.NakaPurchase.decorateWeight(el('span','shn-badge__txt'),primary):el('span','shn-badge__txt','—');
-    currentWeight.append(lockIcon('shn-badge__icon'),el('span','shn-badge__label',scenario?.state==='no-floor'?T.buyAfterShort:T.weightShort),value);
+    currentWeight.append(lockIcon('shn-badge__icon'),el('span','shn-badge__label',scenario?.state==='no-floor'?afterLabel:T.weightShort),value);
     b.replaceChildren(currentWeight);
     if(scenario?.state==='ready') {
       b.classList.add('shn-badge--buy');
-      const preview=el('span',`shn-buy-preview naka-tone-${TIER.tierOf(scenario.result)}`);preview.append(el('span','shn-badge__label',T.buyAfterShort),globalThis.NakaPurchase.decorateWeight(el('b','shn-badge__txt shn-buy-value'),scenario.result));
+      const preview=el('span',`shn-buy-preview naka-tone-${TIER.tierOf(scenario.result)}`);preview.append(el('span','shn-badge__label',afterLabel),globalThis.NakaPurchase.decorateWeight(el('b','shn-badge__txt shn-buy-value'),scenario.result));
       preview.classList.toggle('shn-buy-preview--range',!scenario.result.exact);
       b.replaceChildren(preview);b.removeAttribute('title');
     } else b.removeAttribute('title');
     const numberTag=r?globalThis.NakaPurchase.numberBadge(r.number.value,T):null;if(numberTag)b.append(numberTag);
     b.tabIndex = 0;
     b.dataset.shnHeight = String(SNAP.snapshot.height);
-    const description=scenario?.state==='ready' ? `${T.buyTitle}: ${T.formulaBefore} ${R.formatWeight(scenario.before)}, ${T.buyAfter} ${R.formatWeight(scenario.result)}. ${T.buyBadgeNote}` : scenario?.state==='no-floor'?`${T.buyAfter} —. ${T.buyNoFloor}`:`${T.weight} ${text}.`;
+    const description=scenario?.state==='ready' ? `${action==='cancel'?T.cancelTitle:T.buyTitle}: ${action==='cancel'?T.cancelBefore:T.formulaBefore} ${R.formatWeight(scenario.before)}, ${afterLabel} ${R.formatWeight(scenario.result)}. ${action==='cancel'?T.cancelAssumption:T.buyBadgeNote}` : scenario?.state==='no-floor'?`${afterLabel} —. ${action==='cancel'?T.cancelNoFloor:T.buyNoFloor}`:`${T.weight} ${text}.`;
     // markCompared() composes the accessible name from this description and the comparison selection.
     b.dataset.shnDescription = `${description} ${T.listing[listing].label}: ${T.listing[listing].meaning}. ${T.weightMeaning}${numberTag?' '+numberTag.getAttribute('aria-label')+'.':''} ${I.measureNote(T,SNAP.snapshot.height)}`;
   }
 
   /** 让槽位里恰好有一个归属正确的徽章，返回它。 */
-  function ensureBadge(slot, id, kind) {
+  function ensureBadge(slot, id, kind, action='sale') {
     const all = slot.querySelectorAll(':scope > .shn-badge');
     for (let i = 1; i < all.length; i++) all[i].remove();
     const b = all[0];
     if (b) {
-      if (b.dataset.shnMetric !== DISPLAY_METRIC || b.dataset.shnId !== id || b.dataset.shnGen !== String(GEN) || !b.classList.contains(`shn-badge--${kind}`)) fillBadge(b, id, kind);
+      if (b.dataset.shnMetric !== DISPLAY_METRIC || b.dataset.shnId !== id || b.dataset.shnGen !== String(GEN) || !b.classList.contains(`shn-badge--${kind}`) || b.dataset.shnAction!==action) fillBadge(b, id, kind, action);
       markCompared(b);
       return b;
     }
     const nb = el('span');
-    fillBadge(nb, id, kind);
+    fillBadge(nb, id, kind, action);
     markCompared(nb);
     slot.appendChild(nb);
     return nb;
   }
 
+  const walletArtMaps=new WeakMap();
   function idFromSrc(src) {
-    if (!src || !src.startsWith(CONTENT_PREFIX)) return null;
-    const id = src.slice(CONTENT_PREFIX.length).split(/[?#]/)[0];
-    return ID_RE.test(id) ? id : null;
+    if (!src) return null;
+    if(src.startsWith(CONTENT_PREFIX)){const id=src.slice(CONTENT_PREFIX.length).split(/[?#]/)[0];return ID_RE.test(id)?id:null;}
+    // The standalone wallet loads its own API art first, with Ordinals only as fallback.
+    if(!WALLET_PATH.test(location.pathname)&&COLLECTION_PATH.exec(location.pathname)?.[1]!==SLUG)return null;
+    let url;try{url=new URL(src,location.origin);}catch{return null;}
+    if(url.username||url.password||!['https://shielded-api.ord-dropz.xyz','https://shielded-mint-server-production.up.railway.app'].includes(url.origin))return null;
+    const match=/^\/api\/shielded\/art\/(0|[1-9]\d*)$/.exec(url.pathname);
+    if(!match||url.searchParams.getAll('c').length!==1||url.searchParams.get('c')!==SNAP.collection.cid)return null;
+    const asset=Number(match[1]);if(!Number.isSafeInteger(asset))return null;
+    let ids=walletArtMaps.get(SNAP);if(!ids){ids=new Map(Object.entries(SNAP.items).map(([id,row])=>[row[0]-SNAP.collection.numberStart,id]));walletArtMaps.set(SNAP,ids);}
+    return ids.get(asset)??null;
   }
 
   /** 网格卡片的图片框；不是网格卡片返回 null。 */
@@ -205,6 +228,29 @@
   function vaultSlot(img) {
     const btn = img.parentElement;
     return btn && btn.tagName === 'BUTTON' && btn.firstElementChild === img && img.classList.contains('aspect-square') ? btn : null;
+  }
+
+  /** Standalone wallet: individual tiles / piece artwork only, never collection mosaics,
+   * staking rows or payment/backup screens. Identity remains inscription-based. A market tile whose sale is pending
+   * (dimmed artwork with a SOLD tag until the page refreshes) is still that piece: it keeps a badge like the market grid. */
+  function walletSlot(img) {
+    if (!WALLET_PATH.test(location.pathname)) return null;
+    const box = img.parentElement;
+    const card = box?.parentElement;
+    if (box?.classList.contains('aspect-square') && box.firstElementChild === img
+      && card?.matches('button.sv-tile') && card.firstElementChild === box
+      && card.closest('.sv-piece-grid')?.closest('.sv-shell')) return box;
+    if (box?.classList.contains('ps-art') && box.firstElementChild === img
+      && box.closest('.ps-wrap[role="dialog"]')?.querySelector('.ps-head')) return box;
+    return null;
+  }
+
+  /** Owner asset cards have a titled truncated valuation caption; the wallet market uses plain captions.
+   * Match component structure only, never read wallet labels, balances or private storage. */
+  function ownWalletSlot(slot) {
+    if(!WALLET_PATH.test(location.pathname))return false;
+    if(slot.classList.contains('ps-art'))return Boolean(slot.closest('.ps-wrap[role="dialog"]')?.querySelector('.ps-head'));
+    return Boolean(slot.parentElement?.matches('button.sv-tile') && slot.parentElement.querySelector('.sv-tile-meta .sv-tile-caption > span.truncate[title]'));
   }
 
   /** 金库「我的挂单」卡片的信息列；不是挂单卡片返回 null。 */
@@ -238,13 +284,17 @@
    */
   function scanImages(onCollection, keepBadges, keepPanels) {
     const slots = new Set();
-    for (const img of document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"]`)) {
+    const images=new Set(document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"]`));
+    if(onCollection)for(const img of document.querySelectorAll('img[src*="/api/shielded/art/"]'))images.add(img);
+    if(WALLET_PATH.test(location.pathname))for(const img of document.querySelectorAll('.sv-shell .sv-piece-grid button.sv-tile > .aspect-square > img,.ps-wrap[role="dialog"] .ps-art > img'))images.add(img);
+    for (const img of images) {
       const id = idFromSrc(img.getAttribute('src'));
       if (id === null) continue;
       const vaultOk = onCollection || Boolean(SNAP.items[id]);
       let kind = null;
       let slot = null;
-      if (onCollection && (slot = gridSlot(img))) kind = 'grid';
+      if (SNAP.items[id] && (slot = walletSlot(img))) kind = 'wallet';
+      else if (onCollection && (slot = gridSlot(img))) kind = 'grid';
       else if (vaultOk && (slot = vaultSlot(img))) kind = 'vault';
       else if (vaultOk && (slot = listedSlot(img))) kind = 'listed';
       else if (onCollection && (slot = listSlot(img))) kind = 'list';
@@ -252,7 +302,7 @@
       if (!slot || slots.has(slot)) continue;
       slots.add(slot);
       if (kind === 'modal') keepPanels.add(ensurePanelAfter(slot, id, 'modal'));
-      else keepBadges.add(ensureBadge(slot, id, kind));
+      else keepBadges.add(ensureBadge(slot, id, kind,kind==='vault'||kind==='listed'||kind==='wallet'&&ownWalletSlot(slot)?'cancel':'sale'));
     }
   }
 
@@ -346,7 +396,7 @@
     popId = badge.dataset.shnId;
     popGen = badge.dataset.shnGen;
     const surface=el('div','shn-pop__surface');
-    surface.append(inspectionHead(badge.dataset.shnId,'shn-pop__head'),inspectionFor(badge.dataset.shnId,badge.classList.contains('shn-badge--activity')));
+    surface.append(inspectionHead(badge.dataset.shnId,'shn-pop__head'),inspectionFor(badge.dataset.shnId,badge.classList.contains('shn-badge--activity'),badge.dataset.shnAction));
     const pointer=el('span','shn-pop__pointer');pointer.setAttribute('aria-hidden','true');
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     const group=document.createElementNS(svg.namespaceURI,'g');
@@ -389,7 +439,7 @@
     const a=visibleRect(popFor);let target=visibleRect(popFor.querySelector('.shn-buy-preview,.shn-badge__weight')??popFor);
     if(a.right<=a.left || a.bottom<=a.top){hidePop();return false;}
     // A selected badge's "✓ Compare" tab sits on top of it and belongs to its hover area; the bubble clears it.
-    if(popFor.matches('.shn-badge--grid[data-shn-compared],.shn-badge--vault[data-shn-compared]')) a.top=Math.max(v.top,a.top-parseFloat(getComputedStyle(popFor,'::before').height));
+    if(popFor.matches('.shn-badge--grid[data-shn-compared],.shn-badge--vault[data-shn-compared],.shn-badge--wallet[data-shn-compared]')) a.top=Math.max(v.top,a.top-parseFloat(getComputedStyle(popFor,'::before').height));
     if(target.right<=target.left || target.bottom<=target.top)target=a;
     const surface=pop.querySelector('.shn-pop__surface');
     pop.style.width=`${Math.max(1,Math.floor(Math.min(420,v.width-2*M)))}px`;
@@ -471,18 +521,20 @@
   function scanScope(onCollection, onActivity) {
     const existing = [...document.querySelectorAll('.shn-scope')];
     const heading = onCollection ? document.querySelector('main h1') : null;
-    const anchor = heading?.closest('.mb-3') || heading?.parentElement;
+    const walletGrid = WALLET_PATH.test(location.pathname) ? [...document.querySelectorAll('.sv-shell .sv-piece-grid')].find(g => g.querySelector('.shn-badge--wallet')) : null;
+    const ownerContext=Boolean(walletGrid?.querySelector('[data-shn-action=cancel]'));
+    const anchor = walletGrid || heading?.closest('.mb-3') || heading?.parentElement;
     if (!anchor) { existing.forEach((n) => n.remove()); return; }
-    const current = existing.find((n) => n.previousElementSibling === anchor);
-    if (current && current.dataset.shnLayout === 'compact-v1' && current.dataset.shnMetric === DISPLAY_METRIC && current.dataset.shnGen === String(GEN) && current.dataset.shnActivity === String(onActivity)) {
+    const current = existing.find((n) => walletGrid ? n.nextElementSibling === anchor : n.previousElementSibling === anchor);
+    if (current && current.dataset.shnLayout === 'compact-v1' && current.dataset.shnMetric === DISPLAY_METRIC && current.dataset.shnGen === String(GEN) && current.dataset.shnActivity === String(onActivity) && current.dataset.shnOwner===String(ownerContext)) {
       existing.filter((n) => n !== current).forEach((n) => n.remove());
       return;
     }
     existing.forEach((n) => n.remove());
-    const bar = el('aside', 'shn-scope');
+    const bar = el('aside', walletGrid ? 'shn-scope shn-scope--wallet' : 'shn-scope');
     bar.dataset.shnGen = String(GEN);
     bar.dataset.shnMetric = DISPLAY_METRIC;
-    bar.dataset.shnActivity = String(onActivity);
+    bar.dataset.shnActivity = String(onActivity);bar.dataset.shnOwner=String(ownerContext);
     bar.dataset.shnHeight = String(SNAP.snapshot.height);
     bar.dataset.shnLayout='compact-v1';
     bar.tabIndex=0;
@@ -493,7 +545,7 @@
     const detail=el('span','shn-sr-only shn-scope__detail');detail.id='shn-scope-details';
     bar.append(line,el('p','shn-scope__note',onActivity?T.scopeActivity:T.scopeNote),detail);
     refreshScopeClock(bar);
-    anchor.after(bar);
+    if (walletGrid) anchor.before(bar); else anchor.after(bar);
   }
 
   // ------------------------------------------------------------ 比较选择：按钮、徽章标记与工具栏计数同步显示
@@ -527,7 +579,7 @@
     b.type='button';b.dataset.id=id;paintCompareButton(b);
     b.addEventListener('click',async ev=>{
       ev.preventDefault();ev.stopPropagation();
-      if(b.dataset.compare==='full'){chrome.runtime.sendMessage({type:'shn-open-compare'});return;}
+      if(b.dataset.compare==='full'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'});return;}
       b.disabled=true;
       try{
         const res=await chrome.runtime.sendMessage({type:'shn-compare',action:'toggle',id});if(!res?.ok)throw Error('save');
@@ -544,20 +596,49 @@
     if(!tools||tools.dataset.gen!==String(GEN)){
       tools?.remove();tools=el('div','shn-tools');tools.dataset.gen=String(GEN);
       const label=el('label','',c.filter),select=el('select','shn-tools__filter');
-      for(const v of [0,150,200,250,300,350,400]){const o=el('option','',v?`${v}%`:c.any);o.value=String(v);select.append(o);}select.value=String(minimum);select.title=c.filterNote;select.setAttribute('aria-label',c.filter);
-      select.addEventListener('change',()=>{minimum=Number(select.value);scan();});label.append(select);
+      for(const v of [0,150,200,250,300,350,400]){const o=el('option','',v?`${v}%`:c.any);o.value=String(v);select.append(o);}const boost=el('option','',c.boost);boost.value='portfolio';boost.disabled=!holdings.length;boost.title=holdings.length?c.boostHint:c.boostEmpty;select.append(boost);select.value=boostOnly?'portfolio':String(minimum);select.title=c.filterNote;select.setAttribute('aria-label',c.filter);
+      select.addEventListener('change',()=>{boostOnly=select.value==='portfolio';minimum=boostOnly?0:Number(select.value);scan();});label.append(select);
       const count=el('span','shn-tools__count'),open=el('button','shn-tools__open');open.type='button';open.title=c.open;
-      open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare'}));tools.append(label,count,open);scope.append(tools);
+      open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'}));tools.append(label,count,open);scope.append(tools);
     }
     const roots=new Set();let total=0,shown=0;
     for(const b of document.querySelectorAll('.shn-badge--grid,.shn-badge--list')){
       const root=b.parentElement?.parentElement;if(!root||roots.has(root))continue;roots.add(root);total++;
-      const matches=EXP.matches(EXP.entry(SNAP,PURCHASE,b.dataset.shnId),minimum);
+      const impact=boostOnly?portfolioImpact(b.dataset.shnId):null;const matches=EXP.matches(EXP.entry(SNAP,PURCHASE,b.dataset.shnId),minimum)&&(!boostOnly||impact?.state==='ready'&&impact.allocation.delta.lo>0);
       root.classList.toggle('shn-filtered',!matches);if(matches)shown++;
     }
     for(const root of document.querySelectorAll('.shn-filtered'))if(!roots.has(root))root.classList.remove('shn-filtered');
     const count=tools.querySelector('.shn-tools__count'),text=minimum&&shown===0?c.noMatches:c.shown(shown,total);if(count.textContent!==text)count.textContent=text;
     tools.title=c.filterNote;updateCompareCount();
+  }
+
+  /** Holdings bar on the Vault and the standalone wallet: the weekly SHNAKAS the pieces shown here earn (official
+   * preview split), one action to keep them in My holdings, and the read-only promise. Ownership is never read from the
+   * wallet: only the artwork identities already on the page, and nothing leaves the device. */
+  function scanHoldings(){
+    const badges=[...document.querySelectorAll('.shn-badge--vault,.shn-badge--wallet[data-shn-action=cancel]')];
+    const ids=[...new Set(badges.map(b=>b.dataset.shnId).filter(id=>Object.hasOwn(SNAP.items,id)))];let bar=document.querySelector('.shn-holdings-import');
+    const first=badges[0],anchor=first?.classList.contains('shn-badge--wallet')?first.closest('.sv-piece-grid'):first?.parentElement?.parentElement?.parentElement;
+    if(!ids.length||!anchor){bar?.remove();return;}
+    const c=exploreCopy(),U=globalThis.NakaExploreUI,state=`${ids.join()}|${exploreLang}|${holdings.join()}|${SNAP.snapshot.height}|${SNAP.snapshot.generatedAt}`;
+    if(bar&&bar.dataset.state===state)return;
+    bar?.remove();bar=el('section','shn-holdings-import');bar.dataset.state=state;
+    const page=HOLD.current(SNAP,ids),mine=HOLD.current(SNAP,holdings),added=ids.filter(id=>holdings.includes(id)).length,rest=ids.length-added;
+    const summary=el('div','shn-hb-summary'),figure=el('div','shn-hb-figure'),value=U.shn(page.allocation.weekly);
+    figure.append(el('span','shn-hb-label',`${c.pageHoldings} · ${c.weekly}`),el('span','shn-sr',value));
+    const big=el('span','shn-hb-value');big.append(globalThis.NakaPixel.digits(value,'shn-hb-digits'),el('span','shn-hb-unit',c.weekUnit));figure.append(big);
+    figure.append(el('span','shn-hb-sub',`${c.pageWeekly(ids.length)} · ${c.ofPool(U.percent(page.allocation.share))} · ${c.blockBasis(I.int(SNAP.snapshot.height))}`));
+    figure.title=c.allocationBasis;summary.append(lockIcon('shn-hb-sigil'),figure);
+    const actions=el('div','shn-hb-actions');
+    const button=el('button','shn-compare-add shn-hb-add',rest===0?c.addedVisible(ids.length):rest===ids.length?c.addVisible(ids.length):c.addRest(rest,added));
+    button.type='button';button.disabled=rest===0;button.dataset.state=rest===0?'all':rest===ids.length?'none':'some';button.title=c.holdingsNote;
+    button.addEventListener('click',async()=>{button.disabled=true;const out=await chrome.runtime.sendMessage({type:'shn-holdings',ids});if(!out?.ok){button.disabled=false;button.textContent=c.addError;}});
+    const open=el('button','shn-compare-add shn-hb-open',c.openHoldings);open.type='button';open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'holdings'}));
+    actions.append(button,open);
+    bar.append(summary,actions);
+    // My holdings can include other accounts: show its own total when it is not exactly this page.
+    if(mine.ids.length&&(mine.ids.length!==ids.length||mine.ids.some(id=>!ids.includes(id)))){const foot=el('div','shn-hb-foot');foot.append(el('span','shn-hb-mine',c.myHoldingsLine(mine.ids.length,U.shn(mine.allocation.weekly))));bar.append(foot);}
+    anchor.before(bar);
   }
 
   function scan() {
@@ -567,8 +648,8 @@
     const keepPanels = new Set();
     const onCollection = Boolean(c) && c[1] === SLUG;
     const onActivity = scanActivity(onCollection, keepBadges);
-    scanScope(onCollection, onActivity);
     scanImages(onCollection, keepBadges, keepPanels);
+    scanScope(onCollection, onActivity);
     const m = ITEM_PATH.exec(path);
     if (m) {
       const p = scanItem(m[1]);
@@ -576,7 +657,7 @@
     }
     for (const b of document.querySelectorAll('.shn-badge')) if (!keepBadges.has(b)) b.remove();
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
-    scanTools(onCollection,onActivity);
+    scanTools(onCollection,onActivity);scanHoldings();
     if (popFor && (!popFor.isConnected || popFor.dataset.shnId !== popId || popFor.dataset.shnGen !== popGen)) hidePop();
     else if(popFor) positionPop();
   }
@@ -587,8 +668,8 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.manual, K.live, K.liveEnabled, I.STORAGE_KEY, EXP.KEY]).then((got) => {
-    comparisonIds=EXP.normalize(got[EXP.KEY]);
+  chrome.storage.local.get([K.manual, K.live, K.liveEnabled, I.STORAGE_KEY, EXP.KEY,HOLD.KEY]).then((got) => {
+    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);
     useLang(got[I.STORAGE_KEY]);
     stored.liveEnabled = SRC.resolveLive(got[K.liveEnabled]);
     stored.live = got[K.live];
@@ -605,7 +686,8 @@
     const has = (k) => Object.prototype.hasOwnProperty.call(changes, k);
     const dataChanged = has(K.manual) || has(K.live) || has(K.liveEnabled);
     if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
-    if (!dataChanged && !has(I.STORAGE_KEY)) return;
+    if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();}
+    if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)) return;
     if (has(I.STORAGE_KEY)) useLang(changes[I.STORAGE_KEY].newValue);
     if (has(K.liveEnabled)) stored.liveEnabled = SRC.resolveLive(changes[K.liveEnabled].newValue);
     if (has(K.live)) stored.live = changes[K.live].newValue;

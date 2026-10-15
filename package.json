@@ -1,6 +1,6 @@
 {
   "name": "naka-sigil",
-  "version": "0.10.6",
+  "version": "0.11.0",
   "private": false,
   "description": "Find your Naka: block-specific SHNAKAS holding weights, after-sale comparisons and number lookup for Shielded Nakas on Ord Dropz.",
   "scripts": {

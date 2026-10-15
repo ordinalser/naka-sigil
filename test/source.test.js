@@ -104,7 +104,32 @@ test('Listing details must exactly reproduce snapshot floors/counts; malformed o
   const bad=[x=>x.offers=null,x=>x.offers=[],x=>x.offers.push(x.offers[0]),x=>x.offers[0][0]='b'.repeat(64)+'i0',x=>x.offers[0][1]=0,x=>x.offers[0][1]='100',x=>x.offers[0][1]=101,x=>x.traits[0][2]=125];
   for(const mutate of bad){const x=structuredClone(s);mutate(x);assert.equal(SRC.isSnapshot(x),false);}
 });
-test('Optional trait sale history rejects future heights, invalid prices, duplicate or absent trait indices',()=>{
-  const s=structuredClone(BUNDLED);s.sales=[[0,125,99]];assert.equal(SRC.isSnapshot(s),true);
-  for(const sales of [null,[[0,0,99]],[[0,'125',99]],[[0,125,s.snapshot.height+1]],[[99999,125,99]],[[0,125,99],[0,126,98]]])assert.equal(SRC.isSnapshot({...s,sales}),false);
+test('Optional trait sale history rejects future heights, invalid prices, wrong order, extra old sales and duplicate or absent traits',()=>{
+  const s=structuredClone(BUNDLED);delete s.saleHistory;const h=s.snapshot.height;
+  assert.equal(SRC.isSnapshot({...s,saleHistory:[[0,[[125,h],[124,h-5],[200,h-9]]]]}),true);
+  assert.equal(SRC.isSnapshot({...s,saleHistory:[[0,[[125,h],[124,h-5],[200,h-9],[201,h-9]]]]}),true,'same-block ties with the third sale may remain');
+  for(const saleHistory of [null,[[0,[]]],[[0,[[0,h]]]],[[0,[['125',h]]]],[[0,[[125,h+1]]]],[[99999,[[125,h]]]],[[0,[[125,h]]],[0,[[126,h]]]],[[0,[[125,h-5],[124,h]]]],[[0,[[125,h],[124,h-5],[200,h-9],[201,h-10]]]]])
+    assert.equal(SRC.isSnapshot({...s,saleHistory}),false);
+  assert.equal(SRC.isSnapshot({...s,sales:[[0,125,99]]}),false,'the former single-sale basis is replaced by a fresh sync');
+});
+test('Pending catalog rows use valid traits and never repeat a minted number',()=>{
+  const sb={};require('node:vm').runInNewContext(require('node:fs').readFileSync(require.resolve('../src/data/snapshot.js'),'utf8'),sb);
+  const s=structuredClone(sb.SHNAKAS_SNAPSHOT);const minted=Object.values(s.items)[0][0];
+  assert.equal(SRC.isSnapshot(s),true);assert.ok(Array.isArray(s.pending)&&s.pending.length>0);
+  for(const pending of [[],[[minted,0]],[[s.pending[0][0],99999]],[[s.pending[0][0],0,0]],[[-1,0]],'x'])assert.equal(SRC.isSnapshot({...s,pending}),false);
+});
+
+test('Persisted official trait basis is height-bound and credits require an active listing',()=>{
+  const s=structuredClone(BUNDLED),id=Object.keys(s.items)[0];s.offers=[[id,100]];s.traits[0][2]=100;
+  s.rewardBasis={height:100,traits:[[0,0,'ask',1]]};s.credits=[[id,0]];assert.equal(SRC.isSnapshot(s),true);
+  for(const mutate of [x=>x.rewardBasis.height++,x=>x.rewardBasis.traits[0][1]=12,x=>x.rewardBasis.traits[0][2]='sales',x=>x.rewardBasis.traits[0][3]=0,x=>x.rewardBasis.extra='no',x=>x.credits[0][1]=-1,x=>x.credits.push(x.credits[0]),x=>x.credits[0][0]='b'.repeat(64)+'i0']){
+    const bad=structuredClone(s);mutate(bad);assert.equal(SRC.isSnapshot(bad),false);
+  }
+});
+
+test('Optional reward events reject future, foreign, duplicate and private-shaped data',()=>{
+  const fs=require('fs'),vm=require('vm'),c={};vm.runInNewContext(fs.readFileSync(require.resolve('../src/data/snapshot.js'),'utf8'),c);const s=JSON.parse(JSON.stringify(c.SHNAKAS_SNAPSHOT)),SRC=require('../src/lib/source'),id=Object.keys(s.items)[0];
+  const good={...s,rewardEvents:[[id,s.snapshot.height,'cancel']]};assert.equal(SRC.isSnapshot(good),true);
+  for(const row of [[id,s.snapshot.height+1,'cancel'],['foreign',1,'sale'],[id,1,'owner'],[id,1,'cancel','private']])assert.equal(SRC.isSnapshot({...s,rewardEvents:[row]}),false);
+  assert.equal(SRC.isSnapshot({...s,rewardEvents:[good.rewardEvents[0],good.rewardEvents[0]]}),false);
 });

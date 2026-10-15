@@ -11,7 +11,7 @@
  * 存储键：见 lib/source.js 的 KEYS；另有 syncStatus（手动同步状态）、lang（界面语言）。
  */
 'use strict';
-importScripts('../lib/snapshot-core.js', '../lib/source.js', '../data/snapshot.js', '../lib/explore.js');
+importScripts('../lib/rules.js', '../lib/snapshot-core.js', '../lib/source.js', '../data/snapshot.js', '../lib/explore.js','../lib/purchase.js','../lib/portfolio.js');
 
 const CORE = self.ShnakasSnapshot;
 const SRC = self.ShnakasSource;
@@ -108,7 +108,9 @@ async function liveTick() {
     try {
       const pulse = await CORE.fetchJson(`${CORE.API}/pulse`, 1);
       if (!Number.isSafeInteger(pulse.lastHeight)) throw new Error(`/pulse 的 lastHeight 非法：${pulse.lastHeight}`);
-      if (current !== undefined && current.snapshot.height === pulse.lastHeight && current.snapshot.blockTime != null && prev?.epoch === pulse.epoch && pulse.epoch !== undefined) {
+      // A snapshot whose sale history failed to load (or was written by an older version) is incomplete: rare-trait
+      // branches would stay ranges for the whole block, so the same height is rebuilt on the next check.
+      if (current !== undefined && current.snapshot.height === pulse.lastHeight && current.snapshot.blockTime != null && current.saleHistory !== undefined && prev?.epoch === pulse.epoch && pulse.epoch !== undefined) {
         // 没出新块：数据不用动，只记一下检查时间
         await chrome.storage.local.set({ [K.liveStatus]: { state: 'ok', checkedAt: Date.now(), epoch: pulse.epoch } });
         return;
@@ -165,12 +167,29 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // ------------------------------------------------------------ 消息
 
 let comparisonQueue = Promise.resolve();
+let rewardClockPromise=null,rewardClockCache=null;
+async function rewardClock(){
+  if(rewardClockCache&&Date.now()-rewardClockCache.checkedAt<60000)return rewardClockCache;
+  if(rewardClockPromise)return rewardClockPromise;
+  rewardClockPromise=(async()=>{const pulse=await CORE.fetchJson(`${CORE.API}/pulse`,1);if(!Number.isSafeInteger(pulse.lastHeight)||pulse.lastHeight<0)throw new Error('Invalid clock height');const height=pulse.lastHeight,blockTime=await CORE.readBlockTime(height);return rewardClockCache={height,blockTime,checkedAt:Date.now()};})().finally(()=>{rewardClockPromise=null;});
+  return rewardClockPromise;
+}
+
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !msg) return false;
+  if(msg.type==='shn-reward-clock'){
+    if(sender.url!==chrome.runtime.getURL('popup/popup.html'))return false;
+    rewardClock().then(clock=>sendResponse({ok:true,...clock}),()=>sendResponse({ok:false}));return true;
+  }
   if (msg.type === 'shn-open-compare') {
-    chrome.tabs.create({url:chrome.runtime.getURL('workspace/index.html')}).then(()=>sendResponse({ok:true}),()=>sendResponse({ok:false}));
+    // Optional section of the workspace to open: My holdings, Compare, listings, or listings ranked by Raise my weight.
+    if(msg.section!==undefined&&!['holdings','compare','listings','boost'].includes(msg.section)){sendResponse({ok:false,error:'bad-section'});return false;}
+    chrome.tabs.create({url:chrome.runtime.getURL('workspace/index.html')+(msg.section===undefined?'':'#'+msg.section)}).then(()=>sendResponse({ok:true}),()=>sendResponse({ok:false}));
     return true;
+  }
+  if(msg.type==='shn-holdings'){
+    comparisonQueue=comparisonQueue.then(async()=>{const H=self.NakaPortfolio;const got=await chrome.storage.local.get([H.KEY,K.manual,K.live,K.liveEnabled]);const {snap}=SRC.choose({manual:got[K.manual],live:got[K.live],liveEnabled:got[K.liveEnabled]},BUNDLED);const ids=H.update(got[H.KEY],msg.ids,snap,msg.remove===true);await chrome.storage.local.set({[H.KEY]:ids});sendResponse({ok:true,ids,count:ids.length});}).catch(()=>sendResponse({ok:false}));return true;
   }
   if (msg.type === 'shn-compare') {
     if (!['clear','toggle'].includes(msg.action)) { sendResponse({ok:false}); return false; }

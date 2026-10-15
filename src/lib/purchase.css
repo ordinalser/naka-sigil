@@ -104,3 +104,36 @@
 .naka-select__off { display:none; }
 [data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__on { display:none; }
 [data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__off { display:inline; }
+
+/* My holdings line under an inspection or lookup: weekly allocation before → after, change in color. */
+.naka-holdings { margin:10px 0 0; padding:8px 0 0; border-top:1px solid #3a3530; font-family:ui-monospace,SFMono-Regular,Consolas,"PingFang SC",monospace; }
+.naka-holdings__title { margin:0 0 6px !important; color:#a49e95; font-size:10px; letter-spacing:.02em; }
+.naka-holdings__rows { display:flex; flex-direction:column; gap:3px; margin:0; }
+.naka-holdings__rows > div { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0; font-size:11px; }
+.naka-holdings__rows dt { color:#cfc6b5; }
+.naka-holdings__rows dd { margin:0; color:#f0e9df; font-weight:700; font-variant-numeric:tabular-nums; }
+.naka-holdings__rows dd[data-change=up],.naka-holdings__pixels[data-change=up] { color:#94dcb4; }
+.naka-holdings__rows dd[data-change=down],.naka-holdings__pixels[data-change=down] { color:#efb29f; }
+.naka-holdings__rows dd[data-change=same],.naka-holdings__pixels[data-change=same] { color:#a6a19b; }
+.naka-holdings__sum { margin-top:4px !important; padding-top:5px; border-top:1px dashed #3a3530; }
+.naka-holdings__total { display:inline-flex; align-items:center; gap:8px; }
+.naka-holdings__before { color:#a49e95; font-weight:400; }
+.naka-holdings__pixels { display:inline-flex; color:#f0e9df; }
+.naka-holdings__pixels svg { display:block; width:auto; height:13px; }
+.naka-sr { position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; }
+/* About: shared by the popup tab and the extension page. */
+.naka-about__checks { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:5px; }
+.naka-about__checks li { display:flex; align-items:baseline; gap:8px; }
+.naka-about__checks li::before { content:'✓'; color:#94dcb4; font-weight:800; }
+.naka-about__list { margin:8px 0 0; padding-left:16px; display:grid; gap:4px; }
+.naka-about__formula { display:grid; gap:4px; margin:8px 0 0; padding:8px 10px; background:#0d0e10; border-left:2px solid #ffb347; }
+.naka-about__formula code { color:#ffd99c; font:inherit; font-size:.95em; white-space:normal; }
+.naka-about__lead { color:#eee6da; font-weight:700; }
+.naka-about__label { margin-top:10px !important; color:#a49e95; font-size:.9em; }
+.naka-about__tiles { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; margin-top:5px; border:1px solid #423a32; }
+.naka-about__tile { padding:6px 2px; text-align:center; }
+.naka-about__tile + .naka-about__tile { border-left:1px solid #423a32; }
+.naka-about__tile b { display:block; color:#ffb347; }
+.naka-about__tile span { color:#a49e95; font-size:.9em; }
+.naka-about__links { display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; margin-top:10px !important; color:#a49e95; }
+.naka-about__links a { color:#ffb347; }

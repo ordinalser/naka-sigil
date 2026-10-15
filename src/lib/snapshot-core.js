@@ -2,7 +2,7 @@
  * 快照核心：从 shielded 协议的链上状态生成「每个特征的地板价」数据。
  * 命令行（scripts/snapshot.js）与扩展后台的「同步」（sw/sync-sw.js）共用这一份，两条路径产出同一格式、同一结果。
  *
- * 规则（推文）：每个特征的地板价在季度初按链上数据测一次，与集合地板价相比定档，季度内不变。据此：
+ * 当前链上奖励规则：权重随每个区块的地板价变化。指定高度用于历史复算，不代表季度结算。
  *   1. 从完整事件日志（/state）还原「区块 H 确认之后仍有效」的挂单集合——挂单的上架高度在 listing.height，
  *      成交/取回交易的高度在 notes 里，用现有事件字段重建；历史价格仍取决于协议是否保留原价，不能宣称官方结算。
  *   2. 每件藏品的美术特征取自官方元数据（/meta/<assetId>）；编号 = global.start + assetId。
@@ -19,12 +19,25 @@
   'use strict';
 
   const FORMAT = 1;
-  const API = 'https://shielded-mint-server-production.up.railway.app/api/shielded';
+  const API = 'https://shielded-api.ord-dropz.xyz/api/shielded';
   const COLLECTION = Object.freeze({ slug: 'shielded-nakas-mupv6wja', name: 'Shielded Nakas' });
   const NUMBER_TRAIT_TYPE = 'Shielded #';
   const META_CONCURRENCY = 8;
+  const RULES_RECENT_SALES = 3;
+  const STATE_NOTES_PAST_END = 999999999; // /state?since=<cursor>: notes after the cursor, all listing records
   const FETCH_ATTEMPTS = 3;
   const SEP = '\u0000';
+  // Catalog pieces not yet minted, from the immutable on-chain reward programme (rewards.weights.traits.pieces,
+  // inscription 30adf523…c961a9i0): [programme index, [[type, value], ...]]. The official preview splits the pool
+  // over all 3333 catalog pieces, so their units belong in the programme total even before minting.
+  const PENDING_CATALOG = Object.freeze([
+    [1612,[['Body','Yeti'],['Outfit','Casanova Suit'],['Hair And Headwear','Black Krusty Clown Mohawk'],['Eyes','Purple Frame'],['Mouth','Weed']]],
+    [1613,[['Body','Tan'],['Outfit','Boujee Suit'],['Hair And Headwear','White Cap'],['Eyes','Eye Patch'],['Mouth','Clean']]],
+    [2816,[['Body','White'],['Outfit','Orange Tee Punk'],['Hair And Headwear','Red Horn'],['Eyes','Orange Frame'],['Mouth','Weed']]],
+    [2817,[['Body','Alien'],['Outfit','Yellow Tee Punk'],['Hair And Headwear','Purple Brush Mohawk'],['Eyes','Black Frame'],['Mouth','Pipe']]],
+    [2881,[['Body','Alien'],['Outfit','Pink Tee Punk'],['Hair And Headwear','Orange Brush Mohawk'],['Eyes','Pink Frame'],['Mouth','Clean']]],
+    [2889,[['Body','White'],['Eyes','VR'],['Mouth','Clean'],['Hoodie','Orange']]],
+  ]);
 
   // ------------------------------------------------------------ 链上状态还原
 
@@ -84,23 +97,29 @@
   }
 
   /** Last confirmed trait sale at H. Conflicting prices in the same block have no proven order. */
-  function lastSalesAt(listings,notes,H,traitsByAsset) {
-    const heights=txHeights(notes),latest=new Map();
+  /**
+   * Recent sales per trait at height H, from /state listings: SOLD records carry soldHeight (matches the buying
+   * note height for every record checked). Keeps each trait's three newest sales plus any sale tied with the third
+   * in the same block, newest first, so an ambiguous same-block order stays visible to the rule engine.
+   * @returns Map<key, Array<[price, height]>>
+   */
+  function saleHistoryAt(listings,H,traitsByAsset) {
+    const all=new Map();
     for(const l of listings) {
-      if(!Number.isSafeInteger(l.height)||l.height<0)throw new Error('Listing height missing');
-      const height=closeHeight(l,heights);
       if(l.state!=='SOLD')continue;
-      if(height>H)continue;
-      if(height<l.height)throw new Error('Sale precedes listing');
-      const price=priceSats(l),traits=traitsByAsset.get(l.assetId);
+      if(!Number.isSafeInteger(l.soldHeight)||!Number.isSafeInteger(l.height)||l.soldHeight<l.height)throw new Error(`Sale ${l.nf} has an invalid soldHeight`);
+      if(l.soldHeight>H)continue;
+      const traits=traitsByAsset.get(l.assetId);
       if(!traits)throw new Error('Sold asset missing metadata');
-      for(const [type,value]of traits) {
-        const key=type+SEP+value,prev=latest.get(key);
-        if(!prev||height>prev.height)latest.set(key,{height,prices:new Set([price])});
-        else if(height===prev.height)prev.prices.add(price);
-      }
+      const price=priceSats(l);
+      for(const [type,value] of traits){const key=type+SEP+value;if(!all.has(key))all.set(key,[]);all.get(key).push([price,l.soldHeight]);}
     }
-    return new Map([...latest].filter(([,s])=>s.prices.size===1).map(([key,s])=>[key,{height:s.height,price:[...s.prices][0]}]));
+    const keep=RULES_RECENT_SALES;
+    for(const [key,list] of all){
+      list.sort((a,b)=>b[1]-a[1]||a[0]-b[0]);
+      all.set(key,list.length<=keep?list:list.filter(([,h])=>h>=list[keep-1][1]));
+    }
+    return all;
   }
 
   /**
@@ -179,11 +198,25 @@
     return m;
   }
 
+  /** Latest public sale/cancellation per known piece at H; no notes, owner or payout data retained. */
+  function rewardEventsAt(listings,notes,H,inscriptionByAsset) {
+    const heights=txHeights(notes),events=new Map();
+    for(const l of listings){const h=closeHeight(l,heights),id=inscriptionByAsset.get(l.assetId);
+      if(h===null||h>H||!id)continue;
+      const kind=l.state==='SOLD'?'sale':'cancel',prev=events.get(id);
+      if(!prev||h>prev[1])events.set(id,[id,h,kind]);
+      else if(h===prev[1]&&prev[2]!==kind)events.set(id,[id,h,'exit']);
+    }
+    return [...events.values()].sort((a,b)=>a[0].localeCompare(b[0]));
+  }
   /** 组装快照数据（与插件运行时读取的格式一致）。 */
-  function buildSnapshot({ collection, height, indexerHeight, generatedAt, active, traitsByAsset, numberStart, inscriptionByAsset, lastSales }) {
+  function buildSnapshot({ collection, height, indexerHeight, generatedAt, active, traitsByAsset, numberStart, inscriptionByAsset, saleHistory, rewardEvents }) {
     const { collectionFloor, floors } = floorsOf(active, traitsByAsset);
+    const minted = new Set([...traitsByAsset.keys()].map((assetId) => numberStart + assetId));
+    const pendingCatalog = PENDING_CATALOG.filter(([p]) => !minted.has(numberStart + p));
     const keys = new Set();
     for (const traits of traitsByAsset.values()) for (const [t, v] of traits) keys.add(t + SEP + v);
+    for (const [, traits] of pendingCatalog) for (const [t, v] of traits) keys.add(t + SEP + v);
     const sorted = [...keys].sort();
     const index = new Map(sorted.map((k, i) => [k, i]));
     const traits = sorted.map((k) => {
@@ -206,8 +239,42 @@
       traits,
       items,
       offers: active.map(l => [inscriptionByAsset.get(l.assetId), priceSats(l)]).sort((a,b) => a[0].localeCompare(b[0])),
-      ...(lastSales?{sales:[...lastSales].map(([key,s])=>[index.get(key),s.price,s.height]).sort((a,b)=>a[0]-b[0])}:{}),
+      ...(active.some(l=>Number.isSafeInteger(l.tickets)&&l.tickets>=0)?{credits:active.filter(l=>Number.isSafeInteger(l.tickets)&&l.tickets>=0).map(l=>[inscriptionByAsset.get(l.assetId),l.tickets]).sort((a,b)=>a[0].localeCompare(b[0]))}:{}),
+      ...(rewardEvents?{rewardEvents}:{}),
+      ...(saleHistory?{saleHistory:[...saleHistory].map(([key,list])=>[index.get(key),list]).sort((a,b)=>a[0]-b[0])}:{}),
+      ...(pendingCatalog.length?{pending:pendingCatalog.map(([p,traits])=>[numberStart+p,...traits.map(([t,v])=>index.get(t+SEP+v))])}:{}),
     };
+  }
+
+  /** Attach only a complete, height/floor/catalog-consistent official public reward basis.
+   * Per-piece totals are checked against our independent tier/number/cap engine before accepting it. */
+  function attachRewardBasis(snapshot, data) {
+    const R=typeof module==='object'&&module.exports?require('./rules.js'):globalThis.ShnakasRules;
+    const uint=n=>Number.isSafeInteger(n)&&n>=0;
+    if(!data || data.height!==snapshot.snapshot.height || String(data.F)!==String(snapshot.snapshot.collectionFloor)
+      || !Array.isArray(data.values) || data.values.length>10000 || !Array.isArray(data.pieces) || data.pieces.length>10000)throw new Error('Official reward basis has a different block or floor');
+    const values=new Map(),pieces=new Map();
+    for(const v of data.values){const key=JSON.stringify([v.type,v.value]);
+      if(values.has(key)||!['ask','sales','zeroListed','none'].includes(v.source)||![0,25,50,75,100].includes(v.pct)||!uint(v.pieces)||v.pieces<1||v.pieces>10000)throw new Error('Invalid official trait basis');values.set(key,v);}
+    for(const p of data.pieces){if(!uint(p.p)||pieces.has(p.p)||!uint(p.pct)||p.pct<100||p.pct>400||p.pct%25||!uint(p.weight)||p.weight*25!==p.pct)throw new Error('Invalid official piece weight');pieces.set(p.p,p.pct);}
+    const localCounts=new Array(snapshot.traits.length).fill(0);for(const row of Object.values(snapshot.items))for(const i of row.slice(1))localCounts[i]++;
+    const rows=snapshot.traits.map(([type,value,floor],idx)=>{const v=values.get(JSON.stringify([type,value]));
+      if(!v||v.pieces<localCounts[idx])throw new Error('Official reward catalog differs');
+      if(floor!==null){if(v.source!=='ask'||String(v.floor)!==String(floor)||R.traitTier(floor,snapshot.snapshot.collectionFloor).pct!==v.pct)throw new Error('Official ask basis differs');}
+      else if(v.source==='ask'||v.floor!==null||v.source==='zeroListed'&&(v.pieces<20||v.pct!==100)||v.source==='none'&&v.pct!==0||['sales','none'].includes(v.source)&&v.pieces>=20)throw new Error('Official zero-listing basis differs');
+      return [idx,v.pct,v.source,v.pieces];});
+    const candidate={...snapshot,rewardBasis:{height:data.height,traits:rows}};
+    for(const[id,row]of Object.entries(snapshot.items)){const r=R.evaluateSnapshot(candidate,id);if(!r.exact||r.lo.weight!==pieces.get(row[0]-snapshot.collection.numberStart))throw new Error('Official per-piece total differs');}
+    return candidate;
+  }
+  async function withRewardBasis(snapshot, historical=false) {
+    if(historical&&snapshot.snapshot.height<snapshot.snapshot.indexerHeight)return snapshot;
+    let data;try {data=await fetchJson(`${API}/rewards/weights/now`,1);}
+    catch {return snapshot;} // An unavailable endpoint leaves rare traits uncertain; never inherit stale units.
+    // Fixed historical blocks cannot borrow the current tip's units.
+    if(historical&&data?.height!==snapshot.snapshot.height)return snapshot;
+    // A successful same-block but inconsistent response is an error, never a silent fallback.
+    return attachRewardBasis(snapshot,data);
   }
 
   // ------------------------------------------------------------ 网络
@@ -320,10 +387,11 @@
       traitsByAsset,
       numberStart: col.global.start,
       inscriptionByAsset,
-      lastSales:lastSalesAt(state.listings,state.notes,H,traitsByAsset),
+      saleHistory:saleHistoryAt(state.listings,H,traitsByAsset),
+      rewardEvents:rewardEventsAt(state.listings,state.notes,H,inscriptionByAsset),
     });
     snapshot.snapshot.blockTime = await readBlockTime(H);
-    return { snapshot, metaFetched: missing.length };
+    return { snapshot:await withRewardBasis(snapshot,true), metaFetched: missing.length };
   }
 
   // ------------------------------------------------------------ 实时（跟最新区块）
@@ -394,20 +462,24 @@
       if (!traitsByAsset.has(l.assetId)) throw new Error(`挂单 ${l.nf} 的资产 ${l.assetId} 不在 /collection 里`);
     }
 
-    // Zero-listing rare traits require sale history; a failed optional read leaves explicit uncertainty.
-    let lastSales;
-    try {
-      const state=await fetchJson(`${API}/state`,1);
-      if(state.cid===base.collection.cid && Number.isSafeInteger(state.lastHeight) && state.lastHeight>=H)
-        lastSales=lastSalesAt(state.listings,state.notes,H,traitsByAsset);
-    } catch { /* Keep valid floors; no inherited stale sale prices. */ }
+    // Sale history for small zero-listed traits, as the official market page loads it on each block: /state
+    // with a note cursor past the end returns every listing record (~2.6 MB) and no notes. A different height or a
+    // failed request leaves history absent, so affected hypothetical branches stay ranges instead of going stale.
+    const saleHistory = await recentSalesAtTip(H, traitsByAsset);
     const snapshot = buildSnapshot({
       collection: base.collection, height: H, indexerHeight: H, generatedAt: generatedAt(),
-      active, traitsByAsset, numberStart, inscriptionByAsset,
-      lastSales,
+      active, traitsByAsset, numberStart, inscriptionByAsset, ...(saleHistory ? { saleHistory } : {}),
     });
     snapshot.snapshot.blockTime = await readBlockTime(H);
-    return { snapshot, metaFetched };
+    return { snapshot:await withRewardBasis(snapshot), metaFetched };
+  }
+
+  async function recentSalesAtTip(H, traitsByAsset) {
+    let state;
+    try { state = await fetchJson(`${API}/state?since=${STATE_NOTES_PAST_END}`, 1); }
+    catch { return null; }
+    if (!state || state.lastHeight !== H || !Array.isArray(state.listings)) return null;
+    return saleHistoryAt(state.listings, H, traitsByAsset);
   }
 
   // Optional display metadata, never a dependency of weight calculation.
@@ -429,6 +501,6 @@
 
   return {
     readBlockTime, BLOCK_API, FORMAT, API, COLLECTION, NUMBER_TRAIT_TYPE,
-    txHeights, closeHeight, activeListingsAt, lastSalesAt, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
+    attachRewardBasis, rewardEventsAt, txHeights, closeHeight, activeListingsAt, saleHistoryAt, PENDING_CATALOG, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
   };
 });

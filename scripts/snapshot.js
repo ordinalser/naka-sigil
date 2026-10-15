@@ -55,7 +55,7 @@ async function main() {
   console.log(`   快照高度 ${s.height}（索引器 ${s.indexerHeight}）· 有效挂单 ${s.listings} · 集合地板 ${s.collectionFloor} 聪`);
   console.log(`   特征 ${snap.traits.length} 个：有挂单 ${measured.length}（${Object.entries(tiers).map(([k, v]) => `${k}×${v}`).join('，')}），无挂单 ${snap.traits.length - measured.length}`);
   console.log(`   藏品 ${Object.keys(snap.items).length} 件`);
-  console.log(`   区块 ${s.height} 的权重估算，不是官方季度最终权重`);
+  console.log(`   成交记录 ${snap.saleHistory.length} 个特征 · 待铸造 ${snap.pending ? snap.pending.length : 0} 枚 · 官方当期单位 ${snap.rewardBasis ? '已附' : '未附'}`);
 }
 
 main().catch((e) => { console.error('快照失败：' + e.message); process.exit(1); });

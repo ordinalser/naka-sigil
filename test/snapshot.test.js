@@ -7,15 +7,17 @@ const note = (txid, height) => ({ txid, height, pos: 0, kind: 'buy' });
 const listing = (nf, assetId, price, height, extra = {}) => ({
   nf, assetId, price: String(price), height, state: 'ACTIVE', soldTxid: null, claimTxid: null, closedTxid: null, ...extra,
 });
-test('Last trait sale uses confirmed sale height, excludes future and withdrawals, and rejects ambiguous same-block order',()=>{
-  const C=require('../src/lib/snapshot-core.js'),traits=new Map([[1,[['Hair','Rare']]],[2,[['Hair','Rare']]]]);
-  const sold=(name,asset,p,h)=>listing(name,asset,p,1,{state:'SOLD',soldTxid:name});
-  const ls=[sold('old',1,100,10),sold('new',2,200,20),sold('future',1,300,30),listing('withdraw',1,900,1,{state:'CLAIMED',claimTxid:'claim'})];
-  const notes=[note('old',10),note('new',20),note('future',30),note('claim',21)];
-  assert.deepEqual(C.lastSalesAt(ls,notes,25,traits).get('Hair\0Rare'),{height:20,price:200});
-  assert.equal(C.lastSalesAt(ls,notes,9,traits).size,0);
-  assert.equal(C.lastSalesAt([...ls,sold('tie',1,201,20)],[...notes,note('tie',20)],25,traits).size,0);
-  assert.equal(C.lastSalesAt([...ls,sold('tie',1,200,20)],[...notes,note('tie',20)],25,traits).get('Hair\0Rare').price,200);
+test('Trait sale history keeps the three newest confirmed sales, ties with the third, and excludes future sales and withdrawals',()=>{
+  const C=require('../src/lib/snapshot-core.js'),traits=new Map([[1,[['Hair','Rare']]],[2,[['Hair','Rare'],['Body','Ape']]]]);
+  const sold=(name,asset,p,h)=>listing(name,asset,p,1,{state:'SOLD',soldTxid:name,soldHeight:h});
+  const ls=[sold('a',1,100,10),sold('b',2,200,20),sold('c',1,300,30),sold('d',2,400,40),sold('future',1,999,90),listing('withdraw',1,900,1,{state:'CLAIMED',claimTxid:'claim',claimHeight:21})];
+  assert.deepEqual(C.saleHistoryAt(ls,50,traits).get('Hair\0Rare'),[[400,40],[300,30],[200,20]]);
+  assert.deepEqual(C.saleHistoryAt(ls,50,traits).get('Body\0Ape'),[[400,40],[200,20]]);
+  assert.deepEqual(C.saleHistoryAt(ls,25,traits).get('Hair\0Rare'),[[200,20],[100,10]]);
+  assert.equal(C.saleHistoryAt(ls,9,traits).size,0);
+  assert.deepEqual(C.saleHistoryAt([...ls,sold('tie',1,250,20)],35,traits).get('Hair\0Rare'),[[300,30],[200,20],[250,20]],'a same-block tie at the third sale stays');
+  assert.throws(()=>C.saleHistoryAt([listing('x',1,100,5,{state:'SOLD',soldTxid:'x',soldHeight:4})],50,traits));
+  assert.throws(()=>C.saleHistoryAt([listing('x',1,100,5,{state:'SOLD',soldTxid:'x'})],50,traits));
 });
 
 test('还原指定高度的有效挂单：上架高度 ≤ H，关闭高度 > H', () => {
@@ -108,7 +110,7 @@ function fakeChain({ lastHeight = 100 } = {}) {
     cid: 'c1', lastHeight,
     listings: [
       { nf: 'L1', assetId: 0, price: '1000', height: 10, state: 'ACTIVE', soldTxid: null, claimTxid: null, closedTxid: null },
-      { nf: 'L2', assetId: 2, price: '3000', height: 20, state: 'SOLD', soldTxid: 'buy', claimTxid: null, closedTxid: null },
+      { nf: 'L2', assetId: 2, price: '3000', height: 20, state: 'SOLD', soldTxid: 'buy', claimTxid: null, closedTxid: null, soldHeight: 50 },
     ],
     notes: [{ txid: 'buy', height: 50, pos: 0 }],
   };
@@ -166,7 +168,7 @@ const BASE_LIVE = {
 };
 const ID = (c) => c.repeat(64) + 'i0';
 const BASE_REAL = { ...BASE_LIVE, items: { [ID('a')]: [0, 0], [ID('b')]: [1, 1] } };
-function liveFetch({ heights = [100], listings, inscribed = 2, children, meta, state }) {
+function liveFetch({ heights = [100], listings, inscribed = 2, children, meta, state, weights }) {
   const calls = [];
   let pulseN = 0;
   const fetch = async (url) => {
@@ -175,7 +177,8 @@ function liveFetch({ heights = [100], listings, inscribed = 2, children, meta, s
     if (url.endsWith('/pulse')) { body = { lastHeight: heights[Math.min(pulseN, heights.length - 1)], epoch: 'e', inscribed }; pulseN += 1; }
     else if (url.endsWith('/listings')) body = listings;
     else if (url.endsWith('/collection')) body = { cid: 'c1', global: { start: 0 }, children };
-    else if (url.endsWith('/state')) body = state??null;
+    else if (url.includes('/state')) body = state??null;
+    else if (url.endsWith('/rewards/weights/now')) body = weights??null;
     else if (url.includes('/meta/')) body = meta;
     return { ok: body !== null, status: body ? 200 : 404, headers: { get: () => null }, json: async () => body };
   };
@@ -191,8 +194,9 @@ async function withFetch(f, fn) {
 test('实时快照：挂单按确认高度计入；补读成交历史失败时保留有效地板', async () => {
   const chain = liveFetch({ heights: [100], listings: [L('x', ID('a'), 0, 1000, 90), L('y', ID('b'), 1, 3000, 100), L('z', ID('b'), 1, 500, 101)] });
   const res = await withFetch(chain.fetch, () => generateLive({ before: { lastHeight: 100, epoch: 'e', inscribed: 2 }, bases: [BASE_REAL], generatedAt: () => 'T' }));
-  assert.deepEqual(chain.calls, ['/listings', '/pulse', '/state', 'https://blockstream.info/api/blocks/100']);
+  assert.deepEqual(chain.calls, ['/listings', '/pulse', '/state?since=999999999', 'https://blockstream.info/api/blocks/100', '/rewards/weights/now']);
   assert.equal(res.metaFetched, 0);
+  assert.equal(res.snapshot.saleHistory, undefined, 'failed history read leaves sale-dependent branches unknown');
   assert.equal(res.snapshot.snapshot.height, 100);
   assert.equal(res.snapshot.snapshot.listings, 2);          // 101 上架的那条还没确认，不计入
   assert.equal(res.snapshot.snapshot.collectionFloor, 1000);
@@ -204,18 +208,17 @@ test('实时快照：读取期间又出了新块 → 返回 null，不产出数�
   const res = await withFetch(chain.fetch, () => generateLive({ before: { lastHeight: 100, epoch: 'e', inscribed: 2 }, bases: [BASE_REAL], generatedAt: () => 'T' }));
   assert.equal(res, null);
 });
-test('Live sale history is height-bound; provider lag/failure never inherits stale base sales',async()=>{
-  const base={...BASE_REAL,sales:[[1,999999,80]]};
-  const sold=listing('sale',1,1250,10,{state:'SOLD',soldTxid:'tx'});
-  for(const state of [{cid:'c1',lastHeight:100,listings:[sold],notes:[note('tx',90)]},{cid:'c1',lastHeight:99,listings:[sold],notes:[note('tx',90)]},undefined]) {
+test('Live sale history comes only from same-height /state; another height or a failed read leaves it absent',async()=>{
+  const sold=listing('sale',1,1250,10,{state:'SOLD',soldTxid:'tx',soldHeight:90});
+  for(const [state,expected] of [[{cid:'c1',lastHeight:100,listings:[sold]},[[1250,90]]],[{cid:'c1',lastHeight:99,listings:[sold]},undefined],[undefined,undefined]]) {
     const chain=liveFetch({listings:[L('x',ID('a'),0,1000,90)],state});
-    const res=await withFetch(chain.fetch,()=>generateLive({before:{lastHeight:100,epoch:'e'},bases:[base],generatedAt:()=> 'T'}));
+    const res=await withFetch(chain.fetch,()=>generateLive({before:{lastHeight:100,epoch:'e'},bases:[BASE_REAL],generatedAt:()=> 'T'}));
     assert.equal(res.snapshot.snapshot.collectionFloor,1000);
+    assert.equal(res.snapshot.sales,undefined,'the former single-sale field is never produced');
     const idx=res.snapshot.traits.findIndex(t=>t[1]==='Ape');
-    assert.deepEqual(res.snapshot.sales,state?.lastHeight===100?[[idx,1250,90]]:undefined);
+    assert.deepEqual(res.snapshot.saleHistory?.find(([i])=>i===idx)?.[1],expected);
   }
 });
-
 test('实时快照：有新铸造的藏品才读 /collection 并补拉元数据', async () => {
   const chain = liveFetch({
     heights: [100], inscribed: 3,
@@ -224,7 +227,7 @@ test('实时快照：有新铸造的藏品才读 /collection 并补拉元数据'
     meta: { attributes: [{ trait_type: 'Body', value: 'Alien' }], shielded: { number: 2 } },
   });
   const res = await withFetch(chain.fetch, () => generateLive({ before: { lastHeight: 100, epoch: 'e', inscribed: 3 }, bases: [BASE_REAL], generatedAt: () => 'T' }));
-  assert.deepEqual(chain.calls, ['/listings', '/pulse', '/collection', '/meta/2?c=c1', '/state', 'https://blockstream.info/api/blocks/100']);
+  assert.deepEqual(chain.calls, ['/listings', '/pulse', '/collection', '/meta/2?c=c1', '/state?since=999999999', 'https://blockstream.info/api/blocks/100', '/rewards/weights/now']);
   assert.equal(res.metaFetched, 1);
   assert.deepEqual(res.snapshot.items[ID('c')].slice(0, 1), [2]);
   assert.equal(res.snapshot.snapshot.collectionFloor, 700);
@@ -294,4 +297,33 @@ test('Block time lookup validates height, hash and seconds; API failure remains 
   assert.equal(await withFetch(async()=>{throw new TypeError('network');},()=>readBlockTime(970502)),null);
   assert.equal(await withFetch(async()=>({ok:false,status:429}),()=>readBlockTime(970502)),null);
   assert.equal(await readBlockTime(-1),null);
+});
+
+test('Official current reward basis reconciles trait units, canonical supply and every piece at the same block',()=>{
+  const C=require('../src/lib/snapshot-core.js'),R=require('../src/lib/rules.js');
+  const s={...BASE_REAL,collection:{...BASE_REAL.collection,numberStart:1000},snapshot:{height:100,collectionFloor:1000},traits:[['Body','Pepe',1000,1],['Body','Ape',null,0]],items:{[ID('a')]:[1000,0],[ID('b')]:[1001,1]}};
+  const data={height:100,F:'1000',values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:3},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:4}],pieces:[{p:0,pct:100,weight:4},{p:1,pct:150,weight:6}]};
+  const verified=C.attachRewardBasis(s,data);
+  assert.equal(R.evaluateSnapshot(verified,ID('b')).lo.weight,150);assert.equal(R.evaluateSnapshot(verified,ID('b')).traits[0].method,'official-sales');
+  assert.equal(s.rewardBasis,undefined,'does not mutate an accepted snapshot');
+  for(const mutate of [x=>x.height++,x=>x.F='999',x=>x.values[0].pct=25,x=>x.values[1].source='ask',x=>x.values[1].pieces=0,x=>x.pieces[1].pct=200,x=>x.pieces[1].weight='6',x=>x.pieces.push(x.pieces[0])]){
+    const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad));
+  }
+  const none=structuredClone(data);none.values[1]={...none.values[1],source:'none',pct:0};none.pieces[1]={p:1,weight:4,pct:100};assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,none),ID('b')).exact,true);
+});
+
+test('Listing credits are optional output metadata: known zero survives while unavailable values are omitted',()=>{
+  const snap=buildSnapshot({collection:{},height:100,indexerHeight:100,generatedAt:'T',active:[{assetId:0,price:'1000',tickets:0}],traitsByAsset:new Map([[0,[['Body','Pepe']]]]),numberStart:0,inscriptionByAsset:new Map([[0,ID('a')]])});
+  assert.deepEqual(snap.credits,[[ID('a'),0]]);
+  const absent=buildSnapshot({collection:{},height:100,indexerHeight:100,generatedAt:'T',active:[{assetId:0,price:'1000'}],traitsByAsset:new Map([[0,[['Body','Pepe']]]]),numberStart:0,inscriptionByAsset:new Map([[0,ID('a')]])});
+  assert.equal(absent.credits,undefined);
+});
+
+test('Public reward exits retain only known IDs, closed heights and kinds at the selected block',()=>{
+  const C=require('../src/lib/snapshot-core'),a=ID('a'),b=ID('b'),ids=new Map([[1,a],[2,b]]);
+  const ls=[listing('sale',1,100,1,{state:'SOLD',soldTxid:'buy'}),listing('cancel',1,200,2,{state:'CLAIMED',claimTxid:'return'}),listing('unknown',3,100,1,{state:'SOLD',soldTxid:'other'}),listing('active',2,100,1)];
+  const notes=[note('buy',10),note('return',20),note('other',9)];
+  assert.deepEqual(C.rewardEventsAt(ls,notes,15,ids),[[a,10,'sale']]);
+  assert.deepEqual(C.rewardEventsAt(ls,notes,20,ids),[[a,20,'cancel']]);
+  assert.deepEqual(C.rewardEventsAt(ls,notes,8,ids),[]);
 });

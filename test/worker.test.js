@@ -90,6 +90,11 @@ test('A no-change automatic pulse keeps the exact batch without rebuilding it',a
  const before=Date.now()-61000;let generated=0;const h=harness({liveEnabled:true,liveSnapshot:snapshot,liveStatus:{state:'ok',epoch:7,checkedAt:before}}, {fetchJson:async()=>({lastHeight:snapshot.snapshot.height,epoch:7}),generateLive:async()=>{generated++;return {snapshot};}});await flush();await h.tick();
  assert.equal(generated,0);assert.equal(h.local.liveSnapshot,snapshot);assert.equal(h.local.liveStatus.state,'ok');assert.equal(h.local.liveStatus.epoch,7);assert.ok(h.local.liveStatus.checkedAt>before);
 });
+test('A same-height snapshot without sale history is rebuilt instead of keeping ranges for the whole block',async()=>{
+ const incomplete=JSON.parse(JSON.stringify(snapshot));delete incomplete.saleHistory;let generated=0;
+ const h=harness({liveEnabled:true,liveSnapshot:incomplete,liveStatus:{state:'ok',epoch:7,checkedAt:Date.now()-61000}}, {fetchJson:async()=>({lastHeight:snapshot.snapshot.height,epoch:7}),generateLive:async()=>{generated++;return {snapshot};}});await flush();await h.tick();
+ assert.equal(generated,1);assert.equal(h.local.liveSnapshot,snapshot);assert.ok(h.local.liveSnapshot.saleHistory.length>0);
+});
 test('A fixed-height load queues behind an in-flight live request instead of rejecting the mode switch',async()=>{
  const gate=deferred();let manual=0;const h=harness({liveEnabled:true},{generateLive:()=>gate.promise,generate:async()=>{manual++;return {snapshot};}});await flush();const live=h.tick();await flush();
  h.local.liveEnabled=false;let response;h.events.message({type:'shn-sync',height:snapshot.snapshot.height},{id:'test'},r=>response=r);await flush();assert.equal(response.ok,true);assert.equal(manual,0);
@@ -112,4 +117,29 @@ test('Failed or mismatched fixed selection preserves the original mode and data'
   h.events.message({type:'shn-set-fixed',height:snapshot.snapshot.height},{id:'test'},()=>{});await flush();
   assert.equal(h.local.liveEnabled,true);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.syncStatus.state,'error');
  }
+});
+
+// Exercise the deployed classic-worker imports, not the mocked calculation core.
+test('Classic worker imports its real reward rules before validating an official basis',()=>{
+  const path=require('node:path'),context={};context.self=context;context.globalThis=context;
+  vm.createContext(context);
+  const source=fs.readFileSync(require.resolve('../src/sw/sync-sw.js'),'utf8');
+  const statement=source.match(/importScripts\([^;]+;/)[0];
+  context.importScripts=(...files)=>{for(const file of files)vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../src/sw',file),'utf8'),context);};
+  vm.runInContext(statement,context);
+  const basis=snapshot.rewardBasis, counts=new Map(basis.traits.map(([i,pct,source,pieces])=>[i,{pct,source,pieces}]));
+  const data={height:snapshot.snapshot.height,F:snapshot.snapshot.collectionFloor,values:snapshot.traits.map(([type,value,floor],i)=>({type,value,floor,...counts.get(i)})),pieces:Object.values(snapshot.items).map(row=>{const r=context.ShnakasRules.evaluateSnapshot(snapshot,Object.keys(snapshot.items).find(id=>snapshot.items[id]===row));return {p:row[0]-snapshot.collection.numberStart,pct:r.lo.weight,weight:r.lo.weight/25};})};
+  assert.equal(context.ShnakasSnapshot.attachRewardBasis(snapshot,data).rewardBasis.height,snapshot.snapshot.height);
+});
+
+test('Explicit reward-clock requests are popup-only, cached and never change Fixed snapshots',async()=>{
+ const h=harness({liveEnabled:false,snapshot},{readBlockTime:async height=>({height,hash:'a'.repeat(64),timestamp:1000})});await flush();
+ const request=()=>new Promise(resolve=>h.events.message({type:'shn-reward-clock'},{id:'test',url:'chrome-extension://test/popup/popup.html'},resolve));
+ const [a,b]=await Promise.all([request(),request()]);assert.equal(a.ok,true);assert.equal(a.height,snapshot.snapshot.height+1);assert.equal(a.height,b.height);assert.equal(h.calls(),1);await request();assert.equal(h.calls(),1);
+ assert.equal(h.local.liveEnabled,false);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.liveSnapshot,undefined);
+ assert.equal(h.events.message({type:'shn-reward-clock'},{id:'test',url:'https://ord-dropz.xyz/wallet'},()=>{}),false);
+});
+test('Bad reward-clock data fails without modifying the selected source',async()=>{
+ const h=harness({liveEnabled:false,snapshot},{fetchJson:async()=>({lastHeight:-1})});await flush();
+ const r=await new Promise(resolve=>h.events.message({type:'shn-reward-clock'},{id:'test',url:'chrome-extension://test/popup/popup.html'},resolve));assert.equal(r.ok,false);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.liveEnabled,false);
 });

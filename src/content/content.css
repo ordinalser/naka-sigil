@@ -149,6 +149,36 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 /* Selected for comparison: a gold frame on every badge; a text tab where the badge floats over artwork, a corner check elsewhere. */
 .shn-badge[data-shn-compared]{border-color:#ffb347;box-shadow:0 0 0 1px #ffb347,2px 2px 0 1px #080808}
 .shn-badge[data-shn-compared]::before{position:absolute;z-index:1;background:#ffb347;color:#1d1408;font:700 9px/13px ui-monospace,monospace;white-space:nowrap}
-.shn-badge--grid[data-shn-compared]::before,.shn-badge--vault[data-shn-compared]::before{content:attr(data-shn-compared);left:-2px;right:-2px;bottom:calc(100% + 1px);padding:0 4px;text-align:center}
-.shn-badge:not(.shn-badge--grid):not(.shn-badge--vault)[data-shn-compared]::before{content:'✓';top:-7px;left:-7px;width:13px;text-align:center}
+.shn-badge--grid[data-shn-compared]::before,.shn-badge--vault[data-shn-compared]::before,.shn-badge--wallet[data-shn-compared]::before{content:attr(data-shn-compared);left:-2px;right:-2px;bottom:calc(100% + 1px);padding:0 4px;text-align:center}
+.shn-badge:not(.shn-badge--grid):not(.shn-badge--vault):not(.shn-badge--wallet)[data-shn-compared]::before{content:'✓';top:-7px;left:-7px;width:13px;text-align:center}
 .shn-pop[data-shn-side=top] .shn-pop__pointer-edge { stroke:#bca16e; }
+
+/* Standalone wallet: stay within the artwork, keeping native prices and actions intact. */
+.sv-shell .sv-piece-grid button.sv-tile > .aspect-square:has(> .shn-badge--wallet),
+.ps-wrap[role="dialog"] .ps-art:has(> .shn-badge--wallet) { position:relative; }
+.shn-badge--wallet { right:6px; bottom:6px; font-size:11px; }
+.shn-scope--wallet { margin:8px 0; padding:6px 8px; }
+.shn-scope--wallet .shn-scope__head { flex-wrap:wrap; gap:4px 7px; }
+.shn-scope--wallet .shn-scope__brand { font-size:9px; }
+.shn-scope--wallet { gap:0 7px; }
+.shn-scope--wallet .shn-scope__head { min-width:0; min-height:20px; height:auto; }
+.shn-scope--wallet .shn-scope__note { display:block; flex-basis:100%; margin:0; font-size:9px; white-space:normal; }
+.shn-holdings-import{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 18px;margin:12px 0 14px;padding:12px 14px;background:#17161a;border:1px solid #3a3530;border-left:3px solid #94dcb4;color:#eee8dd;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.shn-hb-summary{display:flex;align-items:center;gap:12px;min-width:0}
+.shn-hb-sigil{flex:none;width:28px;height:32px;color:#ffb347}
+.shn-hb-figure{display:flex;flex-direction:column;gap:3px;min-width:0}
+.shn-hb-label{color:#a7a198;font-size:11px}
+.shn-hb-value{display:flex;align-items:flex-end;gap:8px;color:#94dcb4}
+.shn-hb-digits{display:block;width:auto;height:26px}
+.shn-hb-unit{font-size:12px;font-weight:700;line-height:1}
+.shn-hb-sub{color:#a7a198;font-size:10px}
+.shn-hb-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.shn-holdings-import .shn-compare-add{margin:0;padding:6px 10px;font-size:11px}
+.shn-hb-add[data-state=none],.shn-hb-add[data-state=some]{color:#1c140a;background:#ffb347;border-color:#ffb347;font-weight:700}
+.shn-hb-add[data-state=all]{opacity:1;color:#9ce0bc;border-color:#58866b;background:#183125}
+.shn-hb-foot{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding-top:8px;border-top:1px dashed #3a3530;font-size:10px}
+.shn-hb-safe{color:#d6cbea}
+.shn-hb-safe::before{content:'';display:inline-block;width:7px;height:8px;margin-right:7px;background:#c4b5fd;clip-path:polygon(0 3px,1px 3px,1px 1px,2px 1px,2px 0,5px 0,5px 1px,6px 1px,6px 3px,7px 3px,7px 8px,0 8px)}
+.shn-hb-mine{color:#9ce0bc}
+.shn-sr{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
+@media(max-width:640px){.shn-holdings-import{grid-template-columns:1fr}.shn-hb-actions{justify-content:flex-start}.shn-hb-mine{margin-left:0}}

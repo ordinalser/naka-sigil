@@ -11,7 +11,7 @@ test('Any catalog number resolves by snapshot number, not title or array order',
   for(const n of [0,9,10,99,100,999,1000,3332]) {
     const entry=Object.entries(snap.items).find(([,r])=>r[0]===n);if(!entry)continue;
     const found=query(snap,String(n));assert.equal(found.state,'found');assert.equal(found.id,entry[0]);assert.equal(found.height,snap.snapshot.height);
-    const traits=entry[1].slice(1).map(i=>{const [type,value,floor,listed]=snap.traits[i];const sale=snap.sales?.find(([idx])=>idx===i);return {type,value,floor,listed,supply:Object.values(snap.items).filter(r=>r.slice(1).includes(i)).length,lastSale:sale?.[1]??null};});
+    const traits=entry[1].slice(1).map(i=>{const [type,value,floor,listed]=snap.traits[i];const history=snap.saleHistory?.find(([idx])=>idx===i);return {type,value,floor,listed,supply:[...Object.values(snap.items),...(snap.pending??[])].filter(r=>r.slice(1).includes(i)).length,...(snap.saleHistory?{saleHistory:history?.[1]??[]}:{}),...(snap.rewardBasis?{officialPct:snap.rewardBasis.traits[i][1],officialSource:snap.rewardBasis.traits[i][2],supply:snap.rewardBasis.traits[i][3]}:{})};});
     assert.equal(R.formatWeight(found.result),R.formatWeight(R.evaluate({number:n,traits},snap.snapshot.collectionFloor)));
   }
 });
@@ -29,12 +29,12 @@ test('Lookup exposes listed/unlisted at the selected block, with an explicit unk
   assert.equal(R.formatWeight(before.result),R.formatWeight(after.result),'listing status is separate from holding formula');
 });
 test('Lookup recomputes against selected block/floors, preserving unknown ranges and cap',()=>{
-  const cloned=JSON.parse(JSON.stringify(snap));cloned.snapshot.height=985000;cloned.snapshot.blockTime=null;delete cloned.offers;cloned.snapshot.indexerHeight=985000;for(const t of cloned.traits)if(t[2]!==null)t[2]=cloned.snapshot.collectionFloor;
+  const cloned=JSON.parse(JSON.stringify(snap));cloned.snapshot.height=985000;cloned.snapshot.blockTime=null;delete cloned.offers;delete cloned.credits;delete cloned.rewardBasis;delete cloned.saleHistory;cloned.snapshot.indexerHeight=985000;for(const t of cloned.traits)if(t[2]!==null)t[2]=cloned.snapshot.collectionFloor;
   assert.equal(require('../src/lib/source.js').isSnapshot(cloned),true);
   const result=query(cloned,'#0');assert.equal(result.height,985000);
   assert.notEqual(result.result.lo.weight,query(snap,'#0').result.lo.weight);
-  for(const [id,row]of Object.entries(snap.items)){
-    const found=query(snap,String(row[0]));if(found.result.unmeasured){assert.ok(found.result.lo.weight<=found.result.hi.weight);return;}
+  for(const [id,row]of Object.entries(cloned.items)){
+    const found=query(cloned,String(row[0]));if(found.result.unmeasured){assert.ok(found.result.lo.weight<=found.result.hi.weight);return;}
   }
   assert.fail('Expected unmeasured trait fixture');
 });
