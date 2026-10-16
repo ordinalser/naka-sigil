@@ -122,12 +122,18 @@ Review of the stacked home (block card above holdings) found two hero numbers of
 
 ## No repeated facts (v0.11.0) / 不重复同一事实
 
-Each fact appears once per view. Home drops the “My holdings · 7” head (the view is the holdings): the count belongs to “All holdings (7)”. The Block tab keeps its learned top (mode, block card with the countdown) and below it shows only facts the top does not: what one unit of weight is worth at this block (100% and 400% per week, K, the pool, the per-unit rate v) and the reward period (current or first week range, completed weeks, last rewarded block, claim deadline). Estimated times are local time to the hour. Adding a holding or a comparison opens a small dialog, so the page underneath never shifts. Tab order: Holdings, Block, Find & compare, About. Raise my weight lists the lowest ask first; Largest gain is one click away.
+Each fact appears once per view. Home drops the “My holdings · 7” head (the view is the holdings): the count belongs to “All holdings (7)”. The Block tab keeps its learned top (mode, block card with the countdown) and below it shows only facts the top does not: what one unit of weight is worth at this block (100% and 400% per week, K, the pool, the per-unit rate v) and the reward period (current or first week range, completed weeks, last rewarded block, claim deadline). Estimated times are local time to the minute of the estimate (header time plus 10 minutes a block), marked “about”. Adding a holding or a comparison opens a small dialog, so the page underneath never shifts. Tab order: Holdings, Block, Find & compare, About. Raise my weight lists the lowest ask first; Largest gain is one click away.
 
-每个视图里同一事实只出现一次。首页去掉“我的持仓 · 7 枚”（这一页本身就是持仓），数量放到“全部持仓 (7)”。区块页保持用户已熟悉的上半部分（模式、带倒计时的区块卡），下面只展示上面没有的信息：本区块一个权重单位值多少（100% 与 400% 每周可分多少、K、奖池、每单位每块速率 v），以及奖励周期（当前或第 1 周的区块范围、已完成周数、最后计奖区块、领取截止区块）。预计时间显示为本地时间，精确到小时。添加持仓或比较时弹出小对话框，下方页面不跳动。功能栏顺序：持仓、区块、查询·比较、说明。“增加我的权重”默认按挂价从低到高，一键可切换为“增加最多”。
+每个视图里同一事实只出现一次。首页去掉“我的持仓 · 7 枚”（这一页本身就是持仓），数量放到“全部持仓 (7)”。区块页保持用户已熟悉的上半部分（模式、带倒计时的区块卡），下面只展示上面没有的信息：本区块一个权重单位值多少（100% 与 400% 每周可分多少、K、奖池、每单位每块速率 v），以及奖励周期（当前或第 1 周的区块范围、已完成周数、最后计奖区块、领取截止区块）。预计时间显示为本地时间，按区块头时间加每块 10 分钟推算并精确到分钟，前面标“约”。添加持仓或比较时弹出小对话框，下方页面不跳动。功能栏顺序：持仓、区块、查询·比较、说明。“增加我的权重”默认按挂价从低到高，一键可切换为“增加最多”。
 
 ## Calm screens (v0.11.0) / 不拥挤的界面
 
 Number entry takes several comma-separated numbers; valid ones are added in input order, and every skipped entry is named with its reason (not a number, not in this block's data, already added, Compare full). The weekly-figure card holds only the reward (the figure and its share of the pool); the list head carries everything else on one row: its title, then two identical quiet links, Raise my weight ↗ and Manage ↗ (both open the extension page), then the one framed action ＋ Add; the list ends with a full-width “Show all” row. About keeps only the read-only card open; the allocation arithmetic, weight rules and data notes are rows that unfold one at a time. An empty comparison is one panel that is itself the add button; a partial one shows a single “＋ N more” slot. The Block tab spaces its cards evenly within one screen.
 
 编号输入支持用逗号一次输入多个；有效编号按输入顺序添加，每个被跳过的条目都写明原因（不是编号、不在当前区块数据中、已添加、比较已满）。每周分配卡片只放奖励本身（数字和占奖池比例）；其余操作都在列表头这一行：标题，然后是样式完全相同的两个浅色文字链接“增加我的权重 ↗”“管理 ↗”（都打开插件独立页面），最后是唯一带框的“＋ 添加”；列表末尾是整行的“展开全部”。说明页只展开只读卡片，分配算法、权重规则和数据说明收成可逐个展开的行。比较为空时是一整块可点击的添加面板，部分选中时只显示一条“＋ 还可加入 N 枚”。区块页的卡片在一屏内均匀留白。
+
+## Focused reward card (v0.11.1) / 精简奖励卡
+
+The popup keeps a34px pixel amount, a short week label/progress, and three secondary metrics. The desktop workspace uses a compact horizontal card: accrued amount left, current rate/projected week/claimable right. Narrow screens stack naturally. No Vault/Showcase actions or repeated explanation paragraphs; reference assumptions and accumulation height are hover details. Pending/error feedback stays visible. Amount formatting does not change calculation precision.
+
+弹窗使用34px像素累计数字，搭配短周标签、进度及三个辅助指标。独立工作台采用紧凑横向卡：累计在左，当前速率、本周预计、可领取在右；窄屏自然纵排。移除保险库、截图展示按钮与重复说明，参考假设和累计区块放到悬停提示；等待和错误反馈仍可见。显示位数调整不改变计算精度。

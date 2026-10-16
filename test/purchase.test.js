@@ -107,3 +107,8 @@ test('Cancellation removes only an owned listing without inventing a sale or reu
   assert.equal(P.create(fixture([100],[[0]]),{action:'cancel'}).get(id(0)).state,'no-floor');
   assert.throws(()=>P.create(s,{action:'unknown'}));
 });
+
+test('Delisting a rare final ask without sales cannot invent a zero in place of a carry-forward bonus',()=>{
+ const s=fixture([150,100],[[0],[1],[0]],[1000,1001,1002]);s.saleHistory=[];
+ const out=P.create(s,{action:'cancel'}).get(id(0));assert.equal(out.state,'ready');assert.equal(out.before.lo.weight,150);assert.equal(out.result.traits[0].method,'carry-unverified');assert.equal(out.result.exact,false);assert.equal(out.result.lo.weight,100);assert.equal(out.result.hi.weight,200);
+});

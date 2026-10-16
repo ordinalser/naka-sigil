@@ -255,13 +255,13 @@
       || !Array.isArray(data.values) || data.values.length>10000 || !Array.isArray(data.pieces) || data.pieces.length>10000)throw new Error('Official reward basis has a different block or floor');
     const values=new Map(),pieces=new Map();
     for(const v of data.values){const key=JSON.stringify([v.type,v.value]);
-      if(values.has(key)||!['ask','sales','zeroListed','none'].includes(v.source)||![0,25,50,75,100].includes(v.pct)||!uint(v.pieces)||v.pieces<1||v.pieces>10000)throw new Error('Invalid official trait basis');values.set(key,v);}
+      if(values.has(key)||!['ask','sales','zeroListed','none','lastBlock'].includes(v.source)||![0,25,50,75,100].includes(v.pct)||!uint(v.pieces)||v.pieces<1||v.pieces>10000)throw new Error('Invalid official trait basis');values.set(key,v);}
     for(const p of data.pieces){if(!uint(p.p)||pieces.has(p.p)||!uint(p.pct)||p.pct<100||p.pct>400||p.pct%25||!uint(p.weight)||p.weight*25!==p.pct)throw new Error('Invalid official piece weight');pieces.set(p.p,p.pct);}
     const localCounts=new Array(snapshot.traits.length).fill(0);for(const row of Object.values(snapshot.items))for(const i of row.slice(1))localCounts[i]++;
     const rows=snapshot.traits.map(([type,value,floor],idx)=>{const v=values.get(JSON.stringify([type,value]));
       if(!v||v.pieces<localCounts[idx])throw new Error('Official reward catalog differs');
       if(floor!==null){if(v.source!=='ask'||String(v.floor)!==String(floor)||R.traitTier(floor,snapshot.snapshot.collectionFloor).pct!==v.pct)throw new Error('Official ask basis differs');}
-      else if(v.source==='ask'||v.floor!==null||v.source==='zeroListed'&&(v.pieces<20||v.pct!==100)||v.source==='none'&&v.pct!==0||['sales','none'].includes(v.source)&&v.pieces>=20)throw new Error('Official zero-listing basis differs');
+      else if(v.source==='ask'||v.floor!==null||v.source==='zeroListed'&&(v.pieces<20||v.pct!==100)||v.source==='none'&&v.pct!==0||['sales','none','lastBlock'].includes(v.source)&&v.pieces>=20)throw new Error('Official zero-listing basis differs');
       return [idx,v.pct,v.source,v.pieces];});
     const candidate={...snapshot,rewardBasis:{height:data.height,traits:rows}};
     for(const[id,row]of Object.entries(snapshot.items)){const r=R.evaluateSnapshot(candidate,id);if(!r.exact||r.lo.weight!==pieces.get(row[0]-snapshot.collection.numberStart))throw new Error('Official per-piece total differs');}

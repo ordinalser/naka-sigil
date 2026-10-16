@@ -641,6 +641,18 @@
     anchor.before(bar);
   }
 
+  // Explicit import of visible official staking eligibility. No amounts, wallet secrets or hidden state are read.
+  function scanRewardEligibility(){
+    const progress=document.querySelector('.sv-shell .st-week[role="progressbar"]'),rows=[...document.querySelectorAll('.sv-shell .st-rows .st-row[data-state]')];let bar=document.querySelector('.shn-reward-import');
+    if(!WALLET_PATH.test(location.pathname)||!progress||!rows.length){bar?.remove();return;}
+    const list=[];for(const row of rows){const image=row.querySelector('img'),id=idFromSrc(image?.getAttribute('src')),label=row.querySelector('.st-row-title')?.textContent?.trim();if(!id||!SNAP.items[id]||label!==`#${SNAP.items[id][0]}`||!['earning','claimable','waiting','paused','past','before'].includes(row.dataset.state))continue;list.push({id,state:row.dataset.state});}
+    if(!list.length){bar?.remove();return;}if(bar&&bar.dataset.lang===exploreLang)return;bar?.remove();
+    bar=el('div','shn-reward-import');bar.dataset.lang=exploreLang;const button=el('button','shn-compare-add',exploreLang==='zh'?'将当前奖励资格同步到插件':'Sync displayed eligibility to Naka Sigil');button.type='button';button.title=exploreLang==='zh'?'只读取已显示藏品的计奖状态，不操作领取':'Reads visible earning states only. Does not claim rewards.';
+    button.addEventListener('click',async()=>{const week=Number(progress.getAttribute('aria-label')?.match(/\d+/)?.[0]),numbers=(progress.querySelector('.st-week-foot')?.textContent?.match(/\d[\d,]*/g)??[]).map(v=>Number(v.replaceAll(',','')));if(!Number.isInteger(week)||week<1||week>78||numbers.length<2||numbers[1]!==1008||numbers[0]<0||numbers[0]>1008)return;
+      const entries=[];for(const row of document.querySelectorAll('.sv-shell .st-rows .st-row[data-state]')){const id=idFromSrc(row.querySelector('img')?.getAttribute('src'));if(id&&SNAP.items[id]&&row.querySelector('.st-row-title')?.textContent.trim()===`#${SNAP.items[id][0]}`)entries.push({id,state:row.dataset.state});}
+      button.disabled=true;try{const out=await chrome.runtime.sendMessage({type:'shn-import-eligibility',height:ShnakasRules.RULES.startBlock+(week-1)*1008+numbers[0],week:week-1,rows:entries});button.textContent=out?.ok?(exploreLang==='zh'?'✓ 已同步到本机':'✓ Synced locally'):(exploreLang==='zh'?'请先等待最新区块同步':'Wait for the latest block sync');}finally{button.disabled=false;}});bar.append(button);progress.closest('.st-hero')?.after(bar);
+  }
+
   function scan() {
     const path = location.pathname;
     const c = COLLECTION_PATH.exec(path);
@@ -657,7 +669,7 @@
     }
     for (const b of document.querySelectorAll('.shn-badge')) if (!keepBadges.has(b)) b.remove();
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
-    scanTools(onCollection,onActivity);scanHoldings();
+    scanTools(onCollection,onActivity);scanRewardEligibility();scanHoldings();
     if (popFor && (!popFor.isConnected || popFor.dataset.shnId !== popId || popFor.dataset.shnGen !== popGen)) hidePop();
     else if(popFor) positionPop();
   }

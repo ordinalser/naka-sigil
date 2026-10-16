@@ -137,3 +137,19 @@
 .naka-about__tile span { color:#a49e95; font-size:.9em; }
 .naka-about__links { display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; margin-top:10px !important; color:#a49e95; }
 .naka-about__links a { color:#ffb347; }
+/* Confirmed-block accrual: the amount leads; animation never advances the balance. */
+.naka-reward-miner{position:relative;min-width:0;isolation:isolate;padding:14px 16px 12px;background:radial-gradient(ellipse at 100% 0,#b38aff12,transparent 70%),#19191d;border-top:2px solid #d2b16f;font:12px/1.5 ui-monospace,"PingFang SC",monospace;text-align:left;color:#eee6d8;overflow:hidden}
+.naka-reward-miner::after{content:'';position:absolute;z-index:-1;right:18px;top:56px;width:4px;height:4px;background:#ffb34766;box-shadow:-10px 12px #c5a8ed44,4px 28px #94dcb433;animation:naka-mining 3s steps(4,end) infinite}
+.naka-reward-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.naka-reward-label{color:#c6b899;font-size:11px}.naka-reward-badge{color:#9e96ad;font-size:9px;white-space:nowrap}
+.naka-reward-figure{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin:12px 0 12px;color:#ffce82;min-width:0}
+.naka-reward-digits{display:block;height:34px;width:auto;max-width:100%;overflow:hidden}
+.naka-reward-placeholder{font-size:34px;line-height:1}.naka-reward-unit{font-size:9px;letter-spacing:1.5px;color:#978c77}
+.naka-reward-progress{height:2px;background:#353039;margin:0 0 12px}.naka-reward-progress i{display:block;min-width:2px;height:100%;background:#c7a7ef;transition:width .35s}
+.naka-reward-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.naka-reward-metrics small{display:block;font-size:9px;color:#9f978b;margin-bottom:4px}.naka-reward-metrics strong{display:block;font-size:15px;line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:#d7cebd}
+.naka-reward-basis{font-size:9px;line-height:1.5;color:#969089;margin:12px 0 0!important}.ws-portfolio-summary{display:none}.ws-portfolio>.naka-reward-miner{margin:16px 0 22px;padding:20px 24px 18px}.ws-portfolio .naka-reward-figure{margin:16px 0;gap:8px}.ws-portfolio .naka-reward-digits{height:44px}.ws-portfolio .naka-reward-unit{font-size:11px}.ws-portfolio .naka-reward-label{font-size:13px}.ws-portfolio .naka-reward-badge{font-size:11px}.ws-portfolio .naka-reward-metrics{gap:24px}.ws-portfolio .naka-reward-metrics small{font-size:11px;margin-bottom:8px}.ws-portfolio .naka-reward-metrics strong{font-size:24px}.ws-accrued{display:block;margin:8px 0 0;color:#d8c19b;font-size:11px}.naka-reward-miner[data-state=loading] .naka-reward-label::after{content:' · · ·';animation:naka-mining 1.5s steps(3,end) infinite}.naka-reward-miner[data-state=before]::after{animation:none;opacity:.3}
+@keyframes naka-mining{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+@media(prefers-reduced-motion:reduce){.naka-reward-miner::after,.naka-reward-label::after{animation:none!important}.naka-reward-progress i{transition:none}}
+@media(max-width:480px){.ws-portfolio>.naka-reward-miner{padding:18px 18px}.ws-portfolio .naka-reward-digits{height:40px}.ws-portfolio .naka-reward-metrics{gap:10px}.ws-portfolio .naka-reward-metrics strong{font-size:17px}.ws-portfolio .naka-reward-metrics small{font-size:10px}.ws-portfolio .naka-reward-badge{font-size:9px}}
+
+@media(min-width:900px){.ws-portfolio>.naka-reward-miner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:48px;row-gap:16px}.ws-portfolio .naka-reward-head{grid-column:1/-1}.ws-portfolio .naka-reward-figure{grid-column:1;grid-row:2;margin:0}.ws-portfolio .naka-reward-metrics{grid-column:2;grid-row:2;align-self:center}.ws-portfolio .naka-reward-progress{grid-column:1/-1;grid-row:3;margin:0}.ws-portfolio .naka-reward-basis{grid-column:1/-1;margin:0!important}}

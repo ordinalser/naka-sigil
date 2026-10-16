@@ -126,10 +126,11 @@
       if(t.supply!==undefined && (!Number.isSafeInteger(t.supply)||t.supply<1))throw new Error('Invalid trait supply');
       if(t.floor!==null)return {...t,...traitTier(t.floor,collectionFloorSats),method:'floor',basisPrice:t.floor};
       if(t.supply>=RULES.heldSupply)return {...t,measured:true,pct:100,ratio:null,method:'held',basisPrice:null};
-      if(t.supply<RULES.heldSupply && t.officialPct!==undefined && ['sales','none'].includes(t.officialSource)){
+      if(t.supply<RULES.heldSupply && t.officialPct!==undefined && ['sales','none','lastBlock'].includes(t.officialSource)){
         if(![0,25,50,75,100].includes(t.officialPct))throw new Error('Invalid official trait bonus');
         return {...t,measured:true,pct:t.officialPct,ratio:null,method:'official-'+t.officialSource,basisPrice:null};
       }
+      if(t.carryUnknown)return {...t,measured:false,method:'carry-unverified',basisPrice:null,pctLo:0,pctHi:MAX_TRAIT_PCT};
       // Without sale history the three-sale basis is unknown: 0..100%.
       if(t.saleHistory===undefined)return {...t,measured:false,method:'missing-sale',basisPrice:null,pctLo:0,pctHi:MAX_TRAIT_PCT};
       return {...t,...recentSalesTier(t.saleHistory,t.pendingSale,collectionFloorSats)};

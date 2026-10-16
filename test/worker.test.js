@@ -13,7 +13,7 @@ function harness(initial={}, overrides={}) {
   const area=data=>({get:async keys=>Object.fromEntries((Array.isArray(keys)?keys:[keys]).map(k=>[k,data[k]])),set:async values=>Object.assign(data,values),remove:async keys=>{for(const k of Array.isArray(keys)?keys:[keys])delete data[k];}});
   let calls=0;
   const core={FORMAT:1,API:'https://example.invalid',fetchJson:async()=>{calls++;return {lastHeight:snapshot.snapshot.height+1,epoch:2};},generateLive:async()=>({snapshot}),...overrides};
-  const context={self:{ShnakasSnapshot:core,ShnakasSource:SRC,SHNAKAS_SNAPSHOT:snapshot,NakaExplore:require('../src/lib/explore.js')},importScripts(){},setInterval,clearInterval,Date,
+  const context={self:{ShnakasRules:require('../src/lib/rules.js'),NakaRewards:require('../src/lib/rewards.js'),NakaPortfolio:require('../src/lib/portfolio.js'),ShnakasSnapshot:core,ShnakasSource:SRC,SHNAKAS_SNAPSHOT:snapshot,NakaExplore:require('../src/lib/explore.js')},importScripts(){},setInterval,clearInterval,Date,
     chrome:{storage:{local:area(local),session:area(session),onChanged:event('change')},tabs:{create:async options=>{events.created=options;}},runtime:{getURL:rel=>'chrome-extension://test/'+rel,id:'test',onInstalled:event('installed'),onStartup:event('startup'),onMessage:event('message'),getPlatformInfo:async()=>({})},alarms:{get:async n=>alarms.get(n),create:async(n,a)=>alarms.set(n,a),clear:async n=>alarms.delete(n),onAlarm:event('alarm')}}};
   vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../src/sw/sync-sw.js'),'utf8'),context);
   return {local,context,events,alarms,calls:()=>calls,tick:()=>vm.runInContext('liveTick()',context)};
@@ -101,22 +101,22 @@ test('A fixed-height load queues behind an in-flight live request instead of rej
  gate.resolve({snapshot});await live;await flush();assert.equal(manual,1);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.liveSnapshot,undefined);assert.equal(h.local.liveEnabled,false);
 });
 
-test('Confirmed fixed selection changes mode and data atomically only after a valid load',async()=>{
- for(const enabled of [true,false]){
-  const gate=deferred(),old={...snapshot,snapshot:{...snapshot.snapshot,height:snapshot.snapshot.height-1}};
-  const h=harness({liveEnabled:enabled,snapshot:old},{generate:()=>gate.promise});await flush();let response;
-  h.events.message({type:'shn-set-fixed',height:snapshot.snapshot.height},{id:'test'},r=>response=r);await flush();
-  assert.equal(response.ok,true);assert.equal(h.local.liveEnabled,enabled);assert.equal(h.local.snapshot,old);
-  h.events.message({type:'shn-set-fixed',height:snapshot.snapshot.height},{id:'test'},r=>response=r);assert.equal(response.error,'busy');
-  gate.resolve({snapshot});await flush();assert.equal(h.local.liveEnabled,false);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.syncStatus.state,'done');
+test('Historical inspection is popup-only, cached and never changes the live source',async()=>{
+ let generated=0;const h=harness({liveEnabled:true,liveSnapshot:snapshot,snapshot},{generate:async()=>{generated++;return {snapshot};}});await flush();
+ const sender={id:'test',url:'chrome-extension://test/popup/popup.html'};
+ const req=()=>new Promise(resolve=>h.events.message({type:'shn-history',height:snapshot.snapshot.height},sender,resolve));
+ const first=await req();assert.equal(first.ok,true);assert.equal(first.snapshot,snapshot);assert.equal((await req()).ok,true);assert.equal(generated,1);assert.equal(h.local.liveEnabled,true);assert.equal(h.local.liveSnapshot,snapshot);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.syncStatus,undefined);
+ let denied;h.events.message({type:'shn-history',height:snapshot.snapshot.height},{id:'test',url:'https://ord-dropz.xyz/wallet'},r=>denied=r);assert.equal(denied.ok,false);
+ h.events.message({type:'shn-set-fixed',height:snapshot.snapshot.height},sender,r=>denied=r);assert.equal(denied.error,'history-only');
+});
+test('Failed or mismatched historical queries preserve all production data',async()=>{
+ for(const generate of [async()=>{throw Error('Failed');},async()=>({snapshot:{...snapshot,snapshot:{...snapshot.snapshot,height:1}}})]){
+  const h=harness({liveEnabled:true,liveSnapshot:snapshot,snapshot},{generate});await flush();const result=await new Promise(resolve=>h.events.message({type:'shn-history',height:snapshot.snapshot.height},{id:'test',url:'chrome-extension://test/popup/popup.html'},resolve));
+  assert.equal(result.ok,false);assert.equal(h.local.liveEnabled,true);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.liveSnapshot,snapshot);assert.equal(h.local.syncStatus,undefined);
  }
 });
-test('Failed or mismatched fixed selection preserves the original mode and data',async()=>{
- for(const generate of [async()=>{throw Error('Failed');},async()=>({snapshot:{...snapshot,snapshot:{...snapshot.snapshot,height:1}}})]){
-  const h=harness({liveEnabled:true,snapshot},{generate});await flush();
-  h.events.message({type:'shn-set-fixed',height:snapshot.snapshot.height},{id:'test'},()=>{});await flush();
-  assert.equal(h.local.liveEnabled,true);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.syncStatus.state,'error');
- }
+test('Upgrade migrates old Fixed mode to Live and clears schema-failure backoff',async()=>{
+ const h=harness({liveEnabled:false,liveStatus:{state:'error',message:'Invalid official trait basis'}});await flush();await h.events.installed();assert.equal(h.local.liveEnabled,true);assert.equal(h.local.liveStatus,undefined);
 });
 
 // Exercise the deployed classic-worker imports, not the mocked calculation core.
@@ -142,4 +142,26 @@ test('Explicit reward-clock requests are popup-only, cached and never change Fix
 test('Bad reward-clock data fails without modifying the selected source',async()=>{
  const h=harness({liveEnabled:false,snapshot},{fetchJson:async()=>({lastHeight:-1})});await flush();
  const r=await new Promise(resolve=>h.events.message({type:'shn-reward-clock'},{id:'test',url:'chrome-extension://test/popup/popup.html'},resolve));assert.equal(r.ok,false);assert.equal(h.local.snapshot,snapshot);assert.equal(h.local.liveEnabled,false);
+});
+
+test('Upgrade preserves local holdings, comparisons and language byte-for-byte even when API caches are invalid',async()=>{
+ const holdings=[...Object.keys(snapshot.items).slice(0,20),'f'.repeat(64)+'i999'],compare=Object.keys(snapshot.items).slice(20,24);
+ const initial={liveEnabled:false,nakaPortfolio:holdings,nakaComparison:compare,lang:'zh',snapshot:{format:999},liveSnapshot:null};
+ const before=JSON.stringify({holdings,compare,lang:initial.lang});const h=harness(initial);await flush();await h.events.installed();
+ assert.equal(JSON.stringify({holdings:h.local.nakaPortfolio,compare:h.local.nakaComparison,lang:h.local.lang}),before);assert.equal(h.local.nakaPortfolio.at(-1),holdings.at(-1),'Unknown cached artwork must not remove a user-selected NFT');assert.equal(h.local.snapshot,undefined);assert.equal(h.local.liveSnapshot,undefined);assert.equal(h.local.liveEnabled,true);
+});
+
+test('Cache refetch failure and later selection edits never discard saved NFTs absent from API data',async()=>{
+ const known=Object.keys(snapshot.items),missing='f'.repeat(64)+'i999';
+ const holdings=[known[0],missing],compare=[known[2],missing];
+ const h=harness({liveEnabled:true,nakaPortfolio:holdings,nakaComparison:compare,lang:'zh',liveSnapshot:snapshot},{generateLive:async()=>{throw new TypeError('Changed API format');}});
+ await flush();await h.tick();
+ assert.deepEqual(h.local.nakaPortfolio,holdings);assert.deepEqual(h.local.nakaComparison,compare);assert.equal(h.local.lang,'zh');assert.equal(h.local.liveSnapshot,snapshot);
+ const req=msg=>new Promise(resolve=>h.events.message(msg,{id:'test'},resolve));
+ await req({type:'shn-holdings',ids:[known[1]]});
+ assert.deepEqual(Array.from(h.local.nakaPortfolio),[known[0],missing,known[1]]);
+ await req({type:'shn-compare',action:'toggle',id:known[3]});
+ assert.deepEqual(Array.from(h.local.nakaComparison),[known[2],missing,known[3]]);
+ await req({type:'shn-holdings',ids:[known[1]],remove:true});
+ assert.deepEqual(Array.from(h.local.nakaPortfolio),holdings);
 });

@@ -177,3 +177,19 @@ The generated download guide gives both languages the same installation/update s
 - The old collection Vault's public component still renders direct square artwork; `ShieldedArt` now supplies official `/api/shielded/art/` URLs. Collection-bound known-ID matching covers both these URLs and Ordinals artwork. Other collections remain excluded; native cards/actions are preserved.
 - The standalone page remains a historical demo, with no new live API service or external website bridge. Extension pages share their storage/source; explicit import selects Fixed mode atomically. No new permissions or remote upload.
 - Isolated browser verification covers EN/ZH at 390/868/1280/1600 pixels, old Vault identity and explicit visible import, cross-view storage, purchase/delisting metrics, positive-gain filtering, local export/import, pinned-source behavior, standalone persistence, and no horizontal page overflow. Fixtures are synthetic and kept outside the public project.
+
+## v0.11.1 post-launch verification
+
+- All3327 current inscribed weights and weekly rates match the official non-preview API at971704, with catalogue K=29065 and v=910111; user-associated comparisons remain private.
+- Accumulation uses the official weekly sums. Schema tests cover week/height/packed-length/uint64 validation, eligibility unknown vs explicitly observed, waiting/listed zero accrual and stale-week isolation. `lastBlock` tests accept valid tiers and reject unknown sources, invalid supply and percentages.
+- Upgrades retain user holding/comparison/language values byte-for-byte, including IDs absent from an invalid API cache. Historical inspection is popup-only, cached, failure-safe and cannot modify production Live state.
+- Isolated browser flow verifies Live source, single-use history, next ordinary lookup returning to current height, explicit synthetic official eligibility import, shared popup/workspace values, EN/ZH and390/868/1440 widths. No actual wallet connected or unlocked.
+- Final checks:141/141 tests in each repository;42 shared source/test files byte-identical. A fresh real Live batch and official accumulator both reached971709 in3724ms, including the `lastBlock` source.26 isolated browser checks passed. Native action-popup content fits a constrained498px-high window with380px content width; the environment's viewport is395px including its gutter, rather than a claimed380x600 native capture.
+
+## Focused reward card and weekly scope
+
+The card prioritizes the pixel amount with at most four visible fractional digits (eight for very small positive values), without changing arithmetic precision. Secondary current-rate/projection/claimable values remain. Vault and Showcase actions and redundant paragraphs are removed; reference assumptions and accumulation height remain in hover text. Loading/failure feedback remains visible.27 isolated browser checks cover the revised EN/ZH popup and390/868/1440 workspace layouts.
+
+Public `/rewards/weights/0` at chain971709 has week index0, anchor971700,9blocks,complete=false,base33048800 and3333 piece sums. `/state` contains per-week tables, not this user’s lifetime balance. The official wallet’s `rewardsOf` combines tables with private note firstWeek/spent/paid state and only complete1008-block weeks for claimable amounts. Current-week reference must never be relabeled lifetime rewards or summed across current holdings as personal entitlement; future-week unknown claimable remains unavailable, not zero.
+
+- Final compact layout:29 isolated browser checks PASS (EN/ZH popup, workspace390/868/1440; desktop Hero under190px and popup under190px). Public screenshots use synthetic selections and public block data; reward card is explicitly reference.141unit tests PASS.

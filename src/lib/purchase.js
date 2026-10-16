@@ -48,7 +48,8 @@
         const traits=R.snapshotTraits(snap,indexes).map((t,i)=>{
           const f=floors.get(indexes[i]),changed=removedIndexes.has(indexes[i]);
           const preserve=floor===snap.snapshot.collectionFloor && (!changed || (action==='cancel' && t.floor===null));
-          return {...t,floor:f?.floor??null,listed:f?.listed??0,...(action==='sale'&&changed?{pendingSale:price}:{}),
+          const carryUnknown=t.supply<R.RULES.heldSupply&&(f?.floor??null)===null&&t.saleHistory?.length===0&&((action==='cancel'&&changed&&t.floor!==null&&R.traitTier(t.floor,snap.snapshot.collectionFloor).pct>0)||(!preserve&&t.officialSource==='lastBlock'&&t.officialPct>0));
+          return {...t,carryUnknown,floor:f?.floor??null,listed:f?.listed??0,...(action==='sale'&&changed?{pendingSale:price}:{}),
             ...(!preserve?{officialPct:undefined,officialSource:undefined}:{})};
         });
         return R.evaluate({number,traits},floor);
@@ -165,7 +166,7 @@
       tr.children[0].append(node('small','naka-compare__type',a.type==='Hair And Headwear'?T.headwear:a.type),node('span','naka-compare__name',a.value));
       const changed=paired?traitChange(a,b,options.beforeFloor,options.afterFloor):null;
       if(changed){tr.dataset.change=changed;changes.add(changed);}
-      const ratio=(t,floor)=>t.method==='official-sales'?T.officialSales:t.method==='official-none'?T.officialNoSales:t.method==='held'?T.heldTrait(t.supply):t.method==='sales-median'?`${T.salesMedianShort} ${R.formatRatio(t.basisPrice,floor)}`:t.method==='no-sales'?T.noSales:t.method==='sales-ambiguous'?T.salesTied:t.method==='floor'?R.formatRatio(t.floor,floor):T.saleUnknown;
+      const ratio=(t,floor)=>t.method==='official-sales'?T.officialSales:t.method==='official-none'?T.officialNoSales:t.method==='official-lastBlock'?T.officialLastBlock:t.method==='carry-unverified'?T.carryUnknown:t.method==='held'?T.heldTrait(t.supply):t.method==='sales-median'?`${T.salesMedianShort} ${R.formatRatio(t.basisPrice,floor)}`:t.method==='no-sales'?T.noSales:t.method==='sales-ambiguous'?T.salesTied:t.method==='floor'?R.formatRatio(t.floor,floor):T.saleUnknown;
       const basis=t=>t.method.startsWith('official-')?T.officialBasis:t.method==='held'?T.heldRule:t.method==='sales-median'?T.salesMedianBasis(I.btc(t.basisPrice)):t.method==='no-sales'?T.noSalesBasis:t.method==='sales-ambiguous'?T.salesTiedBasis:t.method==='floor'?T.floorOf(I.btc(t.floor),t.listed):T.saleUnknown;
       const cell=tr.children[1],value=node('span','naka-compare__value');
       const oldRatio=ratio(a,options.beforeFloor??snapshot.collectionFloor),newRatio=ratio(b,options.afterFloor??snapshot.collectionFloor);

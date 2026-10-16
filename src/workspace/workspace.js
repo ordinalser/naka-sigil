@@ -7,6 +7,7 @@
  const $=id=>document.getElementById(id),n=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
  let snap=B,model=P.create(B),lang='en',ids=demo?E.examples(B,model).slice(0,3):[],stored={},minimum=0,showAll=false,message='';
  let holdings=[],boost=false,boostSort='ask',fresh=new Set();
+ const A=globalThis.NakaRewards;
  const C=()=>U.pick(lang),T=()=>I.pick(lang);
  const art=id=>U.art(snap,id,'ws-art-fallback');
  const total=(r,bitmap=false)=>r?P.decorateWeight(n('span'),r,bitmap):n('span','',C().unavailable);
@@ -54,7 +55,7 @@
  document.addEventListener('pointerdown',ev=>{if(!ask.hidden&&!ask.contains(ev.target)&&!askAnchor?.contains(ev.target))closeAsk();});
 
  // ---------------------------------------------------------------- Data and persistence.
- function adopt(){const pick=S.choose({manual:stored[S.KEYS.manual],live:stored[S.KEYS.live],liveEnabled:stored[S.KEYS.liveEnabled]},B);snap=pick.snap;model=P.create(snap);lang=I.resolveLang(stored[I.STORAGE_KEY]);ids=E.normalize(stored[E.KEY]);holdings=H.normalize(stored[H.KEY]);}
+ function adopt(){const pick=S.choose({manual:stored[S.KEYS.manual],live:stored[S.KEYS.live],liveEnabled:stored[S.KEYS.liveEnabled]},B);if(snap!==pick.snap){snap=pick.snap;model=P.create(snap);}lang=I.resolveLang(stored[I.STORAGE_KEY]);ids=E.normalize(stored[E.KEY]);holdings=H.normalize(stored[H.KEY]);}
  function persist(){try{localStorage.setItem('nakaWeb',JSON.stringify({portfolio:holdings,compare:ids,lang}));}catch{message=C().addError;}}
  async function saveHoldings(next){if(demo){holdings=next;persist();render();}else await chrome.storage.local.set({[H.KEY]:next});}
  async function change(id,clear=false){
@@ -79,12 +80,7 @@
   const c=C(),own=H.current(snap,holdings),a=own.allocation;portfolio.replaceChildren();
   const head=n('div','ws-portfolio-head'),title=n('div','ws-portfolio-title'),h2=n('h2','',c.holdings);h2.id='holdingsTitle';
   title.append(h2,n('span','ws-portfolio-count',c.pieces(own.ids.length)));head.append(title);
-  if(own.ids.length){
-   const summary=n('div','ws-portfolio-summary'),value=U.shn(a.weekly),figure=n('strong','ws-portfolio-total');
-   figure.append(n('span','ws-sr',value),NakaPixel.digits(value,'ws-portfolio-digits'),n('span','ws-portfolio-unit',c.weekUnit));
-   summary.append(figure,n('small','',c.ofPool(U.percent(a.share))));summary.title=c.allocationBasis;head.append(summary);
-  }
-  portfolio.append(head);
+  portfolio.append(head);if(own.missing)portfolio.append(n('p','ws-muted',lang==='zh'?`${own.missing} 枚已保存持仓正在等待数据更新，编号不会移除`:`${own.missing} saved Nakas await public data; their IDs are retained`));if(own.ids.length)portfolio.append(A.render(snap,own.ids,demo?null:stored[A.KEY],demo?null:stored[A.OBSERVED],lang,a.weekly,demo?null:stored[A.STATUS]).element);
   const grid=n('div','ws-holding-grid'),add=n('button','ws-holding ws-holding-add');add.type='button';add.append(n('span','ws-add-mark','+'),n('span','',c.addHoldingTitle));
   add.addEventListener('click',()=>openAsk(add,c.addHoldingTitle,async raw=>{const r=U.resolveNumbers(snap,raw,holdings,c,c.skipHeld);if(r.empty)return {added:0,message:c.invalid};if(r.ids.length){fresh=new Set(r.ids);await saveHoldings(H.update(holdings,r.ids,snap));}return {added:r.ids.length,message:r.skipped.length?c.addedSkipped(r.ids.length,r.skipped):null};}));
   grid.append(add);
@@ -97,7 +93,7 @@
    const info=n('div','ws-holding-info'),top=n('div','ws-holding-top');top.append(n('strong','',`#${number}`),total(r));info.append(top);
    const weekly=n('p','ws-holding-weekly');
    weekly.append(n('b',listed?'ws-holding-zero':'',listed?'0':U.shn(R.weeklyAllocation(R.units(r),a.all))),n('span','',c.weekUnit));if(listed)weekly.classList.add('is-zero');
-   info.append(weekly);tile.append(media,info);
+   info.append(weekly);const accrued=A.portfolio(snap,[id],demo?null:stored[A.KEY],demo?null:stored[A.OBSERVED]).rows[0];if(accrued?.amount!==null&&accrued?.amount!==undefined){weekly.querySelector('b').textContent=A.format(accrued.amount);weekly.querySelector('span').textContent=lang==='zh'?(accrued.verified?'本周已累计':'本周累计参考'):(accrued.verified?'Accrued this week':'This week · reference');info.append(n('small','ws-accrued',`${lang==='zh'?(accrued.paused&&!listed?'下个符合条件周':'当前周速率'):(accrued.paused&&!listed?'Next eligible week':'Current weekly rate')} ${listed?'0':U.shn(R.weeklyAllocation(R.units(r),a.all))} / ${lang==='zh'?'周':'week'}`));}tile.append(media,info);
    // A listed holding explains itself on hover: what delisting would change, next to the NFT itself.
    if(listed){tile.tabIndex=0;hoverCard(tile,()=>{const x=H.impact(snap,holdings,id,'cancel');return x.state==='ready'?impactCard(x,id,`#${number} · ${c.listedTag}`,c.cancelLead):[n('p','',c.listedNoEarn)];},320);}
    grid.append(tile);
@@ -129,7 +125,7 @@
   const types=[...new Set(entries.flatMap(e=>e?.before.traits.map(t=>t.type)??[]))];
   for(const type of types)row(type==='Hair And Headwear'?t.headwear:type,(td,e)=>{const a=e.before.traits.find(x=>x.type===type);if(!a){td.textContent='—';return;}if(e.sale.state==='no-floor'){td.append(n('span','ws-trait-name',a.value),n('span','ws-bonus','—'));return;}const b=e.sale.state==='ready'?e.result.traits.find(x=>x.type===type):a;td.append(n('span','ws-trait-name',a.value));const pct=x=>x.measured?`+${x.pct}%`:'+0–100%',value=n('span','ws-bonus');const changed=e.sale.state==='ready'?P.traitChange(a,b,e.sale.beforeFloor,e.sale.afterFloor):null;
    if(changed){td.classList.add('ws-changed');td.dataset.change=changed;td.title=t.changedRows;if(pct(a)!==pct(b))value.append(n('span','ws-old',pct(a)+' → '));}value.append(n('span','',pct(b)+(changed?(changed==='up'?' ↑':changed==='down'?' ↓':' ◆'):'')));td.append(value);const shared=holdings.filter(id=>id!==e.id&&snap.items[id]?.slice(1).some(idx=>snap.traits[idx][0]===type&&snap.traits[idx][1]===a.value)).length;if(shared)td.append(n('small','ws-shared',c.sharedTrait(shared)));
-   const floor=e.sale.state==='ready'?e.sale.afterFloor:snap.snapshot.collectionFloor;const ratio=(v,f)=>v.method==='official-sales'?t.officialSales:v.method==='official-none'?t.officialNoSales:v.method==='held'?t.heldTrait(v.supply):v.method==='sales-median'?t.salesMedianShort+' '+R.formatRatio(v.basisPrice,f):v.method==='no-sales'?t.noSales:v.method==='sales-ambiguous'?t.salesTied:v.method==='floor'?R.formatRatio(v.floor,f):t.saleUnknown;const now=ratio(b,floor),old=ratio(a,e.sale.beforeFloor??floor);td.append(n('small','',changed&&old!==now?old+' → '+now:now));
+   const floor=e.sale.state==='ready'?e.sale.afterFloor:snap.snapshot.collectionFloor;const ratio=(v,f)=>v.method==='official-sales'?t.officialSales:v.method==='official-none'?t.officialNoSales:v.method==='official-lastBlock'?t.officialLastBlock:v.method==='carry-unverified'?t.carryUnknown:v.method==='held'?t.heldTrait(v.supply):v.method==='sales-median'?t.salesMedianShort+' '+R.formatRatio(v.basisPrice,f):v.method==='no-sales'?t.noSales:v.method==='sales-ambiguous'?t.salesTied:v.method==='floor'?R.formatRatio(v.floor,f):t.saleUnknown;const now=ratio(b,floor),old=ratio(a,e.sale.beforeFloor??floor);td.append(n('small','',changed&&old!==now?old+' → '+now:now));
   });
   if(entries.some(e=>e?.before.number.pct))row(c.number,(td,e)=>{td.textContent=`+${e.before.number.pct}%`;});
   box.append(table);
@@ -206,8 +202,8 @@
   else holdings=exampleHoldings(snap);
   render();arrive();
  }else{
-  chrome.storage.local.get([S.KEYS.manual,S.KEYS.live,S.KEYS.liveEnabled,I.STORAGE_KEY,E.KEY,H.KEY]).then(got=>{stored=got;adopt();render();arrive();});
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;let relevant=false;for(const key of [S.KEYS.manual,S.KEYS.live,S.KEYS.liveEnabled,I.STORAGE_KEY,E.KEY,H.KEY])if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
+  chrome.storage.local.get([S.KEYS.manual,S.KEYS.live,S.KEYS.liveEnabled,I.STORAGE_KEY,E.KEY,H.KEY,A.KEY,A.STATUS,A.OBSERVED]).then(got=>{stored=got;adopt();render();arrive();});
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;let relevant=false;for(const key of [S.KEYS.manual,S.KEYS.live,S.KEYS.liveEnabled,I.STORAGE_KEY,E.KEY,H.KEY,A.KEY,A.STATUS,A.OBSERVED])if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
   const beat=()=>{if(document.visibilityState==='visible'&&chrome.runtime.id)chrome.runtime.sendMessage({type:'shn-visible'}).catch(()=>{});};
   beat();setInterval(beat,S.HEARTBEAT_MS);document.addEventListener('visibilitychange',beat);
  }

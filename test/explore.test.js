@@ -70,3 +70,24 @@ test('Comparison copy has identical English/Chinese keys and function arities',(
  assert.deepEqual(Object.keys(en).sort(),Object.keys(zh).sort());
  for(const k of Object.keys(en)){assert.equal(typeof en[k],typeof zh[k],k);if(typeof en[k]==='function')assert.equal(en[k].length,zh[k].length,k);}
 });
+
+
+// Both popup dialogs and the standalone workspace use this shared batch resolver.
+const batchBox={ShnakasLookup:require('../src/lib/lookup.js')};
+vm.runInNewContext(fs.readFileSync(require.resolve('../src/lib/explore-ui.js'),'utf8'),batchBox);
+const batchUI=batchBox.NakaExploreUI;
+const batchSnap={snapshot:{height:100,collectionFloor:100},traits:[],items:Object.fromEntries([379,1025,1500].map((n,i)=>[String(i).padStart(64,'0')+'i0',[n]])),offers:[]};
+const batchIds=Object.keys(batchSnap.items);
+test('Batch additions accept commas, spaces, mixed whitespace, and preserve optional hash notation',()=>{
+ for(const lang of ['en','zh'])for(const raw of ['379,1025,1500','379 1025 1500',' 379, 1025\t1500\n','379,\n1025  1500','# 379 #1025, # 1500','379，1025，1500']){
+  const c=batchUI.pick(lang),out=batchUI.resolveNumbers(batchSnap,raw,[],c,c.skipHeld);
+  assert.deepEqual(Array.from(out.ids),batchIds,raw);assert.equal(out.skipped.length,0,raw);assert.equal(out.empty,false);
+ }
+});
+test('Batch additions retain duplicate, invalid, missing and already-added handling for both destinations',()=>{
+ for(const lang of ['en','zh']){const c=batchUI.pick(lang);for(const reason of [c.skipHeld,c.skipCompared]){
+  const out=batchUI.resolveNumbers(batchSnap,'379 1025, 1025 bad 9999 1500',[batchIds[0]],c,reason);
+  assert.deepEqual(Array.from(out.ids),batchIds.slice(1));assert.equal(out.skipped.length,4);assert.equal(out.skipped[0],reason(379));assert.equal(out.skipped[1],reason(1025));
+  assert.equal(batchUI.resolveNumbers(batchSnap,' , \t\n ',[],c,reason).empty,true);
+ }}
+});

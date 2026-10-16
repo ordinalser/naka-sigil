@@ -422,3 +422,14 @@ body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
 .view-block .alloc-stats { gap:11px 12px; }
 .view-block .schedule { gap:5px; }
 .add-hint { margin:6px 0 0; color:#8f877c; font-size:10px; }
+
+/* A holdings breakdown adds real content: keep the ledger's natural height and
+ * scroll inside the fixed popup instead of flex-shrinking Chinese lines into one another. */
+.has-lookup .popup-scroll { display:block; }
+.has-lookup .view-explore,.has-lookup .lookup-section { display:block; flex:none; }
+.has-lookup #lookupResult[data-state=found] { display:block; flex:none; }
+.has-lookup .lookup-card,.has-lookup .naka-purchase,.has-lookup .naka-compare { flex:none; }
+.has-lookup .naka-purchase > * { flex-shrink:0; }
+.has-lookup .naka-purchase__caution,.has-lookup .naka-holdings { flex-shrink:0; }
+
+.mode-options,#modeFixed,#modeLive{display:none!important}.hc-figure:has(.naka-reward-miner){display:block;padding:0}.hc-accrued{grid-column:1/-1;font-size:8px;color:#c9b99b;line-height:1.4}.holdings-hero:has(.naka-reward-miner){padding:0;background:transparent}

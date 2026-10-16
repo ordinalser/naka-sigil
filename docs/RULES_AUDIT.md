@@ -83,3 +83,11 @@ At block reuses the fixed-block dialog: a number and height are entered together
 The weights endpoint reports `v` as an integer: v = floor(poolPerWeek ÷ 1008 ÷ K), and `perBlock = units × v`. Weekly allocation now uses exactly that integer rate (units × v × 1008 ÷ 10⁸) instead of pool × units ÷ K, which differed by up to 0.001 SHNAKAS. At block 971,553 the plugin's K = 28,947 equals the official K, v = 913,821 equals the official v, and every 150% piece (6 units) gives 5,482,926 per block, the official `perBlock` for such pieces. A live snapshot whose sale history failed to load, or was written by an older version, is rebuilt on the next check at the same height instead of keeping ranges for the whole block.
 
 中文：官方接口的 `v` 是整数，v = floor(每周奖池 ÷ 1008 ÷ K)，每枚 `perBlock = 单位 × v`。每周分配改为按这个整数速率计算（单位 × v × 1008 ÷ 10⁸），不再用 奖池 × 单位 ÷ K（两者最多相差 0.001 SHNAKAS）。971,553 区块插件 K = 28,947、v = 913,821 与官方一致，150% 的藏品（6 单位）每块 5,482,926，与官方对这类藏品给出的 `perBlock` 相同。实时快照若成交记录加载失败或由旧版本写入，同一区块下次检查时会重新生成，不再整块保留范围。
+
+## Post-launch verification · block 971704
+
+The non-preview official endpoint reports K=29065 and v=910111. Independent floor/number/cap recomputation plus height-bound official fallback evidence matches all3327 inscribed pieces, and every perBlock×1008 weekly rate. This is not a quarter-freeze result: actual listing changes after the launch changed both K and individual weights. The endpoint now uses `lastBlock` for certain rare zero-listed traits. It is accepted only within the existing valid tier/supply/block/floor constraints; unknown source types remain errors.
+
+The current-week endpoint returns w=0, anchor971700, blocks4, base14566968, and3333 accumulated amounts. The100% piece sum is0.14566968 SHNAKAS. Its current per-block rate is0.03640444, whose naive four-block multiplication is0.14561776; the difference proves why actual accumulation must use the integrated table. Personal eligibility and paid claims require the official holder record and cannot be inferred from inscription identity alone. The plugin imports visible earning-state evidence only after an explicit action, not wallet secrets.
+
+奖励启动后在区块971704核对：官方非预览接口K=29065、v=910111，3327枚已铭刻藏品的权重和每周速率全部对齐。当前周100%藏品的累计为0.14566968，而当前每块速率乘4为0.14561776，因此必须使用实际累计表。上市变化仍改变每块权重，不能推断季度冻结。个人资格和已领取情况不能只靠编号证明。

@@ -12,6 +12,7 @@
   const PIXEL = globalThis.NakaPixel;
   const LOOKUP = globalThis.ShnakasLookup;
   const TIER = globalThis.ShnakasTier;
+  const A=globalThis.NakaRewards;let rewardWeek, rewardStatus, officialReadings;
   const K = SRC.KEYS, EXP=globalThis.NakaExplore, HOLD=globalThis.NakaPortfolio;
   let holdings=[];
   const VERSION = chrome.runtime.getManifest().version;
@@ -37,14 +38,15 @@
     return n;
   };
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-  /** Estimated times are shown in the viewer's local time, to the hour: block times are ~10-minute estimates. */
-  const localHour = (ms) => { const d = new Date(ms), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:00`; };
+  /** Estimated times in the viewer's local time, to the minute of the estimate (header time + 10 minutes a block);
+   * the "about" label in the copy marks it as an estimate. */
+  const localTime = (ms) => { const d = new Date(ms), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
   // 当前状态：语言、本地同步的快照、同步状态；任一变化都整体重画（弹窗内容很少，重画开销可以忽略）
   const state = {
     lang: I.DEFAULT_LANG, manual: undefined, status: undefined, localError: null,
     view: 'home', returnView: 'home', holdingsOpen: false, addKind: null, fresh: null,
-    lookupRaw: null, lookupHistorical:false, lookupFocus:false, fixedPending:false, fixedRequestHeight:null, historyDialog:false, pendingLookup:null,rewardClock:null, liveEnabled: SRC.LIVE_DEFAULT, live: undefined, liveStatus: undefined, visibleAt: undefined,
+    lookupRaw: null, lookupSnapshot:null, lookupHistorical:false, lookupFocus:false, fixedPending:false, fixedRequestHeight:null, historyDialog:false, pendingLookup:null,rewardClock:null, liveEnabled: SRC.LIVE_DEFAULT, live: undefined, liveStatus: undefined, visibleAt: undefined,
   };
 
   function renderStatic(T) {
@@ -115,8 +117,8 @@
     $('currentHeight').setAttribute('aria-label', I.int(s.height));
     $('snapSource').textContent = sourceText; $('snapSource').hidden = source !== 'bundled'; // Live / Fixed are already shown by the mode switch; only bundled data adds information.
     // Reward start is planning context for the selected block: remaining blocks plus a header-time date.
-    const phase=R.rewardPhase(s);
-    const date=phase.eta===null?T.launchUnknown:T.launchDate(localHour(phase.eta));
+    const clock=state.rewardClock?.height>s.height?state.rewardClock:s;const phase=R.rewardPhase(clock);
+    const date=phase.eta===null?T.launchUnknown:T.launchDate(localTime(phase.eta));
     const cycle=phase.state==='before'?{label:source==='live'?T.launchStat:T.launchStatAtBlock,value:I.int(phase.remaining),pixels:true,unit:T.blocksUnit,sub:date}
       :phase.state==='boundary'?{label:source==='live'?T.firstRewardBlock:T.firstRewardAtBlock,value:'1',pixels:true,unit:T.blocksUnit,sub:T.nextBoundary(I.int(phase.next))}
       :phase.state==='active'?{label:source==='live'?T.weekRemaining:T.weekRemainingAtBlock,value:I.int(phase.remaining),pixels:true,unit:T.blocksUnit,sub:T.rewardWeek(phase.week,R.RULES.weeks)}
@@ -131,7 +133,7 @@
       if (sub !== null) row.append(el('dd', 'stat-sub', sub));
       return row;
     });
-    rows[2].title = [...globalThis.NakaPurchase.renderLaunch(s,T,I).children].map(n=>n.textContent).join('\n');
+    rows[2].title = [...globalThis.NakaPurchase.renderLaunch(clock,T,I).children].map(n=>n.textContent).join('\n');
     $('snap').replaceChildren(...rows);
     $('snap').dataset.source = source;
     $('blockAge').textContent = I.blockAge(T,s);
@@ -152,7 +154,7 @@
     $('allocNote').textContent = `v = ${rate}`; $('allocNote').title = cc.allocNote(rate);
     $('scheduleTitle').textContent = cc.scheduleTitle;
     const done = phase.state === 'active' ? phase.week - 1 : ['ended', 'closed'].includes(phase.state) ? W.weeks : 0;
-    $('weekBar').firstElementChild.style.width = `${(phase.state === 'active' ? (s.height - W.startBlock) / (W.weeks * W.weekBlocks) : done / W.weeks) * 100}%`;
+    $('weekBar').firstElementChild.style.width = `${(phase.state === 'active' ? (clock.height - W.startBlock) / (W.weeks * W.weekBlocks) : done / W.weeks) * 100}%`;
     const range = (a, b) => `${I.int(a)} – ${I.int(b)}`;
     const current = phase.state === 'active' ? [cc.scheduleWeekN(`${phase.week}/${W.weeks}`), range(phase.first, phase.last)] : [cc.scheduleWeekN(1), range(W.startBlock + 1, W.startBlock + W.weekBlocks)];
     $('weeksDone').textContent = `${cc.progressLabel} ${cc.weeksDone(done, W.weeks)}`;
@@ -223,7 +225,7 @@
       basis.title=I.blockTimeTitle(T,snap.snapshot);
     }
     for(const chip of $('lookupResult').querySelectorAll('.lookup-mode')) {
-      chip.textContent=state.liveEnabled?T.modeLive:T.modeFixed;
+      chip.textContent=state.lookupHistorical?T.historyTitle:T.modeLive;
       chip.setAttribute('aria-label',`${T.modeTitle}: ${chip.textContent}`);
       chip.title=T.historyLookup+' · '+$('liveState').title;
       chip.dataset.state=$('liveState').dataset.state;
@@ -258,7 +260,7 @@
     link.href=`https://ord-dropz.xyz/secondary/item/${found.id}?collection=${snap.collection.slug}`;
     link.target='_blank'; link.rel='noopener noreferrer';
     // The action follows the full result, in the same layout flow as its evidence.
-    $('lookupCompare').dataset.id=found.id;$('lookupHolding').dataset.id=found.id;$('lookupActions').hidden=false;
+    $('lookupCompare').dataset.id=found.id;$('lookupHolding').dataset.id=found.id;$('lookupActions').hidden=state.lookupHistorical;
     head.append(el('strong','',`Shielded #${found.number}`),link);
     const rank=globalThis.NakaPurchase.numberBadge(found.number,T);if(rank)head.insertBefore(rank,link);
     const model=globalThis.NakaPurchase.create(snap),scenario=model.get(found.id);
@@ -270,7 +272,7 @@
     context.append(purchase.querySelector('.naka-purchase__basis'),mode);
     purchase.prepend(context);
     // My holdings: a listed NFT shows what buying it does; one of my listed holdings shows what delisting does.
-    if(holdings.length&&found.listing==='listed'){const held=holdings.includes(found.id),x=HOLD.impact(snap,holdings,found.id,held?'cancel':'sale');if(x.state==='ready')card.append(globalThis.NakaExploreUI.holdingsLine(x,globalThis.NakaExploreUI.pick(state.lang)));}
+    if(!state.lookupHistorical&&holdings.length&&found.listing==='listed'){const held=holdings.includes(found.id),x=HOLD.impact(snap,holdings,found.id,held?'cancel':'sale');if(x.state==='ready')card.append(globalThis.NakaExploreUI.holdingsLine(x,globalThis.NakaExploreUI.pick(state.lang)));}
     box.append(card);
   }
 
@@ -281,9 +283,10 @@
   let holdingsKey = '';
   function renderHoldings(snap) {
     const c = globalThis.NakaExploreUI.pick(state.lang), U = globalThis.NakaExploreUI, own = HOLD.current(snap, holdings);
-    const key = `${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${own.ids.join()}|${state.holdingsOpen}|${state.fresh ? [...state.fresh].join() : ''}`;
+    const key = `${rewardWeek?.height}|${rewardStatus?.state}|${JSON.stringify(officialReadings)}|${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${own.ids.join()}|${state.holdingsOpen}|${state.fresh ? [...state.fresh].join() : ''}`;
     if (key === holdingsKey) return;
     holdingsKey = key;
+    let missing=$('holdingsMissing');if(!missing){missing=el('p','hc-how');missing.id='holdingsMissing';missing.setAttribute('role','status');$('holdingsEmpty').before(missing);}missing.hidden=!own.missing;missing.textContent=state.lang==='zh'?`${own.missing} 枚已保存持仓正在等待数据更新，编号不会移除`:`${own.missing} saved Nakas await public data; their IDs are retained`;
     const empty = !own.ids.length;
     document.querySelector('.holdings-hero').hidden = empty; $('holdingsList').hidden = empty; $('holdingsEmpty').hidden = !empty;
     // First run previews the result: the weekly figure at zero and four empty tiles, then the ways to fill them.
@@ -293,7 +296,7 @@
     $('raiseOpen').textContent = c.raiseLink; $('raiseOpen').title = c.raiseHint;
     const a = own.allocation, value = U.shn(a.weekly), figure = el('span', 'hc-value');
     figure.append(el('span', 'sr-only', value), PIXEL.digits(value, 'hc-pixels'), el('span', 'hc-unit', c.weekUnit));
-    $('holdingsFigure').replaceChildren(figure, el('span', 'hc-share', [c.sharePool(U.percent(a.share)), ...(own.listed ? [c.listedCount(own.listed)] : [])].join(' · ')));
+    const rewards=A.render(snap,own.ids,rewardWeek,officialReadings,state.lang,a.weekly,rewardStatus);$('holdingsFigure').replaceChildren(rewards.element);
     $('holdingsFigure').title = c.allocationBasis;
     const cancel = globalThis.NakaPurchase.create(snap, { action: 'cancel' }), limit = TILE_ROWS * TILE_COLUMNS, folded = !state.holdingsOpen && own.ids.length > limit;
     $('holdingsTiles').replaceChildren(...(folded ? own.ids.slice(0, limit) : own.ids).map((id) => {
@@ -307,7 +310,9 @@
       const art = el('span', 'hc-art'); art.append(globalThis.NakaExploreUI.art(snap, id, 'hc-fallback'));
       if (listed) art.append(el('span', 'hc-tag', c.listedTag));
       const caption = el('span', 'hc-caption');
+      const accrued=A.portfolio(snap,[id],rewardWeek,officialReadings).rows[0];
       caption.append(el('span', 'hc-number', `#${number}`), el('span', `hc-weight naka-tone-${TIER.tierOf(r)}`, R.formatWeight(r)), el('b', listed ? 'hc-earn hc-earn--listed' : 'hc-earn', listed ? c.earnListed : U.shn(weekly)));
+      if(accrued?.amount!==null&&accrued?.amount!==undefined){caption.querySelector('b').textContent=new Intl.NumberFormat('en-US',{maximumFractionDigits:4,minimumFractionDigits:4}).format(accrued.amount);caption.append(el('small','hc-accrued',`${state.lang==='zh'?'本周':'This week'}${accrued.verified?'':' ≈'}`));tile.title+=`\n${A.format(accrued.amount)} SHNAKAS`; }
       tile.append(art, caption);
       tile.addEventListener('click', () => { $('lookupNumber').value = String(number); showLookup(String(number)); });
       return tile;
@@ -347,7 +352,7 @@
     render(); document.querySelector('.popup-scroll').scrollTop = 0;
   }
   /** Inline "#number" forms: add to My holdings, or to Compare, without leaving the current tab. */
-  /** Add one or more comma-separated numbers. Returns { added, message }: message explains skipped entries (or why
+  /** Add one or more comma- or space-separated numbers. Returns { added, message }: message explains skipped entries (or why
    * nothing was added); the dialog stays open with it, and closes when everything went in. */
   async function addHolding(raw) {
     const c = globalThis.NakaExploreUI.pick(state.lang), snap = SRC.choose({ liveEnabled: state.liveEnabled, live: state.live, manual: state.manual }, BUNDLED).snap;
@@ -405,8 +410,9 @@
     renderStatic(T);
     renderLive(T);
     const snap = renderSnapshot(T);
-    renderLookup(T, snap);
-    renderLookupContext(T,snap);
+    const querySnap=state.lookupHistorical&&state.lookupSnapshot?state.lookupSnapshot:snap;
+    renderLookup(T,querySnap);
+    renderLookupContext(T,querySnap);
     if (!$('lookupActions').hidden) { paintLookupCompare($('lookupCompare')); paintLookupHolding($('lookupHolding')); }
     renderHoldings(snap);
     renderCompareList(snap);
@@ -416,10 +422,10 @@
   }
 
   Promise.all([
-    chrome.storage.local.get([K.manual, K.live, K.liveEnabled, K.liveStatus, 'syncStatus', I.STORAGE_KEY, EXP.KEY, HOLD.KEY]),
+    chrome.storage.local.get([K.manual, K.live, K.liveEnabled, K.liveStatus, 'syncStatus', I.STORAGE_KEY, EXP.KEY, HOLD.KEY,A.KEY,A.STATUS,A.OBSERVED]),
     chrome.storage.session.get(SRC.SESSION_VISIBLE),
   ]).then(([got, ses]) => {
-    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);
+    rewardWeek=got[A.KEY];rewardStatus=got[A.STATUS];officialReadings=got[A.OBSERVED];comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);
     state.lang = I.resolveLang(got[I.STORAGE_KEY]);
     state.manual = got[K.manual];
     if(SRC.compatibleSnapshot(state.manual,BUNDLED))$('syncHeight').value=String(state.manual.snapshot.height);
@@ -428,15 +434,18 @@
     state.liveStatus = got[K.liveStatus];
     state.status = got.syncStatus;
     state.visibleAt = ses[SRC.SESSION_VISIBLE];
+    chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok){state.rewardClock=c;render();}}).catch(()=>{});
     render();
     setInterval(render, 15000); // 刷新「几分钟前」与暂停状态
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'session') {
+      if(has(changes,'nakaHistoryProgress')&&state.fixedPending){state.status=changes.nakaHistoryProgress.newValue;renderStatus(I.pick(state.lang));}
       if (has(changes, SRC.SESSION_VISIBLE)) { state.visibleAt = changes[SRC.SESSION_VISIBLE].newValue; render(); }
       return;
     }
     if (area !== 'local') return;
+    if(has(changes,A.KEY))rewardWeek=changes[A.KEY].newValue;if(has(changes,A.STATUS))rewardStatus=changes[A.STATUS].newValue;if(has(changes,A.OBSERVED))officialReadings=changes[A.OBSERVED].newValue;
     if(has(changes,EXP.KEY)) comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);
     if(has(changes,HOLD.KEY)) holdings=HOLD.normalize(changes[HOLD.KEY].newValue);
     if (has(changes, I.STORAGE_KEY)) state.lang = I.resolveLang(changes[I.STORAGE_KEY].newValue);
@@ -487,11 +496,11 @@
     const points=R.rewardBoundaries();
     for(const b of [...points.filter(b=>b.height<=tip).sort((a,b)=>b.height-a.height),...points.filter(b=>b.height>tip)]){
       const label=b.kind==='launch'?T.boundaryLaunch:T.boundaryWeek(b.week),o=el('option','',`${label} · ${I.int(b.height)}`);o.value=String(b.height);
-      if(b.height>tip){o.disabled=true;const ts=I.blockTimestamp(clock??{}),time=ts===null?null:(ts+(b.height-clock.height)*600)*1000,eta=time===null||time<Date.now()?T.launchUnknown:T.launchDate(localHour(time));o.textContent+=` · ${T.boundaryDistance(I.int(b.height-tip),eta)}`;future.append(o);}else past.append(o);
+      if(b.height>tip){o.disabled=true;const ts=I.blockTimestamp(clock??{}),time=ts===null?null:(ts+(b.height-clock.height)*600)*1000,eta=time===null||time<Date.now()?T.launchUnknown:T.launchDate(localTime(time));o.textContent+=` · ${T.boundaryDistance(I.int(b.height-tip),eta)}`;future.append(o);}else past.append(o);
     }
     select.replaceChildren(placeholder,past,future);select.title=T.quarterUnconfirmed;select.value=value;
   }
-  function openFixedDialog(history=false){state.localError=null;state.status=undefined;state.historyDialog=history;state.pendingLookup=null;const selected=SRC.choose({liveEnabled:state.liveEnabled,live:state.live,manual:state.manual},BUNDLED).snap;$('syncHeight').value=String(selected.snapshot.height);$('historyNumber').value=$('lookupNumber').value;boundaryKey='';$('fixedDialog').showModal();render();$('syncHeight').focus();$('syncHeight').select();chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok&&Number.isSafeInteger(c.height)&&c.height>=0){state.rewardClock=c;boundaryKey='';if($('fixedDialog').open)renderBoundaries(I.pick(state.lang));}}).catch(()=>{});}
+  function openFixedDialog(history=true){state.localError=null;state.status=undefined;state.historyDialog=history;state.pendingLookup=null;const selected=SRC.choose({liveEnabled:state.liveEnabled,live:state.live,manual:state.manual},BUNDLED).snap;$('syncHeight').value=String(selected.snapshot.height);$('historyNumber').value=$('lookupNumber').value;boundaryKey='';$('fixedDialog').showModal();render();$('syncHeight').focus();$('syncHeight').select();chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok&&Number.isSafeInteger(c.height)&&c.height>=0){state.rewardClock=c;boundaryKey='';if($('fixedDialog').open)renderBoundaries(I.pick(state.lang));}}).catch(()=>{});}
   $('modeFixed').addEventListener('click',()=>openFixedDialog());
   $('historyLookup').addEventListener('click',()=>openFixedDialog(true));
   $('rewardBoundary').addEventListener('change',()=>{if($('rewardBoundary').value)$('syncHeight').value=$('rewardBoundary').value;});
@@ -508,7 +517,7 @@
 
   function showLookup(raw) {
     if (!state.lookupFocus) state.returnView = state.view;
-    state.lookupFocus = true;
+    state.lookupFocus = true;state.lookupHistorical=false;state.lookupSnapshot=null;
     state.lookupRaw = raw;
     render(); document.querySelector('.popup-scroll').scrollTop = 0;
   }
@@ -532,13 +541,13 @@
     if(!Number.isSafeInteger(Number(raw))){state.localError='syncBadHeight';render();return;}
     if(state.historyDialog){const n=LOOKUP.parseNumber($('historyNumber').value);if(n===null){state.localError='lookupInvalid';render();return;}state.pendingLookup=n;}
     state.fixedRequestHeight=Number(raw);state.fixedPending=true;state.status={state:'running',stage:'state'};state.localError=null;render();
-    let res;try{res=await chrome.runtime.sendMessage({ type: 'shn-set-fixed', height: Number(raw) });}catch{res={ok:false,error:'busy'};}
-    if (res.ok) return;
+    let res;try{res=await chrome.runtime.sendMessage({ type: 'shn-history', height: Number(raw) });}catch{res={ok:false,error:'busy'};}
+    if(res.ok&&SRC.compatibleSnapshot(res.snapshot,BUNDLED)){state.fixedPending=false;state.lookupSnapshot=res.snapshot;state.lookupHistorical=true;state.lookupRaw=String(state.pendingLookup);$('lookupNumber').value=state.lookupRaw;state.lookupFocus=true;state.pendingLookup=null;$('fixedDialog').close();render();return;}
     state.fixedPending=false;state.pendingLookup=null; // 进度由 syncStatus 的存储变化驱动
     if (res.error === 'busy') state.localError = 'syncBusy';
     else if (res.error === 'live-mode') state.localError='fixedRequired';
     else if (res.error === 'bad-height') state.localError = 'syncBadHeight';
-    else throw new Error(`后台返回了未知错误：${res.error}`);
+    else{state.localError=null;state.status={state:'error',kind:res.error??'data',message:res.message??''};}
     render();
   });
 

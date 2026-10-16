@@ -86,8 +86,8 @@
       if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).sort().join()!=='height,traits'||b.height!==h.height||!Array.isArray(b.traits)||b.traits.length!==s.traits.length)return false;
       const counts=new Array(s.traits.length).fill(0);for(const row of Object.values(s.items))for(const idx of row.slice(1))counts[idx]++;
       const seen=new Set();for(const row of b.traits){if(!Array.isArray(row)||row.length!==4)return false;const[idx,pct,source,supply]=row;
-        if(!uint(idx)||idx>=s.traits.length||seen.has(idx)||![0,25,50,75,100].includes(pct)||!['ask','sales','zeroListed','none'].includes(source)||!uint(supply)||supply<counts[idx]||supply>10000)return false;
-        const floor=s.traits[idx][2];if(floor!==null?source!=='ask':source==='ask'||source==='zeroListed'&&(supply<20||pct!==100)||['sales','none'].includes(source)&&supply>=20||source==='none'&&pct!==0)return false;
+        if(!uint(idx)||idx>=s.traits.length||seen.has(idx)||![0,25,50,75,100].includes(pct)||!['ask','sales','zeroListed','none','lastBlock'].includes(source)||!uint(supply)||supply<counts[idx]||supply>10000)return false;
+        const floor=s.traits[idx][2];if(floor!==null?source!=='ask':source==='ask'||source==='zeroListed'&&(supply<20||pct!==100)||['sales','none','lastBlock'].includes(source)&&supply>=20||source==='none'&&pct!==0)return false;
         seen.add(idx);
       }
     }

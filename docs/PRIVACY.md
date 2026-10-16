@@ -57,3 +57,9 @@ Only explicitly added public inscription IDs are stored in `nakaPortfolio`. Addi
 The extension never connects to a wallet, never asks for login, approval or a signature, and holds no keys. On the collection Vault and `/wallet` it only reads artwork identities already rendered on the page; the weekly figure shown there is computed locally from the selected snapshot. Holding thumbnails in the popup and the extension page load the public art URL for each piece (`/api/shielded/art/<asset>`, then Ordinals), the same images the official site shows; such a request contains the piece number but no wallet address, holding list or lookup text, and ordinary request metadata such as the IP address is visible to that server.
 
 插件从不连接钱包，不要求登录、授权或签名，也不持有任何私钥。在集合金库和 `/wallet` 页面只读取页面上已显示的藏品图片身份，页面上的每周数字在本机按所选快照计算。弹窗和独立页面的持仓缩略图按藏品编号加载公开图片地址（`/api/shielded/art/<资产号>`，失败时用 Ordinals），与官方网站显示的是同一图片；请求只含藏品编号，不含钱包地址、持仓清单或查询内容，IP 等普通请求信息对该服务器可见。
+
+### Reward accrual and explicit eligibility readings
+
+`nakaRewardWeek` is a compact public weekly accumulator. `nakaOfficialReadings` is private local user data: an explicit click on the official staking page imports only the shown inscription IDs, earning state, reward week, and displayed progress height. No vault address, label, balance, private note, claim amount or wallet storage is read. It is not included in source, demos, screenshots or installation archives. Historical inspections are ephemeral worker-memory results and never overwrite the user's Live source or NFT lists. Updates never delete user holdings or comparison selections to fix an API cache.
+
+`nakaRewardWeek` 保存公开周累计向量；`nakaOfficialReadings` 为私人本机数据，只有用户主动点击时才导入官方页面已显示的铭文 ID、计奖状态、奖励周与进度高度。不读取保险库地址、名称、余额、私人持有记录、领取金额或钱包存储，不进入源码、演示、截图或安装包。历史查询结果只在后台内存临时复用，不覆盖实时来源或 NFT 清单。API 缓存修复不会删除用户持仓和比较。

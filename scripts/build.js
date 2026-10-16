@@ -45,14 +45,14 @@ const manifest = {
   content_scripts: [{
     // 整站匹配：站点是 Next.js 单页应用，从首页点进集合页不会重新注入脚本，脚本自己按路由决定是否工作
     matches: ['https://ord-dropz.xyz/*'],
-    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/portfolio.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'content/content.js'],
+    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/rewards.js','lib/portfolio.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'content/content.js'],
     css: ['content/content.css', 'lib/purchase.css'],
     run_at: 'document_idle',
   }],
 };
 
 const FILES = [
-  'lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
+  'lib/rewards.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
   'data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'lib/snapshot-core.js', 'sw/sync-sw.js',
   'content/content.js', 'content/content.css',
   'popup/popup.html', 'popup/popup.js', 'popup/popup.css',

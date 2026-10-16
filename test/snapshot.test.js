@@ -306,6 +306,10 @@ test('Official current reward basis reconciles trait units, canonical supply and
   const verified=C.attachRewardBasis(s,data);
   assert.equal(R.evaluateSnapshot(verified,ID('b')).lo.weight,150);assert.equal(R.evaluateSnapshot(verified,ID('b')).traits[0].method,'official-sales');
   assert.equal(s.rewardBasis,undefined,'does not mutate an accepted snapshot');
+  const carried=structuredClone(data);carried.values[1].source='lastBlock';
+  assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,carried),ID('b')).traits[0].method,'official-lastBlock');
+  for(const change of [v=>v.source='unknownFutureSource',v=>v.pieces=20,v=>v.pct=101]){const bad=structuredClone(carried);change(bad.values[1]);assert.throws(()=>C.attachRewardBasis(s,bad),'Keep strict checks around the newly supported source');}
+
   for(const mutate of [x=>x.height++,x=>x.F='999',x=>x.values[0].pct=25,x=>x.values[1].source='ask',x=>x.values[1].pieces=0,x=>x.pieces[1].pct=200,x=>x.pieces[1].weight='6',x=>x.pieces.push(x.pieces[0])]){
     const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad));
   }
