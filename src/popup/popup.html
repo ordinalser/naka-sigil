@@ -9,15 +9,23 @@
 </head>
 <body>
   <header class="head">
-    <button id="lookupBack" class="lookup-back" type="button" hidden></button>
     <div id="sigil" class="sigil-frame" aria-hidden="true"></div>
     <div class="brand"><h1 id="title"></h1><p id="tagline" class="sub"></p></div>
+    <button id="searchOpen" class="head-search" type="button" aria-controls="sheet" aria-expanded="false"></button>
     <div id="langSwitch" class="segmented" role="group" aria-label="Language / 语言">
       <button type="button" data-lang="zh">中文</button><button type="button" data-lang="en">EN</button>
     </div>
   </header>
 
-  <main class="popup-scroll">
+  <div class="stage">
+  <section id="updateCard" class="update-card" aria-labelledby="updateTitle" hidden>
+    <div id="updateSigil" class="update-sigil" aria-hidden="true"></div>
+    <h2 id="updateTitle"></h2>
+    <p id="updateText"></p>
+    <button id="updateReload" class="btn update-reload" type="button"></button>
+    <p id="updateHint" class="update-hint"></p>
+  </section>
+  <main id="views" class="popup-scroll">
   <section id="viewHome" class="view view-home">
     <button id="statusStrip" class="status-strip" type="button"></button>
     <section class="holdings-hero" aria-labelledby="holdingsTitle">
@@ -33,31 +41,22 @@
       <p id="emptyNote" class="hc-how empty-note"></p>
     </section>
     <section id="holdingsList" class="holdings-list">
-      <div class="list-head"><h3 id="tilesTitle"></h3><span class="list-actions"><button id="raiseOpen" class="list-link" type="button"></button><button id="holdingsManage" class="list-link" type="button"></button><button id="holdingsAdd" class="list-add" type="button"></button></span></div>
+      <div class="list-head"><h3 id="tilesTitle"></h3><span class="list-actions"><button id="holdingsCopy" class="list-link" type="button"></button><button id="holdingsManage" class="list-link" type="button"></button><button id="holdingsAdd" class="list-add" type="button"></button></span></div>
+      <div id="holdingsNotes" class="hc-notes"></div>
       <div id="holdingsTiles" class="hc-tiles"></div>
       <button id="holdingsMore" class="hc-more" type="button" hidden></button>
     </section>
   </section>
 
-  <section id="viewExplore" class="view view-explore" hidden>
-    <section class="lookup-section" aria-labelledby="lookupTitle">
-      <form id="lookupForm">
-        <div class="lookup-heading"><label id="lookupTitle" class="px-title" for="lookupNumber"></label><button id="historyLookup" class="text-btn" type="button"></button></div>
-        <div class="lookup-controls"><span class="lookup-prefix" aria-hidden="true">#</span><input id="lookupNumber" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24"><button id="lookupBtn" class="btn" type="submit"></button></div>
-      </form>
-      <p id="lookupHow" class="lookup-how"></p>
-      <div id="lookupResult" aria-live="polite" hidden></div>
-      <div id="lookupActions" class="lookup-actions" hidden><button id="lookupCompare" class="lookup-compare" type="button"></button><button id="lookupHolding" class="lookup-compare lookup-holding" type="button"></button></div>
-    </section>
-    <section class="compare-panel" aria-labelledby="compareTitle">
-      <div class="compare-head"><h2 id="compareTitle" class="px-title"></h2><span id="comparePips" class="pips" aria-hidden="true"></span><span id="compareCount" class="hc-count"></span><button id="compareAdd" class="hc-manage" type="button"></button></div>
-      <div id="compareList" class="compare-list"></div>
-      <button id="compare" class="compare-open" type="button"></button>
-    </section>
+  <section id="viewRaise" class="view view-raise" hidden>
+    <div class="raise-head"><h2 id="raiseTitle" class="px-title"></h2><button id="raiseFull" class="list-link" type="button"></button></div>
+    <p id="raiseBasis" class="raise-basis"></p>
+    <p id="raiseScope" class="raise-scope" hidden></p>
+    <div id="raiseBody" class="raise-body"></div>
   </section>
 
   <section id="viewBlock" class="view view-block" hidden>
-    <div class="mode-row"><span id="liveTitle" class="sr-only"></span><div class="mode-options" role="group" aria-labelledby="liveTitle"><button id="modeLive" type="button"></button><button id="modeFixed" type="button"></button></div><span id="liveState" class="live-state" role="status"></span></div>
+    <div class="mode-row"><span id="liveTitle" class="sr-only"></span><span id="liveState" class="live-state" role="status"></span></div>
     <section class="snapshot-card" aria-labelledby="snapTitle">
       <h2 id="snapTitle" class="sr-only"></h2>
       <div class="height-line"><span id="heightLabel"></span><strong id="currentHeight"></strong><span id="snapSource" class="source-chip"></span></div>
@@ -71,29 +70,56 @@
   <section id="viewAbout" class="view view-about" hidden>
     <section class="about-safe"><h2 id="safeTitle"></h2><div id="aboutSafe"></div></section>
     <div class="about-folds">
+      <details class="about-fold"><summary><h2 id="casesTitle"></h2></summary><div id="aboutCases" class="about-body"></div></details>
       <details class="about-fold"><summary><h2 id="allocTitle"></h2></summary><div id="aboutAlloc" class="about-body"></div></details>
       <details class="about-fold"><summary><h2 id="rulesTitle"></h2></summary><div class="about-body"><div id="aboutRules"></div><p id="listedNote"></p><p id="measureNote" role="note"></p></div></details>
       <details class="about-fold"><summary><h2 id="dataTitle"></h2></summary><div class="about-body"><div id="aboutData"></div><p class="about-links"><a id="open" target="_blank" rel="noopener noreferrer"></a></p></div></details>
     </div>
+    <p class="about-tg"><a id="tgJoin" target="_blank" rel="noopener noreferrer"></a></p>
   </section>
   </main>
+
+  <section id="sheet" class="sheet" aria-labelledby="subTitle" hidden>
+    <div class="sheet-head"><button id="lookupBack" class="lookup-back" type="button"></button><h2 id="subTitle" class="sub-title"></h2></div>
+    <div id="sheetScroll" class="sheet-scroll">
+    <section class="lookup-section" aria-labelledby="lookupTitle">
+      <form id="lookupForm">
+        <div class="lookup-heading"><label id="lookupTitle" class="px-title" for="lookupNumber"></label><button id="historyLookup" class="text-btn" type="button"></button></div>
+        <div class="lookup-controls"><span class="lookup-prefix" aria-hidden="true">#</span><input id="lookupNumber" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24"><button id="lookupBtn" class="btn" type="submit"></button></div>
+      </form>
+      <p id="lookupHow" class="lookup-how"></p>
+      <div id="lookupResult" aria-live="polite" hidden></div>
+      <div id="lookupActions" class="lookup-actions" hidden><button id="lookupCompare" class="lookup-compare" type="button"></button><button id="lookupHolding" class="lookup-compare lookup-holding" type="button"></button><button id="lookupPlan" class="lookup-compare lookup-plan" type="button"></button></div>
+    </section>
+    <section class="compare-panel" aria-labelledby="compareTitle">
+      <div class="compare-head"><h2 id="compareTitle" class="px-title"></h2><span id="comparePips" class="pips" aria-hidden="true"></span><span id="compareCount" class="hc-count"></span><button id="compareAdd" class="hc-manage" type="button"></button></div>
+      <div id="compareList" class="compare-list"></div>
+      <button id="compare" class="compare-open" type="button"></button>
+    </section>
+    </div>
+  </section>
+  </div>
 
   <nav id="tabbar" class="tabbar" aria-label="Sections">
     <button type="button" data-view="home"><span class="tab-icon"></span><span class="tab-label"></span></button>
     <button type="button" data-view="block"><span class="tab-icon"></span><span class="tab-label"></span></button>
-    <button type="button" data-view="explore"><span class="tab-icon"></span><span class="tab-label"></span><span id="compareBadge" class="tab-badge" hidden></span></button>
+    <button type="button" data-view="raise"><span class="tab-icon"></span><span class="tab-label"></span></button>
     <button type="button" data-view="about"><span class="tab-icon"></span><span class="tab-label"></span></button>
   </nav>
   <dialog id="addDialog" aria-labelledby="addTitle">
-    <form id="addForm"><h2 id="addTitle"></h2><div class="add-field"><span class="lookup-prefix" aria-hidden="true">#</span><input id="addInput" class="field" type="text" autocomplete="off" spellcheck="false" maxlength="400"></div><p id="addHint" class="add-hint"></p><p id="addError" class="inline-error" role="alert"></p><div class="fixed-actions"><button id="addCancel" class="text-btn" type="button"></button><button id="addSubmit" class="btn" type="submit"></button></div></form>
+    <form id="addForm"><h2 id="addTitle"></h2><div class="add-field"><span class="lookup-prefix" aria-hidden="true">#</span><input id="addInput" class="field" type="text" autocomplete="off" spellcheck="false"></div><p id="addHint" class="add-hint"></p><p id="addError" class="inline-error" role="alert"></p><div class="fixed-actions"><button id="addCancel" class="text-btn" type="button"></button><button id="addSubmit" class="btn" type="submit"></button></div></form>
   </dialog>
   <dialog id="fixedDialog" aria-labelledby="fixedTitle">
     <h2 id="fixedTitle"></h2><p id="syncHint" class="footnote"></p>
-    <label id="boundaryLabel" class="fixed-label" for="rewardBoundary"></label><select id="rewardBoundary" class="field"></select><p id="boundaryClock" class="footnote"></p>
-    <div id="fixedControls"><form id="syncForm"><label id="fixedHeightLabel" class="fixed-label" for="syncHeight"></label><input id="syncHeight" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="12"><div id="historyNumberRow" hidden><label id="historyNumberLabel" class="fixed-label" for="historyNumber"></label><input id="historyNumber" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24"></div><div class="fixed-actions"><button id="fixedCancel" class="text-btn" type="button"></button><button id="syncBtn" class="btn" type="submit"></button></div></form></div>
+    <form id="syncForm">
+      <label id="historyNumberLabel" class="fixed-label" for="historyNumber"></label><div class="history-field"><span class="lookup-prefix" aria-hidden="true">#</span><input id="historyNumber" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24"></div>
+      <label id="boundaryLabel" class="fixed-label" for="rewardBoundary"></label><select id="rewardBoundary" class="field"></select><p id="boundaryClock" class="footnote"></p>
+      <label id="fixedHeightLabel" class="fixed-label" for="syncHeight"></label><input id="syncHeight" class="field" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="12">
+      <div class="fixed-actions"><button id="fixedCancel" class="text-btn" type="button"></button><button id="syncBtn" class="btn" type="submit"></button></div>
+    </form>
     <p id="syncStatus" class="footnote status" role="status" aria-live="polite" hidden></p>
   </dialog>
   <script src="../data/snapshot.js"></script><script src="../lib/rules.js"></script>
-  <script src="../lib/tier.js"></script><script src="../lib/purchase.js"></script><script src="../lib/portfolio.js"></script><script src="../lib/lookup.js"></script><script src="../lib/pixel.js"></script><script src="../lib/i18n.js"></script><script src="../lib/source.js"></script><script src="../lib/explore.js"></script><script src="../lib/explore-ui.js"></script><script src="../lib/rewards.js"></script><script src="popup.js"></script>
+  <script src="../lib/tier.js"></script><script src="../lib/purchase.js"></script><script src="../lib/portfolio.js"></script><script src="../lib/planner.js"></script><script src="../lib/lookup.js"></script><script src="../lib/pixel.js"></script><script src="../lib/i18n.js"></script><script src="../lib/source.js"></script><script src="../lib/explore.js"></script><script src="../lib/explore-ui.js"></script><script src="../lib/rewards.js"></script><script src="popup.js"></script>
 </body>
 </html>

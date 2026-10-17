@@ -32,7 +32,7 @@ The ZIP is loaded after extraction; do not drag the ZIP onto the extensions page
 
 ## Update
 
-Replace the files in your existing extension folder with the new extracted files, click **Reload** on chrome://extensions, then reload open market tabs. The public extension ID stays the same, preserving browser-local settings and snapshots.
+Replace the files in your existing extension folder with the new extracted files, click **Reload** on chrome://extensions, then reload open market tabs. If Chrome was only restarted instead, the popup shows a Finish the update card whose button does that Reload. The public extension ID stays the same, preserving browser-local settings and snapshots.
 
 ## Package details
 
@@ -61,7 +61,7 @@ The download is generated from this project's runtime. It contains no browser pr
 
 ### 更新
 
-将新版解压文件替换到原扩展文件夹，在 **chrome://extensions** 点击该扩展的“**重新加载**”，然后刷新已打开的市场网页。公开版扩展 ID 保持不变，浏览器本地设置和快照可以继续使用。
+将新版解压文件替换到原扩展文件夹，在 **chrome://extensions** 点击该扩展的“**重新加载**”，然后刷新已打开的市场网页。如果只是重启了 Chrome，弹窗会显示“完成更新”，点其中的按钮即可重新加载。公开版扩展 ID 保持不变，浏览器本地设置和快照可以继续使用。
 
 ### 安装包信息
 

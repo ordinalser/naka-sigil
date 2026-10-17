@@ -5,12 +5,11 @@ const { RULES, MAX_TRAIT_PCT, traitTier, numberTier, evaluate, formatBonus, form
 test('Zero-listed common traits get 100%; rare traits require same-block official basis instead of one sale',()=>{
   const t={type:'Hair',value:'X',floor:null,listed:0};
   const calc=x=>evaluate({number:1000,traits:[{...t,...x}]},100);
-  assert.equal(calc({supply:20}).lo.weight,200);assert.equal(calc({supply:20,lastSale:1}).traits[0].method,'held');
-  assert.equal(calc({supply:19,lastSale:125}).exact,false,'a single sale is not the current three-sale rule');
+  assert.equal(calc({supply:20}).lo.weight,200);assert.equal(calc({supply:20,saleHistory:[[1,90]]}).traits[0].method,'held','20+ pieces never read sales');
   assert.equal(calc({supply:19,officialPct:25,officialSource:'sales'}).lo.weight,125);
   assert.equal(calc({supply:19,officialPct:0,officialSource:'none'}).lo.weight,100);
-  assert.equal(calc({supply:19,lastSale:124}).lo.weight,100);
-  assert.equal(calc({supply:1,lastSale:300}).hi.weight,200);
+  const one=calc({supply:19,saleHistory:[[124,90]]});assert.equal(one.exact,true);assert.equal(one.lo.weight,100,'one sale at 1.24× is +0%');
+  const high=calc({supply:1,saleHistory:[[300,90]]});assert.equal(high.exact,true);assert.equal(high.lo.weight,200,'one sale at 3× is +100%');
   assert.equal(calc({supply:1,officialPct:100,officialSource:'sales'}).lo.weight,200);
   assert.equal(calc({supply:19}).exact,false);assert.equal(calc({supply:19}).traits[0].method,'missing-sale');
   assert.equal(calc({supply:20,floor:100,listed:1}).lo.weight,100,'active floor takes priority over supply');
@@ -161,7 +160,8 @@ test('Displayed ratio cannot round a below-threshold floor into a qualifying tie
 test('Reward phases match official start+1 and 1008-block week boundaries',()=>{
   const {rewardPhase,RULES}=require('../src/lib/rules');const S=RULES.startBlock,W=RULES.weekBlocks,E=S+W*RULES.weeks;
   const p=h=>rewardPhase({height:h,blockTime:{height:h,timestamp:1000000}});
-  assert.equal(p(S-1).state,'before');assert.equal(p(S-1).remaining,1);
+  // Before and at the start the next boundary is the first rewarded block (week 1).
+  assert.equal(p(S-1).state,'before');assert.equal(p(S-1).next,S+1);assert.equal(p(S-1).remaining,2);
   assert.equal(p(S).state,'boundary');assert.equal(p(S).next,S+1);
   assert.deepEqual([p(S+1).week,p(S+1).first,p(S+1).last,p(S+1).next],[1,S+1,S+W,S+W+1]);
   assert.equal(p(S+W).week,1);assert.equal(p(S+W).remaining,1);

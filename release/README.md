@@ -2,7 +2,7 @@
 
 [English](#install) · [中文](#中文说明)
 
-[**Download Naka Sigil v0.11.1 for Chrome**](./naka-sigil-chrome-v0.11.1-h971547.zip)
+[**Download Naka Sigil v0.12.5 for Chrome**](./naka-sigil-chrome-v0.12.5-h971547.zip)
 
 No Node.js or compilation required. Requires Chrome 105 or later.
 
@@ -18,11 +18,11 @@ The ZIP is loaded after extraction; do not drag the ZIP onto the extensions page
 
 ## Update
 
-Replace the files in your existing extension folder with the new extracted files, click **Reload** on chrome://extensions, then reload open market tabs. The public extension ID stays the same, preserving browser-local settings and snapshots.
+Replace the files in your existing extension folder with the new extracted files, click **Reload** on chrome://extensions, then reload open market tabs. If Chrome was only restarted instead, the popup shows a Finish the update card whose button does that Reload. The public extension ID stays the same, preserving browser-local settings and snapshots.
 
 ## Package details
 
-- Version: **0.11.1**
+- Version: **0.12.5**
 - Bundled snapshot: **block 971,547**, not the current chain tip. Live updates run while the market, workspace or popup is visible. Historical lookup is a one-time inspection and never changes the live source. Existing holdings and comparison selections are retained.
 - SHA-256 checksum: [SHA256SUMS](./SHA256SUMS)
 - Public extension ID: **bcihombccpheaimcgldamaggokpgpidl**
@@ -31,7 +31,7 @@ The download is generated from this project's runtime. It contains no browser pr
 
 ## 中文说明
 
-[**下载适用于 Chrome 的 Naka Sigil v0.11.1**](./naka-sigil-chrome-v0.11.1-h971547.zip)
+[**下载适用于 Chrome 的 Naka Sigil v0.12.5**](./naka-sigil-chrome-v0.12.5-h971547.zip)
 
 无需 Node.js 或自行编译。需要 Chrome 105 或更新版本。
 
@@ -47,11 +47,11 @@ The download is generated from this project's runtime. It contains no browser pr
 
 ### 更新
 
-将新版解压文件替换到原扩展文件夹，在 **chrome://extensions** 点击该扩展的“**重新加载**”，然后刷新已打开的市场网页。公开版扩展 ID 保持不变，浏览器本地设置和快照可以继续使用。
+将新版解压文件替换到原扩展文件夹，在 **chrome://extensions** 点击该扩展的“**重新加载**”，然后刷新已打开的市场网页。如果只是重启了 Chrome，弹窗会显示“完成更新”，点其中的按钮即可重新加载。公开版扩展 ID 保持不变，浏览器本地设置和快照可以继续使用。
 
 ### 安装包信息
 
-- 版本：**0.11.1**
+- 版本：**0.12.5**
 - 内置快照：**区块 971,547**，不是当前链上最新高度。市场、独立页面或弹窗可见时自动同步。历史查询只查看本次结果，不改变实时来源；已有持仓和比较清单保留。
 - SHA-256 校验文件：[SHA256SUMS](./SHA256SUMS)
 - 公开版扩展 ID：**bcihombccpheaimcgldamaggokpgpidl**

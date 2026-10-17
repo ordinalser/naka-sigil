@@ -11,8 +11,8 @@ test('Listing status is an exact selected-block fact, never inferred from weight
   assert.equal(P.listingStatus(s,'toString'),'unknown');
   assert.equal(P.listingStatus({...s,offers:s.offers.slice(1)},id(0)),'unlisted');
   assert.equal(P.listingStatus(fixture([100],[[0]],[0]),id(0)),'listed','last listing is still listed when sale weight is unavailable');
-  const listed=R.evaluate({number:1000,traits:[]},100);
-  assert.equal(listed.lo.weight,100,'listing state must not zero or change the holding formula');
+  // Listing status is not a rule input: the same piece listed or not has the same holding formula.
+  assert.deepEqual(R.evaluateSnapshot({...s,offers:s.offers.slice(1)},id(0)),R.evaluateSnapshot(s,id(0)),'listing state must not zero or change the holding formula');
 });
 function fixture(prices, indexes=[[0],[0],[1]],numbers=[1000,1001,1002]) {
   const traits=[['Hair','Red'],['Hair','Blue']].map(([type,value],idx)=>{const ps=prices.filter((p,i)=>indexes[i].includes(idx));return [type,value,ps.length?Math.min(...ps):null,ps.length];});

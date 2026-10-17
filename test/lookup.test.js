@@ -29,7 +29,8 @@ test('Lookup exposes listed/unlisted at the selected block, with an explicit unk
   assert.equal(R.formatWeight(before.result),R.formatWeight(after.result),'listing status is separate from holding formula');
 });
 test('Lookup recomputes against selected block/floors, preserving unknown ranges and cap',()=>{
-  const cloned=JSON.parse(JSON.stringify(snap));cloned.snapshot.height=985000;cloned.snapshot.blockTime=null;delete cloned.offers;delete cloned.credits;delete cloned.rewardBasis;delete cloned.saleHistory;cloned.snapshot.indexerHeight=985000;for(const t of cloned.traits)if(t[2]!==null)t[2]=cloned.snapshot.collectionFloor;
+  // Every listing at the collection floor (trait floors follow), no official basis and no sale history at this block.
+  const cloned=JSON.parse(JSON.stringify(snap));cloned.snapshot.height=985000;cloned.snapshot.blockTime=null;delete cloned.rewardBasis;delete cloned.saleHistory;cloned.snapshot.indexerHeight=985000;for(const o of cloned.offers)o[1]=cloned.snapshot.collectionFloor;for(const t of cloned.traits)if(t[2]!==null)t[2]=cloned.snapshot.collectionFloor;
   assert.equal(require('../src/lib/source.js').isSnapshot(cloned),true);
   const result=query(cloned,'#0');assert.equal(result.height,985000);
   assert.notEqual(result.result.lo.weight,query(snap,'#0').result.lo.weight);

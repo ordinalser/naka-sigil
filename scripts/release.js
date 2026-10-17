@@ -7,7 +7,8 @@ const { execFileSync } = require('node:child_process');
 const { releaseFiles } = require('./privacy.js');
 const ROOT = path.join(__dirname, '..');
 const version = require('../package.json').version;
-const output = path.join(ROOT, '..', `naka-sigil-source-v${version}.zip`);
+// Inside this repository's ignored dist/ folder, beside the installation archive; privacy.js checks it on later runs.
+const output = path.join(ROOT, 'dist', `naka-sigil-source-v${version}.zip`);
 const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'nakas-public-source-'));
 try {
   for (const rel of releaseFiles) {

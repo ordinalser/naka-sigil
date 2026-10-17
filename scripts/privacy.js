@@ -7,16 +7,16 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const downloads = require('./package-chrome.js');
 const ROOT = path.join(__dirname, '..');
-const screenshots=['market','compare','popup','lookup','workspace'].map(n=>'docs/screenshots/'+n+'.png');
+const screenshots=['market','find','compare','popup','raise','lookup','workspace','planner'].map(n=>'docs/screenshots/'+n+'.png');
 const files = [...screenshots,
-  'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js','test/portfolio.test.js', 'test/programme.test.js','test/rewards.test.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
+  'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js','test/portfolio.test.js', 'test/programme.test.js','test/rewards.test.js','test/planner.test.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
   '.gitignore', 'LICENSE', 'README.md', 'package.json',
   'docs/DESIGN.md', 'docs/ADVERSARIAL_AUDIT.md', 'docs/RULES_AUDIT.md', 'docs/PRIVACY.md', 'docs/VALIDATION.md',
   'scripts/build.js', 'scripts/snapshot.js', 'scripts/gen-icons.js', 'scripts/privacy.js', 'scripts/release.js', 'scripts/package-chrome.js',
-  'test/purchase.test.js', 'test/lookup.test.js', 'test/worker.test.js', 'test/pixel.test.js', 'test/i18n.test.js', 'test/rules.test.js', 'test/snapshot.test.js', 'test/source.test.js', 'test/tier.test.js',
+  'test/purchase.test.js', 'test/lookup.test.js', 'test/worker.test.js', 'test/pixel.test.js', 'test/i18n.test.js', 'test/rules.test.js', 'test/snapshot.test.js', 'test/source.test.js', 'test/tier.test.js', 'test/pages.test.js',
 ];
 const source = [
-  'lib/rewards.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
+  'lib/rewards.js','lib/planner.js','lib/popover.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/planner-ui.js', 'workspace/workspace.js', 'workspace/workspace.css',
   'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'data/snapshot.js', 'lib/rules.js', 'lib/snapshot-core.js', 'lib/source.js', 'lib/i18n.js', 'lib/tier.js',
   'content/content.js', 'content/content.css', 'popup/popup.html', 'popup/popup.css', 'popup/popup.js',
   'sw/sync-sw.js', '_locales/en/messages.json', '_locales/zh_CN/messages.json',
@@ -32,8 +32,15 @@ const patterns = [
   /(?:password|secret|access_token|api_token)\s*[:=]\s*["'][A-Za-z0-9_+\/-]{16,}["']/i,
   /(?:https?:\/\/)[^\s/:]+:[^\s/@]+@/i,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+  // Bitcoin addresses (bech32 and base58) and extended keys, temporary and machine paths, and the names of the private
+  // workspace this release is cut from (built from pieces so this file does not match itself).
+  /\b(?:bc1|tb1|bcrt1)[02-9ac-hj-np-z]{11,87}\b/i,
+  /(?<![A-Za-z0-9+\/])[13][a-km-zA-HJ-NP-Z1-9]{25,34}(?![A-Za-z0-9+\/=])/,
+  /\b[xyzt]pub[1-9A-HJ-NP-Za-km-z]{100,108}\b/,
+  /\/(?:private\/(?:var|tmp)|var\/folders|tmp)\//,
+  new RegExp(['x-user'+'-notes','extension'+'-shnakas','shnakas'+'-reward','fcpjfijdhggf'+'hihmloakbhkllnmicdej'].join('|'),'i'),
 ];
-let count = 0;
+let count = 0, sourceZip = null;
 function walk(dir, prefix = '') {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const rel = prefix + entry.name;
@@ -44,6 +51,8 @@ function walk(dir, prefix = '') {
     if (entry.isDirectory()) { walk(path.join(dir, entry.name), `${rel}/`); continue; }
     const isBuild = rel.startsWith('dist/chrome/');
     const isZip = rel === `dist/${downloads.zipName}` || rel === `release/${downloads.zipName}`;
+    // The source archive release.js writes for this version: exactly the allowlisted files, byte for byte.
+    if (rel === `dist/naka-sigil-source-v${require('../package.json').version}.zip`) { checkZipMetadata(path.join(dir, entry.name)); sourceZip = path.join(dir, entry.name); count++; continue; }
     if (isZip) {
       const zipPath = path.join(dir, entry.name);
       checkZipMetadata(zipPath);
@@ -64,7 +73,7 @@ function validateSnapshot() {
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'src/data/snapshot.js'), 'utf8'), sandbox, { timeout: 1000 });
   const s = sandbox.SHNAKAS_SNAPSHOT;
   const exact = (o, keys) => assert(Object.keys(o).sort().join() === [...keys].sort().join(), 'Unexpected snapshot fields');
-  exact(s, ['format','collection','snapshot','traits','items','offers','saleHistory','pending',...(s.rewardBasis?['rewardBasis']:[]),...(s.credits?['credits']:[]),...(s.rewardEvents?['rewardEvents']:[])]);
+  exact(s, ['format','collection','snapshot','traits','items','offers','saleHistory','pending',...(s.rewardBasis?['rewardBasis']:[]),...(s.credits?['credits']:[]),...(s.rewardEvents?['rewardEvents']:[]),...(s.listedAt?['listedAt']:[]),...(s.closing?['closing']:[])]);
   exact(s.collection, ['slug','name','cid','rulesInscriptionId','numberStart']);
   exact(s.snapshot, ['height','indexerHeight','generatedAt','blockTime','listings','collectionFloor']);
   exact(s.snapshot.blockTime, ['height','hash','timestamp']);
@@ -116,11 +125,16 @@ if (fs.existsSync(manifestPath)) {
   assert(Object.keys(m).sort().join()===manifestKeys.sort().join(), 'Unexpected manifest fields');
   assert(m.manifest_version===3 && m.minimum_chrome_version==='105' && m.default_locale==='en' && m.name==='__MSG_extName__' && m.description==='__MSG_extDesc__' && m.version===require('../package.json').version, 'Unexpected manifest metadata');
   assert(JSON.stringify(m.background)===JSON.stringify({service_worker:'sw/sync-sw.js'}), 'Unexpected background entry');
-  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/rewards.js','lib/portfolio.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','lib/explore.js','lib/explore-ui.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
+  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/portfolio.js','lib/rewards.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','lib/explore.js','lib/explore-ui.js','lib/popover.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
   assert(JSON.stringify(m.content_scripts)===JSON.stringify(scripts), 'Unexpected content script configuration');
 
   assert(JSON.stringify(m.permissions)===JSON.stringify(['storage','alarms']), 'Unexpected permissions');
   assert(JSON.stringify(m.host_permissions)===JSON.stringify(['https://shielded-api.ord-dropz.xyz/*','https://blockstream.info/*']), 'Unexpected API host permissions');
+}
+if (sourceZip) {
+  const names = execFileSync('unzip', ['-Z1', sourceZip], { encoding:'utf8' }).trim().split('\n').sort();
+  assert(JSON.stringify(names) === JSON.stringify([...allowed].map(f => `naka-sigil/${f}`).sort()), 'Source archive differs from the allowlist');
+  for (const f of allowed) assert(execFileSync('unzip', ['-p', sourceZip, `naka-sigil/${f}`]).equals(fs.readFileSync(path.join(ROOT, f))), 'Source archive differs from the working tree');
 }
 console.log(`PASS: ${count} release files; allowlist, privacy patterns, snapshot fields and public identity verified.`);
 

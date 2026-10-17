@@ -65,6 +65,11 @@ test('Comparison control: selected stays removable, a full selection explains it
  assert.equal(E.compareState(four.slice(0,3),ids[4]),'add');
  assert.equal(E.compareState([],ids[0]),'add');
 });
+test('Raise weight copy has identical English/Chinese keys, nested groups included, and function arities',()=>{
+ require('../src/workspace/planner-ui.js');const {zh,en}=globalThis.NakaPlannerUI.copy;
+ const same=(a,b,at)=>{assert.deepEqual(Object.keys(a).sort(),Object.keys(b).sort(),at);for(const k of Object.keys(a)){assert.equal(typeof a[k],typeof b[k],`${at}.${k}`);if(typeof a[k]==='function')assert.equal(a[k].length,b[k].length,`${at}.${k}`);else if(typeof a[k]==='object')same(a[k],b[k],`${at}.${k}`);}};
+ same(en,zh,'copy');
+});
 test('Comparison copy has identical English/Chinese keys and function arities',()=>{
  require('../src/lib/explore-ui.js');const en=globalThis.NakaExploreUI.pick('en'),zh=globalThis.NakaExploreUI.pick('zh');
  assert.deepEqual(Object.keys(en).sort(),Object.keys(zh).sort());
@@ -79,7 +84,7 @@ const batchUI=batchBox.NakaExploreUI;
 const batchSnap={snapshot:{height:100,collectionFloor:100},traits:[],items:Object.fromEntries([379,1025,1500].map((n,i)=>[String(i).padStart(64,'0')+'i0',[n]])),offers:[]};
 const batchIds=Object.keys(batchSnap.items);
 test('Batch additions accept commas, spaces, mixed whitespace, and preserve optional hash notation',()=>{
- for(const lang of ['en','zh'])for(const raw of ['379,1025,1500','379 1025 1500',' 379, 1025\t1500\n','379,\n1025  1500','# 379 #1025, # 1500','379，1025，1500']){
+ for(const lang of ['en','zh'])for(const raw of ['379,1025,1500','379 1025 1500',' 379, 1025\t1500\n','379,\n1025  1500','# 379 #1025, # 1500','379，1025，1500','379、1025、1500','379\u30001025\u30001500','379\n1025\r\n1500']){
   const c=batchUI.pick(lang),out=batchUI.resolveNumbers(batchSnap,raw,[],c,c.skipHeld);
   assert.deepEqual(Array.from(out.ids),batchIds,raw);assert.equal(out.skipped.length,0,raw);assert.equal(out.empty,false);
  }
@@ -90,4 +95,12 @@ test('Batch additions retain duplicate, invalid, missing and already-added handl
   assert.deepEqual(Array.from(out.ids),batchIds.slice(1));assert.equal(out.skipped.length,4);assert.equal(out.skipped[0],reason(379));assert.equal(out.skipped[1],reason(1025));
   assert.equal(batchUI.resolveNumbers(batchSnap,' , \t\n ',[],c,reason).empty,true);
  }}
+});
+test('A wanted post imports as its numbers: our own lead-in in either language, then the numbers; other words stay invalid',()=>{
+ for(const lang of ['en','zh']){const c=batchUI.pick(lang),post=batchUI.wantText(c,[1500,379,1025]);
+  assert.equal(post,`${c.wantPrefix} 379, 1025, 1500`,'ascending, comma and space');
+  for(const raw of [post,batchUI.wantText(batchUI.pick(lang==='en'?'zh':'en'),[379,1025,1500]),'want to buy: 379, 1025, 1500','求购：379，1025，1500']){
+   const out=batchUI.resolveNumbers(batchSnap,raw,[],c,c.skipHeld);assert.deepEqual(Array.from(out.ids),batchIds,raw);assert.equal(out.skipped.length,0,raw);}
+  const loose=batchUI.resolveNumbers(batchSnap,'I want 379',[],c,c.skipHeld);assert.equal(loose.ids.length,1);assert.deepEqual(Array.from(loose.skipped),[c.skipInvalid('I'),c.skipInvalid('want')]);
+ }
 });

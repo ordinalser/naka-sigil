@@ -27,50 +27,53 @@
     salesTied: '同块成交顺序未定',
     salesTiedBasis: '同一区块有多笔成交，公开数据无法确定哪几笔属于最近 3 笔；显示该特征的上下界。',
     saleUnknown: '成交依据缺失',
-    rewardWeek:(n,total)=>`第 ${n}/${total} 奖励周`,
+    rewardWeek:(n,total)=>`第 ${n}/${total} 奖励周`,accrualRemaining:'距奖励结束',accrualRemainingAtBlock:'该块距奖励结束',lastRewardBlock:h=>`最后有奖励的区块 ${h}`,workerUnreachable:'无法连接后台，请重新打开弹窗',
     completedWeeks:'已完成奖励周',weeksUnit:'周',claimLimit:h=>`领取上限 ${h}`,rewardClosed:'超过领取上限',rewardClosedNote:'已超过协议领取高度上限；区块公式仍可历史查询。',
-    launchStatAtBlock:'该块距启动',firstRewardAtBlock:'该块距计奖',weekRemainingAtBlock:'该块距周界',weekRemaining:'距下周边界',firstRewardBlock:'距首个计奖区块',rewardEnded:'累计已结束',rewardBoundary:'奖励启动边界',
+    launchStatAtBlock:'该块距第 1 周',firstRewardAtBlock:'该块距奖励开始',weekRemainingAtBlock:'该块距周界',weekRemaining:'距下周边界',firstRewardBlock:'距第一个有奖励的区块',rewardEnded:'累计已结束',rewardBoundary:'奖励启动边界',
     weekRange:(a,b)=>`${a}–${b}`,nextBoundary:h=>`下周起点 ${h}`,finalBoundary:h=>`最终边界 ${h}`,
-    phaseNotStarted:'奖励尚未启动',phaseBoundary:'下一块开始计奖',phaseEnded:'奖励累计已结束',
-    beforeRewardNote:h=>`启动高度 ${h}；计奖自 ${Number(String(h).replaceAll(',',''))+1}。`,
+    phaseNotStarted:'奖励尚未启动',phaseBoundary:'下一块开始有奖励',phaseEnded:'奖励累计已结束',
+    
     rewardEndNote:h=>`完整合资格周可领取；协议领取上限 ${h}。`,
-    noFutureWeek:'本期无后续奖励周',noFutureWeekNote:'本期已无后续完整奖励周。',weekWaiting:'本周不累计',weekWaitNote:(n,a,b,h)=>`第${n}周 ${a}–${b}；最早 ${h} 恢复。`,
-    weekContext:(n,a,b)=>`第${n}奖励周：${a}–${b}。周资格取决于持有记录，区块公式不等于收益。`,
+    noFutureWeekNote:'本期已无后续完整奖励周。',
+    
     quarterUnconfirmed:'按区块动态计权；以下仅为每周奖励边界。',
-    boundaryReference:h=>`周界参考链高 ${h}`,boundaryChoose:'选择奖励周起点',boundaryPast:'已到达 · 倒序',boundaryFuture:'尚未到达',boundaryLaunch:'奖励启动',boundaryWeek:n=>`第${n}周`,
+    boundaryReference:h=>`周界参考链高 ${h}`,boundaryChoose:'选择奖励周起点',boundaryPast:'已到达 · 倒序',boundaryFuture:'尚未到达',boundaryLaunch:'启动前最后一块',boundaryWeek:n=>`第${n}周`,
     boundaryDistance:(n,date)=>`还需${n}块 · ${date}`,historyCheck:'查该区块',historyLookup:'查历史 ↗',historyTitle:'按区块查藏品',historyNumber:'Shielded 编号',historyConfirm:'查询历史',historyModeHint:'仅查看此次历史记录，不改变实时持仓、比较或市场数据。',
-    launchTitle: h=>`奖励启动 · ${h}`,
+    launchTitle: h=>`第 1 周起点 · ${h}`,
     launchBefore: (blocks,eta,basis)=>`以区块 ${basis} 为准：还需 ${blocks} 块 · ${eta}`,
-    launchReached: '所选区块已达到启动高度',
+    
     launchUnknown: '预计时间未知',
-    launchEta: utc=>`预计 ${utc} UTC`,
-    launchStat: '距奖励启动',
+    
+    launchStat: '距第 1 周',
     blocksUnit: '块',
     launchDate: (d)=>`约 ${d}`,
-    launchReachedShort: '已到达',
+    
     launchAt: (h)=>`启动区块 ${h}`,
     launchMethod: '按区块头时间、10分钟/块估算。奖励周为1008块；未挂单持有，完整周可领取。',
     scopeNote: '区块权重 · 非累计奖励',
     scopeActivity: '所示区块公式值 · 非成交时权重',
     scopeTimeUnknown: '时间未知',
     scopeTimeFuture: '时间超前',
-    scopeSource: {live:'实时',synced:'指定',bundled:'内置'},
-    fixedTitle:'设置指定区块',fixedConfirm:'使用此区块',cancel:'取消',fixedWatching:'保持所选区块 · 点击指定区块可修改',liveWatching:'随新区块自动更新',modeTitle:'区块模式',modeLive:'实时',modeFixed:'指定区块',fixedRequired:'请填写指定区块高度',
+    scopeSource: {live:'实时',bundled:'内置'},
+    cancel:'取消',liveWatching:'随新区块自动更新',modeTitle:'区块模式',modeLive:'实时',fixedRequired:'请填写区块高度',
     headwear: 'Hair / headwear',
     collectionFloorBTC: '集合地板 · BTC',
     inspectProvisional: '隐私领取100% · 展示藏品可领全部权重',
     formulaTitle: '持有权重公式',
     formulaColumn: '该区块',
     listing: {
-      listed: {label:'该区块已挂单',meaning:'本区块不累计奖励',note:'撤单后下一奖励周恢复；此前完整持有周仍可领取。'},
-      unlisted: {label:'该区块未挂单',meaning:'本周资格未核实',note:'完整合资格周可领取；本周资格未核实。'},
-      unknown: {label:'挂单状态未知',meaning:'奖励资格未核实',note:'快照缺少逐笔挂单，请同步核实；公式值不代表奖励。'}
+      listed: {label:'该区块已挂单'},
+      unlisted: {label:'该区块未挂单'},
+      unknown: {label:'挂单状态未知'}
     },
     activityShort: '基于同步区块，非成交时的历史权重。',
     numberBadge: (label,pct) => `${label} · 编号加成 +${pct}%，已包含在总权重中`,
     lookupBack: '返回',
     change: {up:'加成上升',down:'加成下降',market:'计价依据变化',unknown:'价格依据缺失',known:'价格依据已知'},
-    pastRewardNote:'既有奖励属于此前持有记录，不随藏品转移。',buyEligibilityNote:'成交确认后，从下个奖励周起计。',cancelEligibilityNote:'撤单确认后，从下个奖励周恢复。',
+    pastRewardNote:'既有奖励属于此前持有记录，不随藏品转移。',buyEligibilityNote:'成交确认后从下个奖励周起有奖励；成交当周这一枚买卖双方都没有奖励。',
+    closingSaleTag:'成交中',closingCancelTag:'撤单中',
+    closingSale:'已有人买下这单，正在等下一块确认：现在去买会失败，只有那笔购买失败它才会回到市场。',
+    closingCancel:'卖家正在撤单，下一块确认后下架。',
     cancelScopeNote:'自己的挂单显示撤单后权重，仅移除对应挂单；奖励从下一奖励周恢复。',cancelBefore:'挂单中公式值',cancelAfter:'撤单后',cancelTitle:'撤单后持有权重',cancelAssumption:'仅撤销此挂单，其他挂单不变。',cancelNoFloor:'撤销后无剩余挂单，无法计算集合地板及权重。',
     buyTitle: '成交后持有权重',
     formulaBefore: '成交前公式值',
@@ -82,7 +85,7 @@
     totalWeight: '总权重',
     buyAssumptionShort: '仅此挂单成交，其他挂单不变。',
     buyNoFloor: '移除此挂单后已无挂单，集合地板不存在，无法计算权重。',
-    buyBadgeNote: '持有公式值，含基础 100%，不代表奖励。成交前公式值 / 成交后：仅此挂单成交，其他挂单不变。挂单期间奖励为零；成交不保证立即获奖。缺少特征依据时显示范围。',
+    buyBadgeNote: '持有公式值，含基础 100%，不代表奖励。成交前公式值 / 成交后：仅此挂单成交，其他挂单不变。挂单期间没有奖励；买入后从下一奖励周起有奖励，成交当周这一枚谁都没有奖励。缺少特征依据时显示范围。',
     title: 'Naka Sigil',
     weight: '总持有权重',
     bonus: '加成',
@@ -91,7 +94,7 @@
     weightShort: '总权重',
     details: '特征明细',
     activityNote: '总权重为含基础 100% 的持有公式值，不代表奖励。交易记录旁的数据与挂单状态基于上方同步区块，不是成交时的历史状态。',
-    rulesCaveat: '基础100% + 特征与编号加成，最高400%，使用所选区块数据。零挂单特征至少20件加100%；小型特征使用同高度官方近3笔成交依据，缺少依据时显示范围。',
+    
     base: '基础',
     number: 'Shielded 编号',
     atCap: (cap) => `已封顶 ${cap}%`,
@@ -104,12 +107,12 @@
     floorOf: (btc, n) => `特征地板 ${btc} BTC · ${n} 个挂单`,
     noFloor: '快照时没有挂单，测不出地板价',
     // 弹窗
-    popupRules: '说明：只读安全 · 规则与限制',
-    popupTrait: '特征地板 ÷ 集合地板',
-    popupNumber: '号码（只取最高一档）',
-    popupCap: '总权重上限',
-    popupSource: '规则原文',
-    popupZeroSource: '零挂单补充规则',
+    
+    
+    
+    
+    
+    
     popupOpen: '打开市场 ↗',
     lookupTitle: '按 Shielded 编号查询',
     lookupPlaceholder: '输入编号，例如 379',
@@ -117,39 +120,44 @@
     lookupInvalid: '请输入有效的非负整数编号，支持 #0、#379。',
     lookupMissing: (n) => `所选区块快照未收录 Shielded #${n}，不代表这件 NFT 不存在；实时模式会随新区块补入新铸造的藏品。`,
     lookupBasis: (h) => `区块 ${h} 公式值；非官方结算或累计奖励。`,
-    lookupView: '查看藏品 ↗',
+    lookupView: '前往市场 ↗',
     popupSnapshot: '当前计算依据',
     popupHeight: '已同步区块',
     popupFloor: '集合地板',
     popupListings: '有效挂单',
-    ladderTitle: '权重阶梯',
-    ladderSub: '达到每档成交后权重的最低挂价',
-    ladderUnit: '挂价 · BTC',
-    ladderNote: '所选区块挂价，不含费用；每行仅该挂单成交、其他挂单不变。点击查看明细。',
-    ladderNoOffers: '该快照缺少逐项挂单，无法按权重列出挂价。',
-    ladderNone: '该区块没有可计算成交后权重的挂单。',
-    ladderRowTitle: (n)=>`查看 Shielded #${n} 的计算明细`,
-    ladderRowLabel: (w,n,p)=>`成交后 ${w}：Shielded #${n}，挂价 ${p} BTC`,
+    
+    
+    
+    
+    
+    
+    
+    
     srcBundled: '内置快照',
-    srcSynced: '指定区块',
-    syncPlaceholder: '指定区块高度',
-    syncHint: () => '填写要复算的区块高度；载入后保持该区块。',
+    
+    syncPlaceholder: '区块高度',
+    
     syncStage: { state: '读取链上状态…', build: '汇总地板价…' },
     syncMeta: (done, total) => `补充新铸造藏品的特征 ${done}/${total}…`,
-    syncDone: (h) => `同步完成：区块 ${h}`,
-    syncError: (msg) => `同步失败：${msg}`,
-    syncInterrupted: '上次同步被中断（后台被浏览器回收），请重新同步',
+    syncDone: (h) => `查询完成：区块 ${h}`,
+    syncError: (msg) => `查询失败：${msg}`,
+    syncInterrupted: '上次查询被中断（后台被浏览器回收），请重新查询',
     syncBadHeight: '区块高度只能填数字',
-    syncBusy: '已有同步在进行中',
+    syncBusy: '已有一个历史查询在进行中',
     srcLive: '实时',
-    liveHint: '市场、比较页或弹窗可见时自动检查；指定区块模式暂停更新。',
-    liveOff: '指定区块模式：保持所选区块，不随新区块更新',
+    
+    
     liveWaiting: '正在检查最新区块',
     livePaused: '未在使用，自动检查暂停',
+    updateTitle: '完成更新',
+    updateText: (v) => `v${v} 的文件已经就位，重新加载插件后即可使用。`,
+    updateKeep: '持仓、比较和设置都会保留。',
+    updateReload: '重新加载插件',
+    updateHint: '在扩展管理页点“重新加载”效果相同。',
     liveOk: (h, age) => `已同步区块 ${h} · ${age}`,
     liveFail: (reason, min) => `最近一次检查失败：${reason}。${min} 分钟后自动重试`,
     liveKeep: (h) => `页面继续使用区块 ${h} 的数据`,
-    liveKeepNone: '页面继续使用指定区块或内置快照',
+    liveKeepNone: '页面继续使用内置快照',
     failReason: {
       'rate-limit': '接口限流',
       server: '接口服务端出错',
@@ -182,50 +190,53 @@
     salesTied: 'Same-block sale order unknown',
     salesTiedBasis: 'Several sales share one block, so public data cannot tell which belong to the last 3; the trait shows its bounds.',
     saleUnknown: 'Sale basis missing',
-    rewardWeek:(n,total)=>`Reward week ${n}/${total}`,
+    rewardWeek:(n,total)=>`Reward week ${n}/${total}`,accrualRemaining:'To the end of accrual',accrualRemainingAtBlock:'This block to the end of accrual',lastRewardBlock:h=>`Last rewarded block ${h}`,workerUnreachable:'Could not reach the background worker; reopen the popup',
     completedWeeks:'Completed weeks',weeksUnit:'weeks',claimLimit:h=>`Claim limit ${h}`,rewardClosed:'Claim limit passed',rewardClosedNote:'Past the protocol claim-height limit; historical formulas remain inspectable.',
-    launchStatAtBlock:'To start at block',firstRewardAtBlock:'To accrual at block',weekRemainingAtBlock:'Next week at block',weekRemaining:'To next week',firstRewardBlock:'To first reward block',rewardEnded:'Accrual ended',rewardBoundary:'Reward start boundary',
+    launchStatAtBlock:'This block to week 1',firstRewardAtBlock:'To accrual at block',weekRemainingAtBlock:'Next week at block',weekRemaining:'To next week',firstRewardBlock:'To first reward block',rewardEnded:'Accrual ended',rewardBoundary:'Reward start boundary',
     weekRange:(a,b)=>`${a}–${b}`,nextBoundary:h=>`Next week: ${h}`,finalBoundary:h=>`Final boundary: ${h}`,
     phaseNotStarted:'Rewards not started',phaseBoundary:'Accrual starts next block',phaseEnded:'Reward accrual ended',
-    beforeRewardNote:h=>`Start ${h}; accrual from ${Number(String(h).replaceAll(',',''))+1}.`,
+    
     rewardEndNote:h=>`Completed eligible weeks are claimable; protocol claim limit ${h}.`,
-    noFutureWeek:'No later reward week',noFutureWeekNote:'No later full reward week in this programme.',weekWaiting:'No accrual this week',weekWaitNote:(n,a,b,h)=>`Week ${n}: ${a}–${b}. Earliest restart: ${h}.`,
-    weekContext:(n,a,b)=>`Reward week ${n}: ${a}–${b}. Eligibility depends on holding history; formula weight is not earnings.`,
+    noFutureWeekNote:'No later full reward week in this programme.',
+    
     quarterUnconfirmed:'Weights follow each block. These are reward-week boundaries only.',
-    boundaryReference:h=>`Boundary reference: block ${h}`,boundaryChoose:'Choose reward-week start',boundaryPast:'Reached · newest first',boundaryFuture:'Upcoming',boundaryLaunch:'Rewards start',boundaryWeek:n=>`Week ${n}`,
-    boundaryDistance:(n,date)=>`${n} blocks · ${date}`,historyCheck:'Inspect block',historyLookup:'At block ↗',historyTitle:'Look up at block',historyNumber:'Shielded number',historyConfirm:'Inspect history',historyModeHint:'One-time inspection. Live holdings, comparisons and market data stay unchanged.',
-    launchTitle: h=>`Rewards start · ${h}`,
-    launchBefore: (blocks,eta,basis)=>`${blocks} blocks from #${basis} · ${eta}`,
-    launchReached: 'Selected block has reached the start height',
+    boundaryReference:h=>`Boundary reference: block ${h}`,boundaryChoose:'Choose reward-week start',boundaryPast:'Reached · newest first',boundaryFuture:'Upcoming',boundaryLaunch:'Last block before rewards',boundaryWeek:n=>`Week ${n}`,
+    boundaryDistance:(n,date)=>`${n} block${n==='1'?'':'s'} · ${date}`,historyCheck:'Inspect block',historyLookup:'At block ↗',historyTitle:'Look up at block',historyNumber:'Shielded number',historyConfirm:'Inspect history',historyModeHint:'One-time inspection. Live holdings, comparisons and market data stay unchanged.',
+    launchTitle: h=>`Week 1 starts · ${h}`,
+    launchBefore: (blocks,eta,basis)=>`${blocks} block${blocks==='1'?'':'s'} from #${basis} · ${eta}`,
+    
     launchUnknown: 'ETA unavailable',
-    launchEta: utc=>`Est. ${utc} UTC`,
-    launchStat: 'To rewards start',
+    
+    launchStat: 'To week 1',
     blocksUnit: 'blocks',
     launchDate: (d)=>`~${d}`,
-    launchReachedShort: 'Reached',
+    
     launchAt: (h)=>`Start block ${h}`,
     launchMethod: 'Header time + 10 min/block. Reward weeks are 1,008 blocks; hold unlisted and claim completed weeks.',
     scopeNote: 'Block weight · Not accrued rewards',
     scopeActivity: 'Selected-block formula · Not sale-time weight',
     scopeTimeUnknown: 'Time unknown',
     scopeTimeFuture: 'Time ahead',
-    scopeSource: {live:'Live',synced:'Fixed',bundled:'Bundled'},
-    fixedTitle:'Set fixed block',fixedConfirm:'Use block',cancel:'Cancel',fixedWatching:'Block held · select Fixed block to edit',liveWatching:'Follows new blocks automatically',modeTitle:'Block mode',modeLive:'Live',modeFixed:'Fixed block',fixedRequired:'Enter a block height',
+    scopeSource: {live:'Live',bundled:'Bundled'},
+    cancel:'Cancel',liveWatching:'Follows new blocks automatically',modeTitle:'Block mode',modeLive:'Live',fixedRequired:'Enter a block height',
     headwear: 'Hair / headwear',
     collectionFloorBTC: 'Floor · BTC',
     inspectProvisional: 'Private claim: 100% · Reveal for full weight',
     formulaTitle: 'Holding formula',
     formulaColumn: 'At this block',
     listing: {
-      listed: {label:'Listed at this block',meaning:'No accrual at this block',note:'Delisting resumes next reward week; completed held weeks stay claimable.'},
-      unlisted: {label:'Unlisted at this block',meaning:'Week eligibility unverified',note:'Completed eligible weeks are claimable; this week is unverified.'},
-      unknown: {label:'Listing status unknown',meaning:'Eligibility unverified',note:'Individual listings are missing; sync to verify. Formula weight is not rewards.'}
+      listed: {label:'Listed at this block'},
+      unlisted: {label:'Unlisted at this block'},
+      unknown: {label:'Listing status unknown'}
     },
     activityShort: 'Selected-block formula, not sale-time weight.',
     numberBadge: (label,pct) => `${label} · number bonus +${pct}%, already included in total weight`,
     lookupBack: 'Back',
     change: {up:'Bonus up',down:'Bonus down',market:'Price basis changed',unknown:'Price basis missing',known:'Price basis known'},
-    pastRewardNote:'Past rewards belong to the prior holding record and do not transfer with the piece.',buyEligibilityNote:'New holdings start next reward week after confirmation.',cancelEligibilityNote:'Delisting resumes next reward week after confirmation.',
+    pastRewardNote:'Past rewards belong to the prior holding record and do not transfer with the piece.',buyEligibilityNote:'A new holding starts the reward week after confirmation; in the sale week the piece earns nothing for either side.',
+    closingSaleTag:'Selling',closingCancelTag:'Reclaiming',
+    closingSale:'Someone has bought this listing and it is confirming in the next block: buying it now fails; it comes back only if that purchase fails.',
+    closingCancel:'The seller is reclaiming this listing; it leaves the market at the next block.',
     cancelScopeNote:'Owned listings show weight after delisting: only that ask is removed. Rewards resume next reward week.',cancelBefore:'Listed formula',cancelAfter:'After delisting',cancelTitle:'Holding weight after delisting',cancelAssumption:'Only this listing is cancelled; others unchanged.',cancelNoFloor:'No listings remain after cancellation; floor and weight are unavailable.',
     buyTitle: 'Holding weight after sale',
     formulaBefore: 'Before-sale formula',
@@ -237,7 +248,7 @@
     totalWeight: 'Total weight',
     buyAssumptionShort: 'Only this listing sells; others unchanged.',
     buyNoFloor: 'No listings remain after this sale. The collection floor is undefined, so weight cannot be calculated.',
-    buyBadgeNote: 'Holding formula, including the 100% base, not rewards. Before-sale formula / After sale: only this listing sells; others unchanged. No rewards while listed; buying does not confirm eligibility. Missing trait evidence shows a range.',
+    buyBadgeNote: 'Holding formula, base 100% included, not a reward. Before / after sale: only this listing sells, others unchanged. Nothing is earned while listed; a purchase earns from the next reward week, and nobody earns the sale week for the piece. Missing trait evidence shows a range.',
     title: 'Naka Sigil',
     weight: 'Total holding weight',
     bonus: 'Bonus',
@@ -246,7 +257,7 @@
     weightShort: 'Weight',
     details: 'Trait breakdown',
     activityNote: 'Holding-formula values include the 100% base, not rewards. Activity values and listing status use the synced block above, not the historical state at the time of sale.',
-    rulesCaveat: '100% base + trait and number bonuses, capped at 400%, using selected-block inputs. Zero-listed traits with ≥20 pieces get +100%; smaller traits use same-block official recent-three-sale evidence. Missing evidence shows a range.',
+    
     base: 'Base',
     number: 'Shielded #',
     atCap: (cap) => `Capped at ${cap}%`,
@@ -258,12 +269,12 @@
     notInSnapshot: 'Not in the selected snapshot. Live mode adds newly minted pieces as new blocks arrive.',
     floorOf: (btc, n) => `Trait floor ${btc} BTC · ${n} listed`,
     noFloor: 'No listings at the snapshot; floor unknown',
-    popupRules: 'About: read-only · rules & limits',
-    popupTrait: 'Trait floor ÷ collection floor',
-    popupNumber: 'Number (highest tier only)',
-    popupCap: 'Total weight cap',
-    popupSource: 'Source',
-    popupZeroSource: 'Zero-listing supplement',
+    
+    
+    
+    
+    
+    
     popupOpen: 'Open market ↗',
     lookupTitle: 'Find by Shielded number',
     lookupPlaceholder: 'Enter number, e.g. 379',
@@ -271,39 +282,44 @@
     lookupInvalid: 'Enter a non-negative whole number, e.g. #0 or #379.',
     lookupMissing: (n) => `Shielded #${n} is not in the selected snapshot. This does not mean it does not exist; Live mode adds newly minted pieces as new blocks arrive.`,
     lookupBasis: (h) => `Formula at block ${h}; not an official settlement or accrued rewards.`,
-    lookupView: 'View item ↗',
+    lookupView: 'View on market ↗',
     popupSnapshot: 'Calculation snapshot',
     popupHeight: 'Synced block',
     popupFloor: 'Collection floor',
     popupListings: 'Active listings',
-    ladderTitle: 'Weight ladder',
-    ladderSub: 'Lowest ask reaching each after-sale weight',
-    ladderUnit: 'Ask · BTC',
-    ladderNote: 'Selected-block asks, excluding fees. Each row: only that listing sells. Select for details.',
-    ladderNoOffers: 'This snapshot lacks individual listings, so asks cannot be ranked by weight.',
-    ladderNone: 'No listing at this block has a computable after-sale weight.',
-    ladderRowTitle: (n)=>`Show the calculation for Shielded #${n}`,
-    ladderRowLabel: (w,n,p)=>`After sale ${w}: Shielded #${n}, ask ${p} BTC`,
+    
+    
+    
+    
+    
+    
+    
+    
     srcBundled: 'Bundled snapshot',
-    srcSynced: 'Fixed block',
+    
     syncPlaceholder: 'Block height',
-    syncHint: () => 'Enter a block to inspect. Data stays at that block.',
+    
     syncStage: { state: 'Reading on-chain state…', build: 'Computing floors…' },
     syncMeta: (done, total) => `Fetching traits of newly minted pieces ${done}/${total}…`,
-    syncDone: (h) => `Synced: block ${h}`,
-    syncError: (msg) => `Sync failed: ${msg}`,
-    syncInterrupted: 'The last sync was interrupted (background worker was stopped); please sync again',
+    syncDone: (h) => `Inspection done: block ${h}`,
+    syncError: (msg) => `Inspection failed: ${msg}`,
+    syncInterrupted: 'The last inspection was interrupted (the background worker was stopped); run it again',
     syncBadHeight: 'Block height must be a number',
-    syncBusy: 'A sync is already running',
+    syncBusy: 'Another historical inspection is running',
     srcLive: 'Live',
-    liveHint: 'Checks while the market, Compare or popup is visible. Fixed mode pauses automatic updates.',
-    liveOff: 'Fixed block: holds the selected block without automatic updates',
+    
+    
     liveWaiting: 'Checking the latest block',
     livePaused: 'Checks pause when the tool is not in use',
+    updateTitle: 'Finish the update',
+    updateText: (v) => `The files of v${v} are in place: reload the extension to start using it.`,
+    updateKeep: 'Holdings, comparisons and settings stay.',
+    updateReload: 'Reload the extension',
+    updateHint: 'Reload on chrome://extensions does the same.',
     liveOk: (h, age) => `Synced block ${h} · ${age}`,
     liveFail: (reason, min) => `Last check failed: ${reason}. Retrying in ${min} min`,
     liveKeep: (h) => `Pages keep using block ${h} data`,
-    liveKeepNone: 'Pages keep using the fixed-block or bundled snapshot',
+    liveKeepNone: 'Pages keep using the bundled snapshot',
     failReason: {
       'rate-limit': 'rate limited',
       server: 'server error',
@@ -347,6 +363,13 @@
     const b=s?.blockTime;
     return b && b.height === s?.height && typeof b.hash === 'string' && /^[0-9a-f]{64}$/.test(b.hash) && Number.isSafeInteger(b.timestamp) && b.timestamp >= 1231006505 && b.timestamp <= 0xffffffff ? b.timestamp : null;
   }
+  /** How old the block is, alone ("6 min ago"), for places that already say which block. */
+  function blockAgeShort(T, s, now=Date.now()) {
+    const ts=blockTimestamp(s);
+    if(ts === null) return T.blockTimeUnknown;
+    const delta=now-ts*1000;
+    return delta < 0 ? T.blockTimeFuture : T.ago(delta);
+  }
   function blockAge(T, s, now=Date.now()) {
     const ts=blockTimestamp(s);
     if(ts === null) return T.blockTimeUnknown;
@@ -358,9 +381,14 @@
     return ts === null ? T.blockTimeUnknown : T.blockTimeExact(new Date(ts*1000).toISOString().replace('T',' ').replace('.000Z',' UTC'));
   }
   function blockBasis(T, s, now=Date.now()) { return `${int(s.height)} (${blockAge(T,s,now)})`; }
+  /** A moment in the viewer's local time with its UTC offset, to the minute: "2026-10-23 18:47 UTC+8". */
+  function localTime(ms) {
+    const d=new Date(ms),p=n=>String(n).padStart(2,'0'),off=-d.getTimezoneOffset(),h=Math.trunc(Math.abs(off)/60),m=Math.abs(off)%60;
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} UTC${off<0?'−':'+'}${h}${m?':'+p(m):''}`;
+  }
   function measureNote(T, snapshotHeight, s) {
     return T.beforeMeasure(s ? blockBasis(T,s) : int(snapshotHeight));
   }
 
-  return { LANGS, DEFAULT_LANG, STORAGE_KEY, resolveLang, pick, btc, int, blockTimestamp, blockAge, blockTimeTitle, blockBasis, measureNote, ZH, EN };
+  return { LANGS, DEFAULT_LANG, STORAGE_KEY, resolveLang, pick, btc, int, blockTimestamp, blockAge, blockAgeShort, blockTimeTitle, blockBasis, localTime, measureNote, ZH, EN };
 });

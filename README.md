@@ -1,72 +1,62 @@
 # Naka Sigil
 
-**Find your Naka**
+**Find your Naka. Raise your weight.**
 
-See what a purchase changes, directly on [Ord Dropz](https://ord-dropz.xyz/secondary/collections/shielded-nakas-mupv6wja): after-sale weight, ask price, and its impact on your holdings. Track SHNAKAS accrual in a read-only pixel workspace.
+A read-only Chrome extension for [Shielded Nakas on Ord Dropz](https://ord-dropz.xyz/secondary/collections/shielded-nakas-mupv6wja): what your Nakas earn each week, what a purchase changes, and the cheapest way to raise your weight.
 
-- **Holdings:** add visible Nakas from either Vault layout, or enter numbers manually across accounts. Multiple numbers accept commas or spaces.
-- **Rewards:** this week's accrued amount, current per-block rate, projected week, and per-Naka detail. Figures update on confirmed blocks. The focused reward card keeps the amount prominent.
-- **Compare:** up to four Nakas, asks, after-sale weights, changed bonuses and effects on your existing holdings. Enlarged artwork on hover.
-- **Market:** compact listing and Activity badges, weight filters, and a filter for purchases that improve your holdings' weekly rate. Listed holdings explain the effect of delisting.
-- **History:** inspect a number at a past block without changing Live holdings, comparisons or market calculations.
+**[Join the Naka Telegram group](https://t.me/+fRT4yVcxZ6VlNTBl)** for questions, feedback and wanted posts.
 
-English by default · 中文 available · no wallet connection · no API key · no signing or transactions
+<table><tr><td><img src="docs/screenshots/popup.png" width="260" alt="Popup: this week's SHNAKAS, the last block's payout and every holding"></td><td><img src="docs/screenshots/raise.png" width="260" alt="Popup, Raise weight: the best listings to buy, the pieces cheapest to take to 400% and the traits closest to owning"></td><td><img src="docs/screenshots/lookup.png" width="260" alt="Looking up one number: after-sale weight, every trait and what it does for my holdings"></td></tr></table>
+
+![Market: after-sale weight on every listing and what buying it does for my holdings](docs/screenshots/market.png)
+![A buy link scrolls the market to its card and shows what buying it gives](docs/screenshots/find.png)
+![Reach 400%: each piece's own cheapest plan, and one combined plan for the pieces ticked](docs/screenshots/planner.png)
+![My holdings on the extension page](docs/screenshots/workspace.png)
+![Compare four Nakas](docs/screenshots/compare.png)
+
+## What it does
+
+- **This week's SHNAKAS.** Accrued so far, projected for the week, what the last block paid and your share of the pool. Each Naka says whether it counts this week and why, with blocks; finished weeks and pieces you sold are listed from the official weekly tables. A sale of a holding is read from the public records and moves it to Left on its own, and the popup names that week's sales in one line until you open or dismiss it; one the records cannot attribute (a listing that was already open when you added the piece) is asked in the popup. **Copy all numbers** puts your list on the clipboard as plain numbers that anyone's Add box imports.
+- **Raise weight.** The popup gives the answers in one screen: the two best listings to buy, the two pieces cheapest to take to 400% and the two traits closest to owning, one click from the market card or the full plan. The extension page does the planning. *Best buy*: the listings that add the most weekly SHNAKAS per 0.001 BTC. *Reach 400%*: one row per piece with its own cheapest plan, best value first; tick several for one combined plan, a teammate's numbers included. *Own a trait*: the traits buying listings makes yours and how long their bonus then lasts; for the others, the numbers to ask for privately, copied as a wanted post for the Naka Telegram group. *Simulate*: what a listing, sale or reclaim does to you and everyone.
+- **On the market.** After-sale weight on every listing and what buying it does to your holdings; listings someone is already buying are marked. Every link to one Naka scrolls the market to its card and highlights it, so a piece sold a moment ago shows as sold instead of failing at checkout.
+- **Look up and compare.** The magnifier opens Look up over any popup tab: any number at the latest block or a past one; up to four Nakas side by side.
+
+Read-only: no wallet connection, login, approval or signature. English and 中文.
 
 ## Install
 
-**Strongly prefer building from source yourself.** If you want the ready-made option, download the current [installation ZIP](release/README.md). Check its **SHA-256** against [release/SHA256SUMS](release/SHA256SUMS), extract it, then load the extracted directory through **chrome://extensions → Developer mode → Load unpacked**.
+Building from source is recommended:
 
 ```sh
 npm test
 npm run package:chrome
 ```
 
-Load `dist/chrome`. Node.js and a system `zip` command are required; runtime dependencies are bundled. Keep the same installation directory when updating, click **Reload**, and refresh the market tabs. The public extension ID is **bcihombccpheaimcgldamaggokpgpidl**. User holdings, comparisons and language stay local and are retained across updates; incompatible public API caches can be refetched. Do not uninstall first: Chrome removes extension storage on uninstall.
+Then open **chrome://extensions**, turn on **Developer mode**, choose **Load unpacked** and select `dist/chrome`. Node.js and the system `zip` command are needed. Or download the [ready ZIP](release/README.md), check its SHA-256 against [SHA256SUMS](release/SHA256SUMS) and load the extracted folder. The extension ID is **bcihombccpheaimcgldamaggokpgpidl**. To update, replace the folder's contents and press **Reload** (if Chrome was only restarted, the popup offers that Reload); uninstalling first deletes your saved holdings.
 
-## Data and calculations
+## How the numbers work
 
-The extension follows the latest synced block while a supported view is visible. **At block** is temporary historical inspection, with loading progress and a small worker-memory cache. It cannot change the production block. Upcoming reward-week shortcuts are disabled; they are not quarterly weight snapshots.
+- **Weight** = 100% base + trait bonuses + the highest number bonus, capped at 400%, scored every block from the listings left after it. A trait's bonus comes from its floor ÷ the collection floor (1.25×, 1.5×, 2×, 3× → +25 to +100%); a trait with no listing gets +100% from 20 pieces, a smaller one its last three sales. There is no weekly or quarterly snapshot.
+- **Weekly SHNAKAS** = your units × v × 1,008 ÷ 10⁸, with v = floor(26,664,000,000,000 ÷ 1,008 ÷ K) and K the units of all 3,333 pieces (100% = 4 units). This week's amount is read from the official accumulator, not estimated.
+- **Who is paid.** A week pays only a holder who kept the piece the whole week without listing or sending it: a Naka bought, reclaimed or received in a week counts from the next week; the week a piece is listed, sold or sent pays nobody for it. Public listings, sales and reclaims are read from the public records; a private transfer is not public, so amounts stay a **reference** until you sync the official Wallet page. Unclaimed weeks can wait until block 1,102,740.
 
-The official live programme measures weights **per block**: base 100% + trait bonuses + highest number bonus, capped at 400%. A purchase removes only that listing and recalculates trait and collection floors. Each holding is capped separately. Remaining public relay credits are separate from weight.
-
-For a block with total catalogue units `K`, one 25% weight unit earns `v = floor(poolPerWeek / 1008 / K)` base units per block. The current weekly rate is `pieceUnits × v × 1008 / 10^8`. This is a rate, not a guaranteed final week total. Completed-block accrual uses the official `/rewards/weights/{weekIndex}` accumulated vector, so changing rates are integrated rather than multiplying today's rate by elapsed blocks. The packed vector is about 35.6 KB and is cached locally; no per-block historical snapshot download is needed.
-
-A number alone does not establish personal eligibility, historic ownership or paid claims. Until you explicitly sync visible earning states from the official Vault staking screen, accrual is labelled **reference**, assuming held and unlisted since the week began. The import reads shown identities and earning states only, without wallet secrets or private storage. Eligibility is tracked for that week; resync after transfers. Unknown personal claimable amounts remain unknown. In week one, claimable is zero until the first week finishes. Claimed wallet balances cannot be reconstructed from the public weights API.
-
-Programme anchor: **971700**. First rewarded block: **971701**. A reward week is **1008 blocks**, for **78 weeks**; first claim boundary **972709**. Listing pauses accrual; delisting/new ownership starts earning in the next eligible reward week. Previously completed holding-week claims do not transfer with the NFT. Current data does not establish a frozen first-quarter weight.
-
-Same-block official fallback values, including `lastBlock`, are validated against block, floor and per-piece totals. Unsupported sources fail validation. After-sale scenarios retain a range where public inputs cannot determine one value. The standalone [demo](demo/index.html) remains historical and needs no extension; its example holdings do not represent a user's wallet.
-
-## Screenshots
-
-The reward and workspace screenshots use synthetic example holdings with public block data, not a personal wallet or a claimable balance. The market image is a historical public-data example; these are not current quotes.
-
-![Market weights](docs/screenshots/market.png)
-![Compare](docs/screenshots/compare.png)
-![Reward popup](docs/screenshots/popup.png)
-![Holdings workspace](docs/screenshots/workspace.png)
-![Number lookup](docs/screenshots/lookup.png)
-
-[Reward-rule audit](docs/RULES_AUDIT.md) · [Privacy](docs/PRIVACY.md) · [Validation](docs/VALIDATION.md) · [Reproducibility](docs/REPRODUCIBILITY.md)
+Every case and the evidence behind it: [rules audit](docs/RULES_AUDIT.md). Worked examples: [reproducibility](docs/REPRODUCIBILITY.md). Checks: [validation](docs/VALIDATION.md). What is stored and sent: [privacy](docs/PRIVACY.md). Screenshots use example holdings (#6, #314, #888, #1500, #2700), example added numbers (#379, #640, #1200) and public data.
 
 ## 中文说明
 
-**找到你的 Naka**：在交易市场直接查看成交后权重、挂价及对原有持仓的影响，并在只读像素界面跟踪 SHNAKAS 累计。
+**找到你的 Naka，增加你的权重。** 只读的 Chrome 插件：看清每枚 Shielded Naka 每周能分到多少 SHNAKAS、买一单会带来什么变化，以及最省钱的加权重方案。
 
-- **持仓与奖励**：保险库一键加入当前显示的 Naka，或输入其他账号的编号；多个编号支持英文逗号、空格分隔。本周累计为主，当前每块速率、本周预计及每枚明细为辅。
-- **比较与市场**：最多四枚，比较挂价、成交后权重、属性变化和持仓影响；支持大图预览、Activity 权重、挂单筛选及撤单影响。
-- **历史查询**：只查看本次过去区块，不改变实时持仓、比较或市场数据；加载有进度提示，未来奖励周起点不可选择，它们不是季度权重快照。
+**[进入 Naka Telegram 交流群](https://t.me/+fRT4yVcxZ6VlNTBl)**：提问、反馈和求购。
 
-**强烈建议自行编译安装。** 想直接使用，可下载[现成安装包](release/README.md)，按 [release/SHA256SUMS](release/SHA256SUMS) 验证 **SHA-256**，解压后从 **chrome://extensions → 开发者模式 → 加载已解压的扩展程序** 安装。自行构建使用上方相同的 `npm test`、`npm run package:chrome` 命令，然后加载 `dist/chrome`。需要 Node.js 和系统 `zip` 命令。
+- **本周 SHNAKAS**：本周累计、本周预计、最新一块分到的数量和本周占比；每一枚都写明本周有没有奖励、为什么，并给出区块号；已结束的周和卖出的 Naka 按官方周累计表列出。持仓成交后，插件从公开记录读到并自动移到“已离手”，弹窗在持仓上方用一行写明本周卖出的，点“查看”或“×”后不再提示；公开记录分不清是卖出还是买入的（加入时就已在挂单的那一单），在弹窗里直接问你。“复制全部编号”把持仓复制成纯数字清单，别人在“添加”里粘贴就能导入。
+- **增加权重**：弹窗一屏直接给结论：最划算的 2 单挂单、单独冲 400% 最划算的 2 枚、最接近垄断的 2 个特征，一点就到市场上的那张卡或完整方案。完整规划在独立页。*买哪单划算*：每 0.001 BTC 换来每周增量最多的挂单。*冲 400%*：每枚一行，是它单独冲的最省钱做法，按性价比排序；勾选几枚（可加入队友编号）合起来算一份方案。*垄断特征*：买下挂单就能垄断的特征，以及垄断后加成能维持多久；其余的列出需要私下收购的编号，一键复制成求购信息，发到 Naka Telegram 群。*模拟*：挂单、成交或撤单对自己和全网的影响。
+- **市场页**：每个挂单显示成交后权重和对持仓的影响；别人正在买的挂单会标出来。所有跳到某一枚的链接都会把市场页滑到那张卡片并高亮，刚被买走的直接显示已售，不会到结账时才失败。
+- **查询与比较**：弹窗右上角的放大镜在任何页面都能打开查询：任意编号的最新区块或过去区块；最多四枚并排比较。
 
-更新时覆盖原加载目录、重新加载扩展并刷新网页。公开版 ID 固定为 **bcihombccpheaimcgldamaggokpgpidl**，持仓、比较和语言清单保留；只有不兼容的公开 API 缓存会重新获取。暂时未出现在缓存中的 NFT 编号不会删除。不要先卸载扩展，Chrome 会在卸载时删除其存储。无需连接钱包、API key、登录、签名或交易。
+只读：不连接钱包，不需要登录、授权或签名。中英文界面。
 
-权重按**每个区块**的地板价计算：基础100%＋特征加成＋最高编号加成，上限400%。购买情景仅移除该挂单、重算特征和集合地板，每枚持仓分别封顶。中继额度与权重分开显示。
+**安装**：建议自行编译：运行 `npm test`、`npm run package:chrome`，在 **chrome://extensions** 打开开发者模式，选“加载已解压的扩展程序”，选择 `dist/chrome`。需要 Node.js 和系统 `zip` 命令。也可以下载[现成安装包](release/README.md#中文说明)，按 [SHA256SUMS](release/SHA256SUMS) 校验后加载解压目录。插件 ID 固定为 **bcihombccpheaimcgldamaggokpgpidl**；更新时替换目录内容并点“重新加载”（如果只是重启了 Chrome，弹窗会提供“重新加载插件”按钮），先卸载会删除已保存的持仓。
 
-设全目录权重单位合计为 `K`，每个25%权重单位每块得到 `v = floor(每周奖池 / 1008 / K)` 个最小单位；当前每周速率为 `藏品单位数 × v × 1008 / 10^8`，并非本周最终承诺。本周累计直接读取官方 `/rewards/weights/{weekIndex}` 累计向量，包含每块速率变化，不能用当前速率乘已经过的区块。向量压缩后约35.6 KB，本机缓存、随确认块更新，不需要逐块拉取历史快照。
+**数字怎么来的**：权重 = 基础 100% + 特征加成 + 最高一档编号加成，封顶 400%，按每个区块之后剩下的挂单逐块计算；特征加成按特征地板 ÷ 集合地板（1.25×、1.5×、2×、3× 对应 +25% 到 +100%），零挂单特征满 20 件 +100%，不足 20 件按最近三笔成交；没有周或季度快照。每周 SHNAKAS = 你的权重单位 × v × 1,008 ÷ 10⁸，v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)，K 是全部 3,333 枚的单位合计（100% = 4 单位）；本周累计直接读官方累计表。一周的奖励只给整周持有、这一周没挂单也没转出的一方：本周买入、撤单取回或收到的从下一周起有奖励，挂单、卖出或转出的那一周这一枚谁都没有奖励。公开挂单、成交和撤单从公开记录读取；私下转账没有公开记录，所以在官方钱包页同步之前金额标为“参考”。没领的周可以攒到区块 1,102,740 前一次领。
 
-仅有编号不能证明个人资格、历史持有和已领取情况。在官方保险库质押页面主动同步已显示的计奖资格前，金额标为**参考**，假设本周开始前持有且未挂单。同步只读已显示的藏品身份和计奖状态，不读取钱包秘密或私人存储；转移后请重新同步。无法核实的个人可领取保持未知，第一周结束前为零。公开权重 API 无法还原已领取的钱包余额。
-
-启动锚点 **971700**，首个计奖块 **971701**，每周 **1008块**，共 **78周**，首次领取边界 **972709**。挂单暂停计奖；撤单或新持有记录从下个符合条件的奖励周开始。此前完整持有周的领取权不随 NFT 转移。奖励启动和出现累计金额不代表第一季度权重已冻结。
-
-同区块官方依据（包括 `lastBlock`）保留高度、地板价及逐枚校验；未知类型继续拒绝。公开输入不足的成交情景保留范围。免安装[演示页](demo/index.html)继续使用历史数据，示例持仓不代表用户的钱包。奖励、工作台截图使用合成示例持仓和公开区块数据，不是个人钱包或可领取余额；市场截图为历史公开数据，均非实时报价。
+各种情况与依据见[规则核对](docs/RULES_AUDIT.md)，复算示例见[复现文档](docs/REPRODUCIBILITY.md)，检查记录见[验证文档](docs/VALIDATION.md)，存储与网络见[隐私说明](docs/PRIVACY.md)。截图用的是示例持仓（#6、#314、#888、#1500、#2700）、示例添加编号（#379、#640、#1200）和公开数据。

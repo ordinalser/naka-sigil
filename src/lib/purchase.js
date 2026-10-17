@@ -49,8 +49,9 @@
           const f=floors.get(indexes[i]),changed=removedIndexes.has(indexes[i]);
           const preserve=floor===snap.snapshot.collectionFloor && (!changed || (action==='cancel' && t.floor===null));
           const carryUnknown=t.supply<R.RULES.heldSupply&&(f?.floor??null)===null&&t.saleHistory?.length===0&&((action==='cancel'&&changed&&t.floor!==null&&R.traitTier(t.floor,snap.snapshot.collectionFloor).pct>0)||(!preserve&&t.officialSource==='lastBlock'&&t.officialPct>0));
-          return {...t,carryUnknown,floor:f?.floor??null,listed:f?.listed??0,...(action==='sale'&&changed?{pendingSale:price}:{}),
-            ...(!preserve?{officialPct:undefined,officialSource:undefined}:{})};
+          const row={...t,floor:f?.floor??null,listed:f?.listed??0,...(carryUnknown?{carryUnknown:true}:{}),...(action==='sale'&&changed?{pendingSale:price}:{})};
+          if(!preserve){delete row.officialPct;delete row.officialSource;}
+          return row;
         });
         return R.evaluate({number,traits},floor);
       }
@@ -60,25 +61,29 @@
         const result=evaluateRow(snap.items[other]);evaluated.set(other,result);return result;
       }
       // Programme units after this action. With an unchanged collection floor only rows sharing a removed trait can
-      // change; otherwise every catalog row (minted and pending) is re-evaluated.
-      let unitsAfter=null;
+      // change; otherwise every catalog row (minted and pending) is re-evaluated. programmeUnits() bounds K after the
+      // action; unitChange() bounds K after − K before row by row in one world (rules.weightChange), so unchanged rows
+      // add exactly 0 even when their weight is a range.
+      let unitsAfter=null,change=null;
       function programmeUnits() {
         if(unitsAfter)return unitsAfter;
-        const total={...R.programmeUnits(snap)},current=currentUnits(snap);
+        const total={...R.programmeUnits(snap)},current=currentUnits(snap),delta={lo:0,hi:0},same=floor===snap.snapshot.collectionFloor;
         // A removed trait matters only when its floor changes (including to zero listings); otherwise rows keep
         // the same floor-tier result.
         const moved=new Set([...removedIndexes].filter(idx=>(floors.get(idx)?.floor??null)!==snap.traits[idx][2]));
-        const affected=floor===snap.snapshot.collectionFloor?current.rows.filter(([,row])=>row.slice(1).some(idx=>moved.has(idx))):current.rows;
+        const affected=same?current.rows.filter(([,row])=>row.slice(1).some(idx=>moved.has(idx))):current.rows;
         for(const [key,row] of affected){
-          const before=current.units.get(key);
-          const after=R.units(key.startsWith('pending:')?evaluateRow(row):evaluate(key));
+          const before=current.units.get(key),result=key.startsWith('pending:')?evaluateRow(row):evaluate(key),after=R.units(result);
           total.lo+=after.lo-before.lo;total.hi+=after.hi-before.hi;
+          const w=R.weightChange(key.startsWith('pending:')?R.evaluate({number:row[0],traits:R.snapshotTraits(snap,row.slice(1))},snap.snapshot.collectionFloor):R.evaluateSnapshot(snap,key),result,same);
+          delta.lo+=w.lo/R.RULES.unitPct;delta.hi+=w.hi/R.RULES.unitPct;
         }
-        unitsAfter=total;return total;
+        unitsAfter=total;change=delta;return total;
       }
+      function unitChange(){if(!change)programmeUnits();return change;}
       const result=evaluate(id),before=R.evaluateSnapshot(snap,id);
       const r={state:'ready',...common,afterFloor:floor,result,before};
-      Object.defineProperty(r,'evaluate',{value:evaluate});Object.defineProperty(r,'evaluateRow',{value:evaluateRow});Object.defineProperty(r,'programmeUnits',{value:programmeUnits});
+      Object.defineProperty(r,'evaluate',{value:evaluate});Object.defineProperty(r,'evaluateRow',{value:evaluateRow});Object.defineProperty(r,'programmeUnits',{value:programmeUnits});Object.defineProperty(r,'unitChange',{value:unitChange});
       cache.set(id,r);return r;
     }
     return {snapshot:snap.snapshot,get};
@@ -87,9 +92,9 @@
   function renderLaunch(snapshot,T,I) {
     const phase=R.rewardPhase(snapshot),box=node('aside','naka-launch');
     box.dataset.state=phase.state;box.dataset.basis=String(snapshot.height);box.title=T.launchMethod;
-    const date=phase.eta===null?T.launchUnknown:T.launchEta(new Date(phase.eta).toISOString().slice(0,16).replace('T',' '));
-    const title=phase.state==='before'?T.launchTitle(I.int(phase.start)):phase.state==='boundary'?T.rewardBoundary:phase.state==='active'?T.rewardWeek(phase.week,R.RULES.weeks):phase.state==='closed'?T.rewardClosed:T.rewardEnded;
-    const line=phase.state==='before'?T.launchBefore(I.int(phase.remaining),date,I.int(snapshot.height)):phase.state==='boundary'?T.phaseBoundary:phase.state==='active'?`${T.weekRange(I.int(phase.first),I.int(phase.last))} · ${T.nextBoundary(I.int(phase.next))} · ${date}`:T.finalBoundary(I.int(phase.end+1));
+    const date=phase.eta===null?T.launchUnknown:T.launchDate(I.localTime(phase.eta)),last=phase.state==='active'&&phase.index+1>=R.RULES.weeks;
+    const title=phase.state==='before'?T.launchTitle(I.int(phase.start+1)):phase.state==='boundary'?T.rewardBoundary:phase.state==='active'?T.rewardWeek(phase.week,R.RULES.weeks):phase.state==='closed'?T.rewardClosed:T.rewardEnded;
+    const line=phase.state==='before'?T.launchBefore(I.int(phase.remaining),date,I.int(snapshot.height)):phase.state==='boundary'?T.phaseBoundary:phase.state==='active'?`${T.weekRange(I.int(phase.first),I.int(phase.last))} · ${last?T.lastRewardBlock(I.int(phase.end)):T.nextBoundary(I.int(phase.next))} · ${date}`:T.finalBoundary(I.int(phase.end+1));
     box.append(node('strong','',title),node('p','',line),node('small','',phase.state==='closed'?T.rewardClosedNote:phase.state==='ended'?T.rewardEndNote(I.int(phase.claimUntil)):T.launchMethod));
     return box;
   }
@@ -141,10 +146,12 @@
     const basis=node('p','naka-purchase__basis',T.snapBlock(I.blockBasis(T,snapshot)));
     basis.title=I.blockTimeTitle(T,snapshot);box.append(basis);
     const state=node('p','naka-listing');state.dataset.listing=listing;
-    const context=options.rewardContext??R.rewardContext({snapshot},'',listing);
-    const meaning=context.state==='not-started'?(context.phase.state==='boundary'?T.phaseBoundary:T.phaseNotStarted):context.state==='ended'?(context.phase.state==='closed'?T.rewardClosed:T.phaseEnded):context.state==='waiting'?T.weekWaiting:context.state==='no-future-week'?T.noFutureWeek:status.meaning;
-    state.append(node('strong','naka-listing__badge',status.label),node('span','naka-listing__meaning',meaning));
-    if(context.phase.state==='active')state.title=T.weekContext(context.phase.week,I.int(context.phase.first),I.int(context.phase.last));box.append(state);
+    // The eligibility line names this NFT's own blocks and weeks (NakaRewards.explainFor); callers always supply it.
+    const explained=options.explain;if(!explained||typeof explained.short!=='string'||typeof explained.full!=='string')throw new Error('Inspection needs the NFT-specific eligibility text');
+    state.append(node('strong','naka-listing__badge',status.label),node('span','naka-listing__meaning',explained.short));
+    state.title=explained.full;box.append(state);
+    // A listing already closing (bought and confirming, or being reclaimed): said before any figure, nobody else can buy it.
+    if(options.closing){if(!['sale','cancel'].includes(options.closing))throw new Error('Unknown closing kind');const note=node('p','naka-closing',options.closing==='sale'?T.closingSale:T.closingCancel);note.dataset.kind=options.closing;box.append(note);}
 
     if(paired)box.append(node('p','naka-purchase__assumption',options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort));
     const table=node('table','naka-compare');table.setAttribute('aria-label',paired?(options.action==='cancel'?T.cancelTitle:T.buyTitle):T.weight);
@@ -189,17 +196,16 @@
     const caution=node('div','naka-purchase__caution');
     caution.append(node('p','naka-purchase__provisional',T.inspectProvisional));
     if(before.unmeasured || after?.unmeasured)caution.append(node('p','naka-purchase__note naka-purchase__range-note',T.buyRangeNote));
-    const note=context.state==='not-started'?T.beforeRewardNote(I.int(context.phase.start)):context.state==='ended'?(context.phase.state==='closed'?T.rewardClosedNote:T.rewardEndNote(I.int(context.phase.claimUntil))):context.state==='waiting'?T.weekWaitNote(context.phase.week,I.int(context.phase.first),I.int(context.phase.last),I.int(context.eligibleAt)):context.state==='no-future-week'||paired&&context.phase.week===R.RULES.weeks?T.noFutureWeekNote:paired?(options.action==='cancel'?T.cancelEligibilityNote:T.buyEligibilityNote):status.note;
-    const eligibility=node('p','naka-purchase__eligibility',note);if(paired&&options.action!=='cancel')eligibility.title=T.pastRewardNote;caution.append(eligibility);
+    const eligibility=node('p','naka-purchase__eligibility',explained.full);if(paired&&options.action!=='cancel')eligibility.title=T.pastRewardNote;caution.append(eligibility);
     if(options.activity)caution.append(node('p','naka-purchase__activity',T.activityShort));
     if(options.notice)caution.append(node('p','naka-purchase__note',options.notice));
     box.append(caution);
     return box;
   }
   function renderCurrent(result,snapshot,T,I,options={}) {return inspection(result,null,snapshot,T,I,options);}
-  function render(model,id,T,I) {
+  function render(model,id,T,I,options={}) {
     const scenario=model.get(id);if(scenario.state!=='ready')return null;
-    const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,scenario);box.dataset.id=id;return box;
+    const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,{...scenario,...options});box.dataset.id=id;return box;
   }
   return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,numberTag,numberBadge,decorateWeight,traitChange};
 });

@@ -1,6 +1,6 @@
 /**
  * 数据来源与实时同步的纯逻辑（内容脚本、弹窗、后台、单测共用）：
- *   - 页面显示哪份数据（实时 / 手动同步 / 内置快照）
+ *   - 页面显示哪份数据（实时，或内置快照）
  *   - 后台这一轮要不要检查新区块、失败后等多久再试
  *   - 失败原因分类（弹窗里给用户看）
  * 任何一次同步失败都不会动已有数据：页面始终按手上最新的一份数据工作。
@@ -14,21 +14,28 @@
 
   /** chrome.storage.local 的键 */
   const KEYS = Object.freeze({
-    manual: 'snapshot',          // 弹窗「手动同步」得到的数据
     live: 'liveSnapshot',        // 实时同步得到的数据
-    liveEnabled: 'liveEnabled',  // 实时同步开关
     liveStatus: 'liveStatus',    // 实时同步最近一次检查的结果
+    closing: 'liveClosing',      // 同一区块内重读 /listings 得到的成交确认中 / 撤单中挂单 {height, rows}
   });
   const SESSION_VISIBLE = 'visibleAt'; // chrome.storage.session：最近一次有 ord-dropz 页面可见的时间
 
-  const LIVE_DEFAULT = true;            // New installs follow live blocks; explicit saved fixed mode is preserved.
+  /** This code's version (package.json; the build refuses a mismatch). The worker runs its upgrade step once per version.
+   * After the folder's files are replaced, Chrome loads the new pages at once but keeps running the previous worker until
+   * the extension is reloaded: a page asks the worker which version it runs (shn-build), and a worker from before this
+   * check does not answer at all. */
+  const BUILD = '0.12.5';
+  /** Whether the worker runs this code, from its answer to shn-build (undefined when it sent none). */
+  function sameBuild(answer) { return answer !== null && typeof answer === 'object' && answer.ok === true && answer.build === BUILD; }
+  /** chrome.storage.local: the page that asked for that reload, {page: 'popup' | 'workspace', section, at}. Chrome closes
+   * every extension page on reload; the new worker opens it again, if asked within REOPEN_MS. */
+  const REOPEN = 'nakaReopen', REOPEN_MS = 60 * 1000;
+
   const CHECK_MS = 60 * 1000;           // 每分钟最多检查一次 /pulse
   const HEARTBEAT_MS = 45 * 1000;       // 页面可见时每 45 秒报一次心跳
   const VISIBLE_MS = 100 * 1000;        // 100 秒内收到过心跳才算「有页面在看」（容得下一次心跳延迟）
   const BACKOFF_MAX_MIN = 30;
 
-  /** Missing preferences use the live default; malformed values fall back to fixed mode. */
-  function resolveLive(stored) { return stored === undefined ? LIVE_DEFAULT : stored === true; }
 
   /** Validate persisted data before any consumer dereferences it. Storage is not a trust boundary. */
   function isSnapshot(s, format = 1) {
@@ -60,25 +67,28 @@
         used.add(i);
       }
     }
-    // The former single-sale field is a different rule basis; such data is replaced by a fresh sync.
-    if(s.sales!==undefined)return false;
-    if(s.saleHistory!==undefined) {
-      if(!Array.isArray(s.saleHistory)||s.saleHistory.length>s.traits.length)return false;
-      const seen=new Set();
-      for(const entry of s.saleHistory){
-        if(!Array.isArray(entry)||entry.length!==2||!uint(entry[0])||entry[0]>=s.traits.length||seen.has(entry[0])||!Array.isArray(entry[1])||!entry[1].length||entry[1].length>20)return false;
-        seen.add(entry[0]);let prev=Infinity;
-        for(const sale of entry[1]){if(!Array.isArray(sale)||sale.length!==2||!uint(sale[0])||sale[0]===0||!uint(sale[1])||sale[1]>h.height||sale[1]>prev)return false;prev=sale[1];}
-        // Beyond three, only sales tied with the third (same block) may remain.
-        if(entry[1].length>3&&entry[1].some(([,height])=>height<entry[1][2][1]))return false;
-      }
-    }
+    // Pending catalog rows first: the sale-history check below counts their traits.
     if(s.pending!==undefined) {
       if(!Array.isArray(s.pending)||!s.pending.length||s.pending.length+keys.length>10000)return false;
       for(const row of s.pending){
         if(!Array.isArray(row)||row.length<2||!uint(row[0])||row[0]<c.numberStart||numbers.has(row[0]))return false;
         numbers.add(row[0]);const used=new Set();
         for(const i of row.slice(1)){if(!uint(i)||i>=s.traits.length||used.has(i))return false;used.add(i);}
+      }
+    }
+    // The former single-sale field is a different rule basis; such data is replaced by a fresh sync.
+    if(s.sales!==undefined)return false;
+    if(s.saleHistory!==undefined) {
+      if(!Array.isArray(s.saleHistory)||s.saleHistory.length>s.traits.length)return false;
+      // Only traits under 20 catalog pieces (minted and pending) are priced from sales, so only they carry a history.
+      const supply=new Array(s.traits.length).fill(0);for(const row of [...Object.values(s.items),...(Array.isArray(s.pending)?s.pending:[])])for(const i of row.slice(1))if(uint(i)&&i<supply.length)supply[i]++;
+      const seen=new Set();
+      for(const entry of s.saleHistory){
+        if(!Array.isArray(entry)||entry.length!==2||!uint(entry[0])||entry[0]>=s.traits.length||seen.has(entry[0])||supply[entry[0]]>=20||!Array.isArray(entry[1])||!entry[1].length)return false;
+        seen.add(entry[0]);let prev=Infinity;
+        for(const sale of entry[1]){if(!Array.isArray(sale)||sale.length!==2||!uint(sale[0])||sale[0]===0||!uint(sale[1])||sale[1]>h.height||sale[1]>prev)return false;prev=sale[1];}
+        // Beyond three, only sales tied with the third (same block) may remain.
+        if(entry[1].length>3&&entry[1].some(([,height])=>height<entry[1][2][1]))return false;
       }
     }
     if(s.rewardBasis!==undefined) {
@@ -93,14 +103,25 @@
     }
     if(s.rewardEvents!==undefined){
       if(!Array.isArray(s.rewardEvents)||s.rewardEvents.length>Object.keys(s.items).length)return false;
-      const seen=new Set();for(const e of s.rewardEvents){if(!Array.isArray(e)||e.length!==3||!Object.hasOwn(s.items,e[0])||seen.has(e[0])||!uint(e[1])||e[1]>h.height||!['sale','cancel','exit'].includes(e[2]))return false;seen.add(e[0]);}
+      const seen=new Set();for(const e of s.rewardEvents){if(!Array.isArray(e)||e.length!==4||!Object.hasOwn(s.items,e[0])||seen.has(e[0])||!uint(e[1])||e[1]>h.height||!['sale','cancel','exit'].includes(e[2])||!uint(e[3])||e[3]>e[1])return false;seen.add(e[0]);}
+    }
+    if(s.listedAt!==undefined){
+      if(!Array.isArray(s.listedAt)||!Array.isArray(s.offers)||s.listedAt.length!==s.offers.length)return false;
+      const listed=new Set(s.offers.filter(Array.isArray).map(o=>o[0])),seen=new Set();
+      for(const row of s.listedAt){if(!Array.isArray(row)||row.length!==2||!listed.has(row[0])||seen.has(row[0])||!uint(row[1])||row[1]>h.height)return false;seen.add(row[0]);}
     }
     if(s.credits!==undefined){
       if(!Array.isArray(s.credits)||!Array.isArray(s.offers)||s.credits.length>s.offers.length)return false;
       const listed=new Set(s.offers.filter(Array.isArray).map(o=>o[0])),seen=new Set();
       for(const credit of s.credits){if(!Array.isArray(credit)||credit.length!==2||!listed.has(credit[0])||seen.has(credit[0])||!uint(credit[1]))return false;seen.add(credit[0]);}
     }
-    if (s.offers !== undefined) {
+    if(s.closing!==undefined){
+      if(!Array.isArray(s.closing)||!Array.isArray(s.offers)||s.closing.length>s.offers.length)return false;
+      const listed=new Set(s.offers.filter(Array.isArray).map(o=>o[0])),seen=new Set();
+      for(const row of s.closing){if(!Array.isArray(row)||row.length!==2||!listed.has(row[0])||seen.has(row[0])||!['sale','cancel'].includes(row[1]))return false;seen.add(row[0]);}
+    }
+    // Every active listing at the block: listing status, floors and the rule inputs all depend on the complete set.
+    {
       if(!Array.isArray(s.offers) || s.offers.length !== h.listings) return false;
       const seen=new Set(), floors=new Map();let floor=Infinity;
       for(const offer of s.offers) {
@@ -118,12 +139,31 @@
     return isSnapshot(s, bundled.format) && s.collection.cid === bundled.collection.cid && s.collection.numberStart === bundled.collection.numberStart;
   }
 
-  /** Prefer enabled live, then manual, then bundled; reject corrupt/incompatible persisted data. */
-  function choose({ liveEnabled, live, manual }, bundled) {
-    const usable = s => compatibleSnapshot(s, bundled);
-    if (resolveLive(liveEnabled) && usable(live)) return { snap: live, source: 'live' };
-    if (usable(manual)) return { snap: manual, source: 'synced' };
-    return { snap: bundled, source: 'bundled' };
+  /**
+   * Listings already closing, re-read between blocks: purchases confirming (sale) and reclaims under way (cancel) appear
+   * as they are sent, minutes before the next block. A record replaces the snapshot's own `closing` only for the same
+   * block and only when it names that block's active listings, each once; another block's record says nothing about
+   * this one. The merged snapshot is reused while the record's content is unchanged, so pages keep their caches.
+   */
+  const merged = new WeakMap();
+  function withClosing(snap, record) {
+    if (!record || typeof record !== 'object' || record.height !== snap.snapshot.height || !Array.isArray(record.rows)) return snap;
+    const offers = new Set(snap.offers.map(o => o[0])), seen = new Set();
+    for (const row of record.rows) {
+      if (!Array.isArray(row) || row.length !== 2 || !offers.has(row[0]) || seen.has(row[0]) || !['sale', 'cancel'].includes(row[1])) return snap;
+      seen.add(row[0]);
+    }
+    const key = JSON.stringify(record.rows), hit = merged.get(snap);
+    if (hit?.key === key) return hit.snap;
+    const next = { ...snap, closing: record.rows.map(([id, kind]) => [id, kind]) };
+    merged.set(snap, { key, snap: next });
+    return next;
+  }
+
+  /** The newest live data when it is usable (with its between-block closing record), otherwise the bundled snapshot;
+   * corrupt or incompatible data is never used. */
+  function choose({ live, closing }, bundled) {
+    return compatibleSnapshot(live, bundled) ? { snap: withClosing(live, closing), source: 'live' } : { snap: bundled, source: 'bundled' };
   }
 
   /** Invalid progress records must not crash the popup or create NaN backoff delays. */
@@ -144,9 +184,8 @@
     return undefined;
   }
 
-  /** 后台这一轮要不要读 /pulse：开关开着、最近有可见的 ord-dropz 页面、距上次检查满一分钟、不在退避等待期内。 */
-  function shouldCheck({ enabled, now, visibleAt, lastCheckAt, nextAt }) {
-    if (!enabled) return false;
+  /** 后台这一轮要不要读 /pulse：最近有可见的 Ord Dropz 页面、插件页面或弹窗，距上次检查满一分钟，不在退避等待期内。 */
+  function shouldCheck({ now, visibleAt, lastCheckAt, nextAt }) {
     if (visibleAt === undefined || now - visibleAt > VISIBLE_MS) return false;
     if (lastCheckAt !== undefined && now - lastCheckAt < CHECK_MS) return false;
     if (nextAt !== undefined && now < nextAt) return false;
@@ -173,5 +212,5 @@
     return 'network';
   }
 
-  return { KEYS, SESSION_VISIBLE, LIVE_DEFAULT, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, resolveLive, isSnapshot, compatibleSnapshot, statusOf, choose, shouldCheck, backoffMinutes, classify };
+  return { KEYS, SESSION_VISIBLE, BUILD, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, classify };
 });

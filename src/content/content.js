@@ -1,7 +1,10 @@
 /**
  * 内容脚本：在 ord-dropz 的 Shielded Nakas 集合页与藏品详情页标注 SHNAKAS 奖励权重。
- * 数据（lib/source.js 的 choose）：实时模式且已有实时数据 → 实时；否则指定区块的数据；都没有 → 内置快照。
+ * 数据（lib/source.js 的 choose）：有可用的实时数据 → 实时；否则内置快照。
  * 监听存储变化，同步完成后已打开的页面原地刷新。同步失败时存储里的旧数据不变，页面照旧工作。
+ * 插件里所有“去购买 / 查看”链接都打开集合页并带 #naka-find=<编号>：挂单中的从页面顶部滑到那张卡片（边滑边加载），
+ * 用卡牌特效标出买入后的权重和每周增量，前后相邻的挂单一起看得到；未挂单的用官方搜索找出来。别人正在买的卡片
+ * （官方右上角转圈，或我们读到的成交确认中）会直接说明“现在买会失败”（单独打开藏品页看不到这个状态，点购买才失败）。
  * 内容脚本自身不发网络请求；页面可见时给后台发心跳（实时同步只在有页面在看时才检查新区块）。
  *
  * 落点（2026-10-08 实测 DOM）：
@@ -18,7 +21,8 @@
  *   市场视图（网格 / 列表）只在本集合页标注，其它页面上同样结构的卡片属于别的集合。
  *   - 详情页 /secondary/item/<铭文ID>：右栏是 h1 所在 .surface 卡片的父容器 → 明细面板插在标题卡之后
  * 独立 /wallet：新版 button.sv-tile > .aspect-square 与 .ps-art 大图，仅按已知铭文 ID 标注。
- * 集合拼图、奖励、待到账、创建/恢复、支付确认界面不注入；资产列表前显示统一区块依据。
+ * 集合拼图、待到账、创建/恢复、支付确认界面不注入；资产列表前显示统一区块依据。钱包页的质押视图只加一个“同步资格”按钮：
+ * 点了才读取页面上已显示的每枚状态（及“Held weeks a–b”的周数），只保存在本机。
  * 卡片名称上的编号不可靠（站点把资产 0/1/2 显示成 #1/#2/#3），一律按铭文 ID 查快照。
  *
  * 每次扫描都是「对账」：该有的徽章/面板补上或改对，扫描里没认领的一律删掉（离开集合页、节点被复用到
@@ -51,8 +55,9 @@
   let SNAP = BUNDLED;
   let PURCHASE = globalThis.NakaPurchase.create(BUNDLED);
   let CANCELLATION = globalThis.NakaPurchase.create(BUNDLED,{action:'cancel'});
-  let SOURCE = 'bundled'; // 'live' | 'synced' | 'bundled'
-  const stored = { liveEnabled: SRC.LIVE_DEFAULT, live: undefined, manual: undefined };
+  let SOURCE = 'bundled'; // 'live' | 'bundled'
+  let CLOSING = new Map(); // 已在成交确认（sale）或撤单中（cancel）的挂单：铭文 ID → 类型
+  const stored = { live: undefined, closing: undefined };
   let T = I.pick(I.DEFAULT_LANG); // 读到存储里的语言设置前不会渲染任何东西，这里只是占位
   let GEN = 0; // 代号：换数据或换语言后递增，徽章/面板按代号判断是否需要重画
   const cache = new Map();
@@ -61,6 +66,7 @@
   function useData() {
     const picked = SRC.choose(stored, BUNDLED);
     SNAP = picked.snap;
+    CLOSING = new Map(SNAP.closing ?? []);
     PURCHASE = globalThis.NakaPurchase.create(SNAP);
     CANCELLATION = globalThis.NakaPurchase.create(SNAP,{action:'cancel'});
     SOURCE = picked.source;
@@ -133,9 +139,10 @@
     const model=action==='cancel'?CANCELLATION:PURCHASE;
     const r=resultFor(id);if(!r)return el('p','shn-pop__missing',T.notInSnapshot);
     const scenario=activity?null:model.get(id);
-    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I);if(holdings.length){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
+    const closing=CLOSING.has(id)?CLOSING.get(id):null;
+    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I,{explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,action),closing});if(holdings.length){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
     const notice=scenario?.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
-    return globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,rewardContext:R.rewardContext(SNAP,id,globalThis.NakaPurchase.listingStatus(SNAP,id)),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id)});
+    return globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,closing,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id)});
   }
   function inspectionHead(id,cls) {
     const head=el('div',cls),brand=el('span','shn-inspect-brand');brand.append(lockIcon('shn-badge__icon'),el('span','shn-eyebrow',T.title));
@@ -145,7 +152,7 @@
       const c=exploreCopy(),held=holdings.includes(id),own=el('button','shn-compare-add shn-holding-add',held?c.inHoldings:c.addHolding);
       own.type='button';own.title=held?c.holdingRemoveHint:c.holdingHint;own.setAttribute('aria-pressed',String(held));
       own.addEventListener('click',ev=>{ev.stopPropagation();ev.preventDefault();chrome.runtime.sendMessage({type:'shn-holdings',ids:[id],remove:held});});
-      head.append(compareButton(id),own);
+      const actions=el('span','shn-inspect-actions');actions.append(compareButton(id),own);head.append(actions);
     }
     return head;
   }
@@ -177,11 +184,14 @@
       b.replaceChildren(preview);b.removeAttribute('title');
     } else b.removeAttribute('title');
     const numberTag=r?globalThis.NakaPurchase.numberBadge(r.number.value,T):null;if(numberTag)b.append(numberTag);
+    // Bought and confirming, or being reclaimed: the badge says so, so nobody heads for a listing that is already gone.
+    const closing=CLOSING.has(id)?CLOSING.get(id):null;b.classList.toggle('shn-badge--closing',closing!==null);
+    if(closing!==null){const tag=el('span',`shn-badge__closing shn-badge__closing--${closing}`,closing==='sale'?T.closingSaleTag:T.closingCancelTag);tag.title=closing==='sale'?T.closingSale:T.closingCancel;b.append(tag);}
     b.tabIndex = 0;
     b.dataset.shnHeight = String(SNAP.snapshot.height);
     const description=scenario?.state==='ready' ? `${action==='cancel'?T.cancelTitle:T.buyTitle}: ${action==='cancel'?T.cancelBefore:T.formulaBefore} ${R.formatWeight(scenario.before)}, ${afterLabel} ${R.formatWeight(scenario.result)}. ${action==='cancel'?T.cancelAssumption:T.buyBadgeNote}` : scenario?.state==='no-floor'?`${afterLabel} —. ${action==='cancel'?T.cancelNoFloor:T.buyNoFloor}`:`${T.weight} ${text}.`;
     // markCompared() composes the accessible name from this description and the comparison selection.
-    b.dataset.shnDescription = `${description} ${T.listing[listing].label}: ${T.listing[listing].meaning}. ${T.weightMeaning}${numberTag?' '+numberTag.getAttribute('aria-label')+'.':''} ${I.measureNote(T,SNAP.snapshot.height)}`;
+    b.dataset.shnDescription = `${closing==='sale'?T.closingSale+' ':closing==='cancel'?T.closingCancel+' ':''}${description} ${T.listing[listing].label}: ${globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,scenario?.state==='ready'?action:null).short}. ${T.weightMeaning}${numberTag?' '+numberTag.getAttribute('aria-label')+'.':''} ${I.measureNote(T,SNAP.snapshot.height)}`;
   }
 
   /** 让槽位里恰好有一个归属正确的徽章，返回它。 */
@@ -368,153 +378,17 @@
 
   // ------------------------------------------------------------ 悬浮明细
 
-  let pop = null;
-  let popFor = null;
-  let popGen = null;
-  let popId = null; // 列表节点复用时徽章会换成别的藏品，悬浮层要跟着失效
-  let popViewport = null;
-  const popResize = new ResizeObserver(() => { if (popFor) positionPop(); });
-
-  function hidePop() {
-    if (!pop || !popFor) return;
-    pop.classList.remove('shn-pop--show');
-    popFor.removeAttribute('aria-describedby');
-    popFor.removeAttribute('data-shn-open');
-    popResize.disconnect();
-    popFor = null;
-    popId = null;
-    popGen = null;
-    popViewport = null;
-  }
-
-  function showPop(badge) {
-    if(popFor && popFor !== badge) hidePop();
-    const r = resultFor(badge.dataset.shnId);
-    if (!pop) { pop = el('div', 'shn-pop'); pop.id = 'shn-weight-tooltip'; pop.setAttribute('role', 'tooltip'); pop.tabIndex = 0; document.body.appendChild(pop); }
-    badge.setAttribute('aria-describedby', pop.id);
-    popFor = badge;
-    popId = badge.dataset.shnId;
-    popGen = badge.dataset.shnGen;
-    const surface=el('div','shn-pop__surface');
-    surface.append(inspectionHead(badge.dataset.shnId,'shn-pop__head'),inspectionFor(badge.dataset.shnId,badge.classList.contains('shn-badge--activity'),badge.dataset.shnAction));
-    const pointer=el('span','shn-pop__pointer');pointer.setAttribute('aria-hidden','true');
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    const group=document.createElementNS(svg.namespaceURI,'g');
-    for(const cls of ['shn-pop__pointer-fill','shn-pop__pointer-edge']) {
-      const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('class',cls);group.append(path);
-    }
-    svg.append(group);pointer.append(svg);pop.replaceChildren(surface,pointer);
-    pop.className = `shn-pop ${classesOf(r)}`;
-    badge.setAttribute('data-shn-open','true');
-    if (!positionPop()) return;
-    pop.classList.add('shn-pop--show');
-    popResize.disconnect();popResize.observe(surface);popResize.observe(badge);
-  }
-
-  function viewportRect() {
-    const view=window.visualViewport;
-    const v={left:view?.offsetLeft??0,top:view?.offsetTop??0,
-      width:Math.min(document.documentElement.clientWidth,innerWidth,view?.width??Infinity),
-      height:Math.min(document.documentElement.clientHeight,innerHeight,view?.height??Infinity)};
-    v.right=v.left+v.width;v.bottom=v.top+v.height;return v;
-  }
-  function closeOnViewportChange() {
-    if(!popFor || !popViewport)return;
-    const v=viewportRect();
-    if(['left','top','width','height'].some(k=>v[k]!==popViewport[k]))hidePop();
-  }
-  function positionPop() {
-    // The bubble touches its badge (G=0), so the pointer moves straight from badge to inspection with no gap to cross.
-    const M=8,G=0,v=viewportRect();popViewport=v;
-    const clamp=(n,lo,hi)=>Math.max(lo,Math.min(n,hi));
-    const visibleRect=node=>{
-      const r=node.getBoundingClientRect(),out={left:Math.max(r.left,v.left),right:Math.min(r.right,v.right),top:Math.max(r.top,v.top),bottom:Math.min(r.bottom,v.bottom)};
-      for(let parent=node.parentElement;parent && parent!==document.documentElement;parent=parent.parentElement) {
-        const css=getComputedStyle(parent),p=parent.getBoundingClientRect();
-        if(/auto|scroll|hidden|clip/.test(css.overflowX)){out.left=Math.max(out.left,p.left+parent.clientLeft);out.right=Math.min(out.right,p.left+parent.clientLeft+parent.clientWidth);}
-        if(/auto|scroll|hidden|clip/.test(css.overflowY)){out.top=Math.max(out.top,p.top+parent.clientTop);out.bottom=Math.min(out.bottom,p.top+parent.clientTop+parent.clientHeight);}
-      }
-      return out;
-    };
-    const a=visibleRect(popFor);let target=visibleRect(popFor.querySelector('.shn-buy-preview,.shn-badge__weight')??popFor);
-    if(a.right<=a.left || a.bottom<=a.top){hidePop();return false;}
+  // The inspection bubble (lib/popover.js), shared with the extension page so both open, place and close the same way.
+  const popover=globalThis.NakaPopover.create({
+    selector:'.shn-badge',id:'shn-weight-tooltip',
+    build:badge=>({className:classesOf(resultFor(badge.dataset.shnId)),nodes:[inspectionHead(badge.dataset.shnId,'shn-pop__head'),inspectionFor(badge.dataset.shnId,badge.classList.contains('shn-badge--activity'),badge.dataset.shnAction)]}),
+    // The tail centres on the weight inside the badge; a badge without one is its own centre.
+    target:badge=>badge.querySelector('.shn-buy-preview,.shn-badge__weight'),
     // A selected badge's "✓ Compare" tab sits on top of it and belongs to its hover area; the bubble clears it.
-    if(popFor.matches('.shn-badge--grid[data-shn-compared],.shn-badge--vault[data-shn-compared],.shn-badge--wallet[data-shn-compared]')) a.top=Math.max(v.top,a.top-parseFloat(getComputedStyle(popFor,'::before').height));
-    if(target.right<=target.left || target.bottom<=target.top)target=a;
-    const surface=pop.querySelector('.shn-pop__surface');
-    pop.style.width=`${Math.max(1,Math.floor(Math.min(420,v.width-2*M)))}px`;
-    const w=pop.offsetWidth,css=getComputedStyle(surface);
-    const natural=Math.ceil(surface.scrollHeight+parseFloat(css.borderTopWidth)+parseFloat(css.borderBottomWidth));
-    const room={bottom:a.top-v.top-M-G,top:v.bottom-M-a.bottom-G,right:a.left-v.left-M-G,left:v.right-M-a.right-G};
-    let side=natural<=room.bottom?'bottom':natural<=room.top?'top':
-      w<=room.right?'right':w<=room.left?'left':room.bottom>=room.top?'bottom':'top';
-    const limit=Math.max(1,Math.floor(Math.min(v.height-2*M,side==='top'||side==='bottom'?room[side]:v.height-2*M)));
-    surface.style.maxHeight=`${limit}px`;
-    const h=pop.offsetHeight,cx=(target.left+target.right)/2,cy=(target.top+target.bottom)/2;
-    // Round toward the badge so the shared edge never opens a sub-pixel gap.
-    const left=side==='right'?Math.ceil(a.left-w):side==='left'?Math.floor(a.right):Math.round(clamp(cx-w/2,v.left+M,v.right-w-M));
-    const top=side==='bottom'?Math.ceil(a.top-h):side==='top'?Math.floor(a.bottom):Math.round(clamp(cy-h/2,v.top+M,v.bottom-h-M));
-    pop.style.left=`${left}px`;pop.style.top=`${top}px`;pop.dataset.shnSide=side;
-    drawTail(side,a,w,h);
-    return true;
-  }
-
-  /**
-   * Speech-bubble tail beside the badge on the shared edge, curling toward it. Canonical shape in (u along the edge,
-   * n outward) units: base u 0..11 on the edge, tip at u 17, n 12. It goes before the badge when the bubble edge has
-   * room there, otherwise after it (mirrored); with no room on either side the bubble needs no tail.
-   */
-  function drawTail(side,a,w,h) {
-    const pointer=pop.querySelector('.shn-pop__pointer'),svg=pointer.firstChild,[fill,edge]=svg.firstChild.children;
-    const rect=pop.getBoundingClientRect(),vertical=side==='top'||side==='bottom',span=vertical?w:h,CLEAR=10;
-    const near=vertical?a.left-rect.left:a.top-rect.top,far=vertical?a.right-rect.left:a.bottom-rect.top;
-    const before=near-19,after=far+19;
-    let s0,dir;
-    if(before>=CLEAR){s0=before;dir=1;}
-    else if(after<=span-CLEAR){s0=after;dir=-1;}
-    else {pointer.style.display='none';pop.dataset.shnTail='none';return;}
-    const map=(u,n)=>{const p=s0+dir*u;return side==='bottom'?[p,h+n]:side==='top'?[p,-n]:side==='right'?[w+n,p]:[-n,p];};
-    const pt=(u,n)=>map(u,n).map(x=>Math.round(x*10)/10).join(' ');
-    const curve=`M${pt(0,0)}C${pt(2,6)} ${pt(8,11)} ${pt(17,12)}C${pt(12,8)} ${pt(11,4)} ${pt(11,0)}`;
-    fill.setAttribute('d',`M${pt(0,-2.5)}L${curve.slice(1)}L${pt(11,-2.5)}Z`);
-    edge.setAttribute('d',curve);
-    pointer.style.display='';
-    pointer.style.left='0px';pointer.style.top='0px';pointer.style.width=`${w}px`;pointer.style.height=`${h}px`;
-    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-    pop.dataset.shnTail=dir===1?'before':'after';
-  }
-
-  document.addEventListener('mouseover', (e) => {
-    if (pop?.contains(e.target)) return;
-    const b = e.target instanceof Element ? e.target.closest('.shn-badge') : null;
-    if (b === popFor) return;
-    if (b) showPop(b);
-    else hidePop();
-  }, true);
-  document.addEventListener('mouseout', (e) => {
-    if (e.relatedTarget === null) { hidePop(); return; }
-    const fromBadge=e.target instanceof Element && e.target.closest('.shn-badge')===popFor;
-    if ((fromBadge || pop?.contains(e.target)) && !popFor?.contains(e.relatedTarget) && !pop?.contains(e.relatedTarget)) hidePop();
-  }, true);
-  document.addEventListener('focusin', (e) => { if (e.target.matches?.('.shn-badge')) showPop(e.target); });
-  document.addEventListener('focusout', (e) => {
-    if ((e.target.matches?.('.shn-badge') || pop?.contains(e.target)) && !pop?.contains(e.relatedTarget)) hidePop();
+    raise:badge=>badge.matches('.shn-badge--grid[data-shn-compared],.shn-badge--vault[data-shn-compared],.shn-badge--wallet[data-shn-compared]')?parseFloat(getComputedStyle(badge,'::before').height):0,
+    // List rows are reused for other pieces: the bubble follows the badge's piece and data generation.
+    identity:badge=>`${badge.dataset.shnId}|${badge.dataset.shnGen}`,
   });
-  // The badge is a separate inspection target, including inside a card link/button.
-  document.addEventListener('click', (e) => {
-    const b = e.target instanceof Element ? e.target.closest('.shn-badge') : null;
-    if (b) { e.preventDefault(); e.stopPropagation(); showPop(b); }
-    else if (!pop?.contains(e.target)) hidePop();
-  }, true);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hidePop();
-    if (e.target.matches?.('.shn-badge') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); showPop(e.target); }
-  }, true);
-  window.addEventListener('scroll', (e) => { if (!pop?.contains(e.target)) hidePop(); }, true);
-  window.addEventListener('blur', hidePop);
-  window.addEventListener('resize', closeOnViewportChange);
-  window.visualViewport?.addEventListener('resize',closeOnViewportChange);
-  window.visualViewport?.addEventListener('scroll',closeOnViewportChange);
 
   // ------------------------------------------------------------ 调度
 
@@ -632,7 +506,8 @@
     const actions=el('div','shn-hb-actions');
     const button=el('button','shn-compare-add shn-hb-add',rest===0?c.addedVisible(ids.length):rest===ids.length?c.addVisible(ids.length):c.addRest(rest,added));
     button.type='button';button.disabled=rest===0;button.dataset.state=rest===0?'all':rest===ids.length?'none':'some';button.title=c.holdingsNote;
-    button.addEventListener('click',async()=>{button.disabled=true;const out=await chrome.runtime.sendMessage({type:'shn-holdings',ids});if(!out?.ok){button.disabled=false;button.textContent=c.addError;}});
+    // These are the pieces the official site shows in my own vault or wallet: a listing among them is mine (vault).
+    button.addEventListener('click',async()=>{button.disabled=true;const out=await chrome.runtime.sendMessage({type:'shn-holdings',ids,vault:true});if(!out?.ok){button.disabled=false;button.textContent=c.addError;}});
     const open=el('button','shn-compare-add shn-hb-open',c.openHoldings);open.type='button';open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'holdings'}));
     actions.append(button,open);
     bar.append(summary,actions);
@@ -641,17 +516,132 @@
     anchor.before(bar);
   }
 
-  // Explicit import of visible official staking eligibility. No amounts, wallet secrets or hidden state are read.
+  // Explicit import of visible official staking eligibility: each shown row's piece and state, and for a piece shown as left
+  // ("Held weeks a–b before it left") the last week it kept. No amounts, wallet secrets or hidden state are read.
   function scanRewardEligibility(){
     const progress=document.querySelector('.sv-shell .st-week[role="progressbar"]'),rows=[...document.querySelectorAll('.sv-shell .st-rows .st-row[data-state]')];let bar=document.querySelector('.shn-reward-import');
     if(!WALLET_PATH.test(location.pathname)||!progress||!rows.length){bar?.remove();return;}
-    const list=[];for(const row of rows){const image=row.querySelector('img'),id=idFromSrc(image?.getAttribute('src')),label=row.querySelector('.st-row-title')?.textContent?.trim();if(!id||!SNAP.items[id]||label!==`#${SNAP.items[id][0]}`||!['earning','claimable','waiting','paused','past','before'].includes(row.dataset.state))continue;list.push({id,state:row.dataset.state});}
-    if(!list.length){bar?.remove();return;}if(bar&&bar.dataset.lang===exploreLang)return;bar?.remove();
-    bar=el('div','shn-reward-import');bar.dataset.lang=exploreLang;const button=el('button','shn-compare-add',exploreLang==='zh'?'将当前奖励资格同步到插件':'Sync displayed eligibility to Naka Sigil');button.type='button';button.title=exploreLang==='zh'?'只读取已显示藏品的计奖状态，不操作领取':'Reads visible earning states only. Does not claim rewards.';
-    button.addEventListener('click',async()=>{const week=Number(progress.getAttribute('aria-label')?.match(/\d+/)?.[0]),numbers=(progress.querySelector('.st-week-foot')?.textContent?.match(/\d[\d,]*/g)??[]).map(v=>Number(v.replaceAll(',','')));if(!Number.isInteger(week)||week<1||week>78||numbers.length<2||numbers[1]!==1008||numbers[0]<0||numbers[0]>1008)return;
-      const entries=[];for(const row of document.querySelectorAll('.sv-shell .st-rows .st-row[data-state]')){const id=idFromSrc(row.querySelector('img')?.getAttribute('src'));if(id&&SNAP.items[id]&&row.querySelector('.st-row-title')?.textContent.trim()===`#${SNAP.items[id][0]}`)entries.push({id,state:row.dataset.state});}
-      button.disabled=true;try{const out=await chrome.runtime.sendMessage({type:'shn-import-eligibility',height:ShnakasRules.RULES.startBlock+(week-1)*1008+numbers[0],week:week-1,rows:entries});button.textContent=out?.ok?(exploreLang==='zh'?'✓ 已同步到本机':'✓ Synced locally'):(exploreLang==='zh'?'请先等待最新区块同步':'Wait for the latest block sync');}finally{button.disabled=false;}});bar.append(button);progress.closest('.st-hero')?.after(bar);
+    if(!readRows().length){bar?.remove();return;}if(bar&&bar.dataset.lang===exploreLang)return;bar?.remove();
+    const c=exploreCopy();bar=el('div','shn-reward-import');bar.dataset.lang=exploreLang;const button=el('button','shn-compare-add',c.syncButton);button.type='button';button.title=c.syncTitle;const note=el('span','shn-reward-import__note');
+    button.addEventListener('click',async()=>{
+      const c=exploreCopy(),week=Number(progress.getAttribute('aria-label')?.match(/\d+/)?.[0]),numbers=(progress.querySelector('.st-week-foot')?.textContent?.match(/\d[\d,]*/g)??[]).map(v=>Number(v.replaceAll(',','')));
+      if(!Number.isInteger(week)||week<1||week>78||numbers.length<2||numbers[1]!==1008||numbers[0]<0||numbers[0]>1008){note.textContent=c.syncBadReading;return;}
+      // "0 / 1008": the page already counts the next week while the chain is still at the last block of this one.
+      if(numbers[0]===0){note.textContent=c.syncBoundary;return;}
+      button.disabled=true;note.textContent='';
+      try{const out=await chrome.runtime.sendMessage({type:'shn-import-eligibility',height:ShnakasRules.RULES.startBlock+(week-1)*1008+numbers[0],week:week-1,rows:readRows()});
+        note.textContent=out?.ok?(out.moved?c.syncMoved(out.moved):c.syncOk):({ahead:c.syncAhead,'no-live':c.syncNoLive,'bad-reading':c.syncBadReading}[out?.error]??c.syncFailed);}
+      catch{note.textContent=c.syncFailed;}finally{button.disabled=false;}});
+    bar.append(button,note);progress.closest('.st-hero')?.after(bar);
   }
+  /** The shown staking rows of known pieces: id, state, and for a piece shown as left the last week it kept (0-based). */
+  function readRows(){
+    const out=[];
+    for(const row of document.querySelectorAll('.sv-shell .st-rows .st-row[data-state]')){
+      const id=idFromSrc(row.querySelector('img')?.getAttribute('src'));if(!id||!SNAP.items[id]||row.querySelector('.st-row-title')?.textContent?.trim()!==`#${SNAP.items[id][0]}`||!['earning','claimable','waiting','paused','past','before'].includes(row.dataset.state))continue;
+      const entry={id,state:row.dataset.state};
+      if(row.dataset.state==='past'){const m=/(\d+)\s*[–-]\s*(\d+)/.exec(row.querySelector('.st-row-line')?.textContent??'');if(m&&Number(m[1])<=Number(m[2]))entry.through=Number(m[2])-1;}
+      out.push(entry);
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------ Find one Naka on the collection page (#naka-find=<number>)
+  // Every link to one Naka opens the collection page with #naka-find=<number> (NakaExploreUI.marketFind). A new tab lists
+  // listings first, cheapest first, renders 63 cards and 42 more whenever its end nears the viewport. A listed Naka is
+  // shown in the market as it is: the page scrolls from the top down to its card, loading on the way, and the card is
+  // revealed with a card effect beside its cheaper and dearer neighbours. Once a card not for sale is on screen every
+  // listing is, so a Naka still missing has left the market (bought or reclaimed), as it has when no more cards load. A
+  // Naka not for sale sits among 3,000+ unlisted cards: the page's own search shows it. The official card marks a purchase
+  // in progress with a spinner; the note reads it, and our own closing data, before saying anything about buying.
+  const FIND=/^#naka-find=(\d{1,5})$/,SEARCH_PLACEHOLDERS=['Search by name or trait','按名称或属性搜索'];
+  const moving=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let finding=null,fx=null,findTimer=0;
+  /** Rendered grid cards in page order: artwork, slot and card element with the inscription ID. */
+  function gridCards(){
+    const out=[];for(const img of document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"],img[src*="/api/shielded/art/"]`)){const slot=gridSlot(img);if(slot)out.push({slot,card:slot.parentElement,id:idFromSrc(img.getAttribute('src'))});}
+    return out;
+  }
+  /** Drop #naka-find from the address once read (the page's router may write it back while it starts, so this runs again
+   * when the search ends). */
+  const clearHash=()=>{if(FIND.test(location.hash))history.replaceState(history.state,'',location.pathname+location.search);};
+  /** A card for sale shows its ask in BTC; one not for sale says so instead. */
+  const forSale=card=>[...card.querySelectorAll('.font-mono')].some(e=>/\bBTC\b/.test(e.textContent));
+  function readFind(){
+    const m=FIND.exec(location.hash),c=COLLECTION_PATH.exec(location.pathname);
+    if(!m||!c||c[1]!==SLUG)return;
+    clearHash();clearFx();
+    const number=Number(m[1]),id=Object.keys(SNAP.items).find(x=>SNAP.items[x][0]===number);
+    if(id===undefined){findNote(exploreCopy().findNotInData(number));return;}
+    finding={number,id,mode:SNAP.offers.some(o=>o[0]===id)?'scroll':'search',start:Date.now(),counts:[],typedAt:null};
+    findNote(exploreCopy().findSearching(number),null,false);setTimeout(stepFind,700);
+  }
+  function stepFind(){
+    const f=finding;if(!f)return;const c=exploreCopy(),cards=gridCards();
+    if(!cards.length){if(Date.now()-f.start>15000){finding=null;findNote(c.findNoGrid(f.number));}else setTimeout(stepFind,500);return;}
+    const hit=cards.find(x=>x.id===f.id);if(hit){finding=null;reveal(f,hit);return;}
+    if(f.mode==='search'){
+      if(f.typedAt===null){
+        const input=[...document.querySelectorAll('input[type="text"]')].find(i=>SEARCH_PLACEHOLDERS.includes(i.placeholder)&&i.offsetParent!==null);
+        if(!input){finding=null;findNote(c.findNoSearch(f.number));return;}
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,String(f.number));input.dispatchEvent(new Event('input',{bubbles:true}));f.typedAt=Date.now();
+      }else if(Date.now()-f.typedAt>10000){finding=null;findNote(c.findMissing(f.number));return;}
+      setTimeout(stepFind,400);return;
+    }
+    // Every listing is on screen once a card not for sale is, or when two loads in a row add nothing.
+    if(cards.some(x=>!forSale(x.card))||f.counts.length>=2&&f.counts.at(-1)===cards.length&&f.counts.at(-2)===cards.length){finding=null;findGone(f);return;}
+    f.counts.push(cards.length);
+    const last=cards.at(-1).card.getBoundingClientRect();
+    window.scrollTo({top:Math.max(0,last.bottom+scrollY-innerHeight+80),behavior:moving()?'smooth':'auto'});
+    setTimeout(stepFind,moving()?1100:450);
+  }
+  /** Not in the market any more: say so, and offer the page's search, which still shows the card (marked sold). */
+  function findGone(f){clearHash();findNote(exploreCopy().findGone(f.number),{label:exploreCopy().findSearchBtn,run:()=>{finding={...f,mode:'search',start:Date.now(),typedAt:null};window.scrollTo({top:0,behavior:'auto'});stepFind();}});}
+  function reveal(f,hit){
+    const r=hit.card.getBoundingClientRect();
+    window.scrollTo({top:Math.max(0,r.top+scrollY-(innerHeight-r.height)/2),behavior:moving()?'smooth':'auto'});
+    setTimeout(()=>{
+      clearHash();const now=gridCards().find(x=>x.id===f.id);if(!now){findGone(f);return;}
+      const c=exploreCopy(),busy=now.slot.querySelector('.animate-spin')!==null||CLOSING.get(f.id)==='sale',gain=fxGain(f.id);
+      cardFx(now.card,f.id,busy,gain);
+      findNote(busy?c.findPending(f.number):gain?c.findFound(f.number,gain.after,gain.delta):c.findFoundHeld(f.number,R.formatWeight(resultFor(f.id))));
+    },moving()?800:0);
+  }
+  /** What buying this Naka means: its weight after the sale and, with holdings, my weekly change (null: not for sale). */
+  function fxGain(id){
+    const s=PURCHASE.get(id);if(s.state!=='ready')return null;
+    const x=holdings.length&&!holdings.includes(id)?portfolioImpact(id,'sale'):null;
+    return {after:R.formatWeight(s.result),delta:x?.state==='ready'?globalThis.NakaExploreUI.shn(x.allocation.delta,true):null};
+  }
+  /** The card effect, an overlay in page coordinates around the card and never over it (the page's own nodes are left
+   * alone): a gold rim drawn once, a short glow and four sparks in the gutters, and a ribbon above with what buying it
+   * gives. The card is never transformed either, so placeFx's bounding rect is where it sits. */
+  function cardFx(card,id,busy,gain){
+    clearFx();const c=exploreCopy(),box=el('div','shn-card-fx');box.setAttribute('aria-hidden','true');box.dataset.phase='intro';if(busy)box.dataset.busy='true';
+    const ribbon=el('div','shn-card-fx__ribbon');
+    if(gain){ribbon.append(el('b','',`${c.fxAfter} ${gain.after}`));if(gain.delta)ribbon.append(el('span','',c.fxGain(gain.delta)));}
+    else ribbon.append(el('b','',`${c.fxWeight} ${R.formatWeight(resultFor(id))}`));
+    box.append(el('div','shn-card-fx__ring'),ribbon);
+    for(let i=0;i<4;i++){const spark=el('i','shn-card-fx__spark');spark.style.setProperty('--i',String(i));box.append(spark);}
+    document.body.append(box);fx={box,card,id};placeFx();
+    setTimeout(()=>{if(fx?.box===box)box.dataset.phase='steady';},2800);
+  }
+  /** Keep the overlay on its card: the grid may re-render the card or move it. */
+  function placeFx(){
+    if(!fx)return;
+    if(!fx.card.isConnected){const now=gridCards().find(x=>x.id===fx.id);if(!now){clearFx();return;}fx.card=now.card;}
+    const r=fx.card.getBoundingClientRect();Object.assign(fx.box.style,{left:`${r.left+scrollX}px`,top:`${r.top+scrollY}px`,width:`${r.width}px`,height:`${r.height}px`});
+  }
+  function clearFx(){if(!fx)return;fx.box.remove();fx=null;}
+  addEventListener('resize',placeFx);addEventListener('keydown',ev=>{if(ev.key==='Escape')clearFx();});
+  /** The status note at the top; `action` adds one button. Notes that report a result fade after 12 seconds. */
+  function findNote(text,action=null,fade=true){
+    let note=document.querySelector('.shn-find-note');if(!note){note=el('div','shn-find-note');note.setAttribute('role','status');const close=el('button','shn-find-close','×');close.type='button';close.setAttribute('aria-label',exploreCopy().close);close.addEventListener('click',()=>note.remove());note.append(lockIcon('shn-find-sigil'),el('span','shn-find-text'),el('span','shn-find-actions'),close);document.body.append(note);}
+    note.querySelector('.shn-find-text').textContent=text;const actions=note.querySelector('.shn-find-actions');actions.replaceChildren();
+    if(action){const b=el('button','shn-find-action',action.label);b.type='button';b.addEventListener('click',()=>{actions.replaceChildren();action.run();});actions.append(b);}
+    clearTimeout(findTimer);if(fade)findTimer=setTimeout(()=>note.remove(),12000);
+  }
+  addEventListener('hashchange',readFind);
 
   function scan() {
     const path = location.pathname;
@@ -670,8 +660,8 @@
     for (const b of document.querySelectorAll('.shn-badge')) if (!keepBadges.has(b)) b.remove();
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
     scanTools(onCollection,onActivity);scanRewardEligibility();scanHoldings();
-    if (popFor && (!popFor.isConnected || popFor.dataset.shnId !== popId || popFor.dataset.shnGen !== popGen)) hidePop();
-    else if(popFor) positionPop();
+    if(onCollection)placeFx();else clearFx();
+    popover.validate();
   }
 
   // 直接在 MutationObserver 回调（微任务，React 提交之后）里扫描，徽章与站点内容同帧出现。
@@ -680,32 +670,30 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.manual, K.live, K.liveEnabled, I.STORAGE_KEY, EXP.KEY,HOLD.KEY]).then((got) => {
+  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY]).then((got) => {
     comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);
     useLang(got[I.STORAGE_KEY]);
-    stored.liveEnabled = SRC.resolveLive(got[K.liveEnabled]);
     stored.live = got[K.live];
-    stored.manual = got[K.manual];
+    stored.closing = got[K.closing];
     useData();
     new MutationObserver(scan).observe(document.documentElement, {
       childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href'],
     });
-    scan();
+    scan();readFind();
   });
-  // 实时数据更新、载入指定区块、切换模式或语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
+  // 实时数据更新或切换语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     const has = (k) => Object.prototype.hasOwnProperty.call(changes, k);
-    const dataChanged = has(K.manual) || has(K.live) || has(K.liveEnabled);
+    const dataChanged = has(K.live) || has(K.closing);
     if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
     if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();}
     if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)) return;
     if (has(I.STORAGE_KEY)) useLang(changes[I.STORAGE_KEY].newValue);
-    if (has(K.liveEnabled)) stored.liveEnabled = SRC.resolveLive(changes[K.liveEnabled].newValue);
     if (has(K.live)) stored.live = changes[K.live].newValue;
-    if (has(K.manual)) stored.manual = changes[K.manual].newValue;
+    if (has(K.closing)) stored.closing = changes[K.closing].newValue;
     if (dataChanged) useData();
-    hidePop();
+    popover.hide();
     scan();
   });
 

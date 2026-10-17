@@ -80,8 +80,12 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 /* One quiet graphite frame with an integer-step silhouette, never nested panel borders. */
 .shn-panel,.shn-pop { background:#19191c; border:1px solid #514d53; border-top:2px solid #bc9a64; padding:12px; box-shadow:3px 3px 0 #09090a; clip-path:polygon(0 0,calc(100% - 4px) 0,calc(100% - 4px) 2px,100% 2px,100% 100%,4px 100%,4px calc(100% - 2px),0 calc(100% - 2px)); }
 .shn-pop { width:420px; overflow:visible; max-height:calc(100dvh - 16px); }
-.shn-pop__head,.shn-panel__head { display:flex; gap:7px; align-items:center; margin:0 0 7px; padding:0; border:0; }
-.shn-inspect-brand { display:inline-flex; gap:6px; align-items:center; color:#e5bd7d; }
+.shn-pop__head,.shn-panel__head { display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin:0 0 7px; padding:0; border:0; }
+/* The brand never breaks; when the buttons do not fit beside the number (Compare full has a longer label) they move to a
+   second row together. */
+.shn-inspect-brand { display:inline-flex; gap:6px; align-items:center; color:#e5bd7d; white-space:nowrap; }
+.shn-inspect-actions { display:inline-flex; gap:6px; }
+.shn-inspect-actions .shn-compare-add { margin-left:0; }
 .shn-inspect-number { margin-left:auto; color:#bbb5c4; font-size:11px; font-variant-numeric:tabular-nums; }
 .shn-eyebrow { color:#e2d5c0; font-size:12px; letter-spacing:.04em; }
 .shn-badge { height:auto; min-height:24px; flex-wrap:wrap; gap:3px 5px; padding:4px 5px; box-shadow:1px 1px 0 #080808; }
@@ -182,3 +186,42 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-hb-mine{color:#9ce0bc}
 .shn-sr{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
 @media(max-width:640px){.shn-holdings-import{grid-template-columns:1fr}.shn-hb-actions{justify-content:flex-start}.shn-hb-mine{margin-left:0}}
+/* Find one Naka on the collection page (#naka-find): the card revealed like a drawn card, a status note at the top. */
+/* The effect stays in the grid's 10px gutters and above the card: the artwork itself is never lit, tinted or covered. */
+@property --shn-fx-turn { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+.shn-card-fx{position:absolute;z-index:35;pointer-events:none;--shn-fx-rim:#ffc45e}
+.shn-card-fx[data-phase=steady]{--shn-fx-rim:#d6a250}
+/* A 2px rim 2px off the card's edge (its radius 12px + 4px), drawn once clockwise from under the ribbon. */
+.shn-card-fx__ring{position:absolute;inset:-4px;border:2px solid var(--shn-fx-rim);border-radius:16px;transition:border-color .8s;--shn-fx-turn:360deg;-webkit-mask:conic-gradient(#000 var(--shn-fx-turn),#0000 0);animation:shn-fx-draw .9s cubic-bezier(.4,0,.2,1) .1s backwards}
+@keyframes shn-fx-draw{from{--shn-fx-turn:0deg}}
+/* As the rim closes: a soft glow outside it, under the ribbon (an outer shadow never paints inside its box), and a tiny
+   spark at each corner. */
+.shn-card-fx::before{content:'';position:absolute;inset:-4px;border-radius:16px;animation:shn-fx-glow .8s ease-out .9s}
+@keyframes shn-fx-glow{35%{box-shadow:0 0 5px 1px rgba(255,190,90,.6)}}
+.shn-card-fx__spark{position:absolute;width:9px;height:9px;background:#ffe2a0;clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);opacity:0;animation:shn-fx-spark .6s ease-out calc(.95s + var(--i) * .08s)}
+.shn-card-fx__spark:nth-of-type(1){right:-10px;top:-10px}.shn-card-fx__spark:nth-of-type(2){right:-10px;bottom:-10px}.shn-card-fx__spark:nth-of-type(3){left:-10px;bottom:-10px}.shn-card-fx__spark:nth-of-type(4){left:-10px;top:-10px}
+@keyframes shn-fx-spark{from{transform:scale(.3)}50%{opacity:1;transform:scale(1) rotate(45deg)}to{transform:scale(.3) rotate(90deg)}}
+/* Above the card, its lower edge on the rim. No shadow: the clip-path would cut it off. */
+.shn-card-fx__ribbon{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 11px 4px;white-space:nowrap;background:linear-gradient(180deg,#ffdd7a,#e8a93a);color:#2a1a05;font:800 12px/1.15 ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid #fff0b8;clip-path:polygon(0 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px));animation:shn-fx-ribbon .55s cubic-bezier(.2,1.6,.4,1) .35s both}
+.shn-card-fx__ribbon span{font-size:10px;font-weight:700;color:#5a3a08}
+@keyframes shn-fx-ribbon{from{opacity:0;transform:translate(-50%,8px) scale(.6)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+/* Being bought by someone else: no celebration, a grey rim. */
+.shn-card-fx[data-busy=true]{--shn-fx-rim:#8d8d8d}
+.shn-card-fx[data-busy=true]::before,.shn-card-fx[data-busy=true] .shn-card-fx__spark{animation:none}
+.shn-card-fx[data-busy=true] .shn-card-fx__ribbon{background:#2b2b2b;color:#ddd;border-color:#6b6b6b}
+.shn-card-fx[data-busy=true] .shn-card-fx__ribbon span{color:#bbb}
+/* Reduced motion: the finished frame, whole rim and ribbon, from the start. */
+@media (prefers-reduced-motion:reduce){.shn-card-fx::before,.shn-card-fx *{animation:none!important}}
+.shn-find-note{position:fixed;z-index:2147483646;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:min(560px,calc(100vw - 32px));padding:10px 12px 10px 14px;background:#17161a;border:1px solid #6b5d45;border-left:3px solid #ffd25e;color:#eee8dd;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.shn-find-sigil{flex:none;width:16px;height:16px}
+.shn-find-text{flex:1;min-width:0}
+.shn-find-close{flex:none;padding:0 4px;background:transparent;border:0;color:#bdb6aa;font-size:16px;line-height:1;cursor:pointer}
+.shn-find-close:hover{color:#fff}
+.shn-find-actions:empty{display:none}
+.shn-find-action{flex:none;padding:3px 8px;background:#28241e;border:1px solid #77664d;color:#f3debc;font:inherit;cursor:pointer}
+.shn-find-action:hover{border-color:#ffd25e;color:#fff}
+.shn-reward-import__note{margin-left:10px;color:#cfc6b5;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+/* A listing already closing (bought and confirming, or being reclaimed): the badge dims and carries a short tag. */
+.shn-badge--closing > :not(.shn-badge__closing) { opacity:.55; }
+.shn-badge__closing { flex-basis:100%; padding:2px 4px; font-size:9px; font-weight:800; letter-spacing:.02em; text-align:center; color:#ffd7a1; background:#3a2a14; border:1px solid #8a6230; }
+.shn-badge__closing--cancel { color:#d9d3ff; background:#251f3a; border-color:#5d5296; }

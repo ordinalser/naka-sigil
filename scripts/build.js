@@ -3,8 +3,9 @@
  * 依赖：node 内置模块 + 系统 zip。任何必需文件缺失、快照数据不合规都直接抛错（不产出半成品包）。
  *
  * 权限：storage（存放同步得到的数据与设置）、alarms（实时同步每分钟检查一次新区块）、
- * shielded 协议接口的主机权限（后台读取链上状态）。内容脚本只匹配 ord-dropz.xyz，自身不发网络请求；
- * 后台只在实时模式且有市场、比较页或弹窗可见时，或在弹窗确认载入指定区块时联网。
+ * shielded 协议接口与区块浏览器的主机权限（后台读取链上状态和区块时间）。内容脚本只匹配 ord-dropz.xyz，自身不发网络请求；
+ * 后台只在有 Ord Dropz 页面、插件页面或弹窗可见时检查新区块，另外在弹窗打开（链上时钟）和历史查询时联网。
+ * zip 可复现：文件按名排序、不含目录项，权限统一 644，修改时间统一取快照的 generatedAt，时区 UTC。
  */
 'use strict';
 const fs = require('node:fs');
@@ -20,6 +21,8 @@ const SRC = path.join(ROOT, 'src');
 const DIST = path.join(ROOT, 'dist');
 fs.mkdirSync(DIST, { recursive: true });
 const VERSION = require('../package.json').version;
+// The worker runs its upgrade step once per code version (lib/source.js BUILD): it must be this release's.
+if (require('../src/lib/source.js').BUILD !== VERSION) throw new Error(`src/lib/source.js BUILD is not package.json's version ${VERSION}`);
 
 // 固定扩展 ID（公钥，非机密）。未打包扩展的 ID 默认按加载目录路径推导，换目录解压新版本 ID 就变，
 // 而 storage.local 按 ID 分区——ID 一变，之前「同步」得到的数据就看不到了。钉住 key 让升级、换目录都复用同一份数据。
@@ -45,14 +48,14 @@ const manifest = {
   content_scripts: [{
     // 整站匹配：站点是 Next.js 单页应用，从首页点进集合页不会重新注入脚本，脚本自己按路由决定是否工作
     matches: ['https://ord-dropz.xyz/*'],
-    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/rewards.js','lib/portfolio.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'content/content.js'],
+    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/portfolio.js','lib/rewards.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'lib/popover.js', 'content/content.js'],
     css: ['content/content.css', 'lib/purchase.css'],
     run_at: 'document_idle',
   }],
 };
 
 const FILES = [
-  'lib/rewards.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/workspace.js', 'workspace/workspace.css',
+  'lib/rewards.js','lib/planner.js','lib/popover.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/planner-ui.js', 'workspace/workspace.js', 'workspace/workspace.css',
   'data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'lib/snapshot-core.js', 'sw/sync-sw.js',
   'content/content.js', 'content/content.css',
   'popup/popup.html', 'popup/popup.js', 'popup/popup.css',
@@ -83,7 +86,7 @@ function checkSnapshot() {
     });
     evaluateSnapshot(snap, id); // 非法数据在这里抛错
   }
-  return { height, items: ids.length };
+  return { height, items: ids.length, generatedAt: snap.snapshot.generatedAt };
 }
 
 const STAGE = path.join(DIST, '.stage-chrome');
@@ -112,7 +115,10 @@ fs.rmSync(STAGE_ZIP, { force: true });
 try {
   for (const f of FILES) copy(f);
   fs.writeFileSync(path.join(STAGE, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  execFileSync('zip', ['-Xqr', STAGE_ZIP, '.'], { cwd: STAGE });
+  // Same bytes from the same sources on any machine: fixed time and mode, sorted names, no directory entries.
+  const stamp = new Date(snap.generatedAt), names = ['manifest.json', ...FILES].sort();
+  for (const rel of names) { fs.chmodSync(path.join(STAGE, rel), 0o644); fs.utimesSync(path.join(STAGE, rel), stamp, stamp); }
+  execFileSync('zip', ['-X', '-D', '-q', STAGE_ZIP, ...names], { cwd: STAGE, env: { ...process.env, TZ: 'UTC' } });
 } catch (e) {
   fs.rmSync(STAGE, { recursive: true, force: true });
   fs.rmSync(STAGE_ZIP, { force: true });
@@ -122,7 +128,7 @@ try {
 // 文件名带上快照高度：同一版本号换了快照也能一眼分清
 const zipName = `naka-sigil-chrome-v${VERSION}-h${snap.height}.zip`;
 fs.rmSync(path.join(DIST, 'chrome'), { recursive: true, force: true });
-for (const old of fs.readdirSync(DIST)) if (/^naka-sigil-chrome-.*\.zip$/.test(old)) fs.rmSync(path.join(DIST, old));
+for (const old of fs.readdirSync(DIST)) if (/^naka-sigil-(?:chrome|source)-.*\.zip$/.test(old)) fs.rmSync(path.join(DIST, old));
 fs.renameSync(STAGE, path.join(DIST, 'chrome'));
 fs.renameSync(STAGE_ZIP, path.join(DIST, zipName));
 console.log(`OK chrome: dist/chrome/ 与 dist/${zipName}`);

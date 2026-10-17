@@ -1,7 +1,7 @@
 /**
  * SHNAKAS 奖励权重规则：纯函数，无 DOM、无网络。内容脚本、弹窗、快照脚本、构建校验、单测与 E2E 共用这一份。
  *
- * Current block-formula evidence: rewardsSource below; quarterly snapshot heights remain unconfirmed.
+ * Weights are scored every block by the on-chain programme (rewardsSource below); there is no weekly or quarterly snapshot block.
  * 原始规则出处：https://x.com/Ob1_Wan_Satoshi/status/2108018318141755694（2026-10-08，正文 + 配图）
  *   - 权重 = 100% 基础 + 各特征加成之和 + 号码加成，总权重封顶 400%（配图 "400% TOTAL CAP"）
  *   - 特征加成：特征地板 ÷ 集合地板 ≥1.25x +25%、≥1.5x +50%、≥2x +75%、≥3x +100%；每个特征都算
@@ -34,6 +34,10 @@
     poolPerWeekBase: 26664000000000,
     tokenDecimals: 8,
     catalogPieces: 3333,
+    // Catalog pieces still unminted at block 971,787, after rewards started (/pulse: minted 3,327, pending 6; the same six
+    // are pending in the bundled snapshot at 971,547). Any later mint of one is after the start, at a block the listing
+    // records do not show.
+    lateMintNumbers: Object.freeze([1612, 1613, 2816, 2817, 2881, 2889]),
     unitPct: 25,
     // Legacy field retained for compatibility; current weights update per block.
     measureHeight: null,
@@ -95,6 +99,13 @@
     return `${hundredths/100n}.${String(hundredths%100n).padStart(2,'0')}×`;
   }
 
+  /** Ratio of a trait's basis to the collection floor, truncated exactly: the trait floor, or a sales median / mean. */
+  function basisRatio(trait, collectionFloor) {
+    if(trait.method==='sales-median')return formatRatio(trait.basis[0],trait.basis[1]*collectionFloor);
+    if(trait.method==='floor')return formatRatio(trait.floor,collectionFloor);
+    throw new Error(`No price basis for ${trait.method}`);
+  }
+
   /** 号码档位：只取最高一档；不在任何档内则为 0。 */
   function numberTier(number) {
     if (!Number.isSafeInteger(number) || number < 0) throw new Error(`编号必须是非负整数，实际是 ${number}`);
@@ -151,7 +162,9 @@
    * sales-sourced trait checked (83/83 at block 971546), and every alternative tested misses at least one.
    * No sales gives 0%, matching every official zero-sale trait. history: [[price, height], ...] newest first,
    * including all sales tied at the window boundary; pendingSale is a hypothetical newest sale. If tied sales in one
-   * block make the window ambiguous, every possible window is evaluated and the trait keeps those bounds.
+   * block make the window ambiguous, the trait keeps the bounds of every possible window: the median (two: the mean) never
+   * falls when one sale is dearer, so the cheapest and the dearest choice of tied sales bound all the others.
+   * basis [sum, count] is the exact median or mean of a measured window, for an exact ratio against the floor.
    */
   function recentSalesTier(history,pendingSale,collectionFloorSats) {
     if(!Array.isArray(history))throw new Error('Invalid sale history');
@@ -161,23 +174,44 @@
     const windows=[];
     if(history.length<=need)windows.push([...fixed,...history.map(([p])=>p)]);
     else {
-      const edge=history[need-1][1],newer=history.filter(([,h])=>h>edge).map(([p])=>p),tied=history.filter(([,h])=>h===edge).map(([p])=>p),take=need-newer.length;
-      const pick=(start,chosen)=>{if(chosen.length===take){windows.push([...fixed,...newer,...chosen]);return;}for(let i=start;i<tied.length;i++)pick(i+1,[...chosen,tied[i]]);};
-      if(tied.length>12)throw new Error('Too many same-block sales for one trait');
-      pick(0,[]);
+      const edge=history[need-1][1],newer=history.filter(([,h])=>h>edge).map(([p])=>p),tied=history.filter(([,h])=>h===edge).map(([p])=>p).sort((a,b)=>a-b),take=need-newer.length;
+      windows.push([...fixed,...newer,...tied.slice(0,take)]);
+      if(tied.length>take)windows.push([...fixed,...newer,...tied.slice(tied.length-take)]);
     }
     const c=BigInt(collectionFloorSats);
     const tierOf=(sum,count)=>{const hit=RULES.traitTiers.find(t=>sum*BigInt(t.den)>=c*BigInt(t.num)*BigInt(count));return hit?hit.pct:0;};
     const results=windows.map(w=>{
       if(!w.length)return {pct:0,price:null};
-      const v=[...w].sort((a,b)=>a-b),mid=v.length===2?[v[0],v[1]]:[v[(v.length-1)/2]];
-      return {pct:tierOf(mid.reduce((s,x)=>s+BigInt(x),0n),mid.length),price:Math.floor(mid.reduce((s,x)=>s+x,0)/mid.length)};
+      const v=[...w].sort((a,b)=>a-b),mid=v.length===2?[v[0],v[1]]:[v[(v.length-1)/2]],sum=mid.reduce((s,x)=>s+x,0);
+      return {pct:tierOf(mid.reduce((s,x)=>s+BigInt(x),0n),mid.length),price:Math.floor(sum/mid.length),basis:[sum,mid.length]};
     });
     const pcts=results.map(r=>r.pct),lo=Math.min(...pcts),hi=Math.max(...pcts);
     if(lo!==hi)return {measured:false,method:'sales-ambiguous',basisPrice:null,pctLo:lo,pctHi:hi};
     const r=results[0];
     return r.price===null?{measured:true,pct:0,ratio:null,method:'no-sales',basisPrice:null}
-      :{measured:true,pct:r.pct,ratio:r.price/collectionFloorSats,method:'sales-median',basisPrice:r.price};
+      :{measured:true,pct:r.pct,ratio:r.basis[0]/(r.basis[1]*collectionFloorSats),method:'sales-median',basisPrice:r.price,basis:r.basis};
+  }
+
+  /** What evaluate() reads for one trait, branch by branch: a listed trait its floor, a large zero-listed trait nothing
+   * more, a small one its official basis, carry flag and sales (history and a hypothetical newest sale). */
+  function traitInput(t){
+    if(t.floor!==null)return JSON.stringify(['floor',t.floor]);
+    if(t.supply>=RULES.heldSupply)return JSON.stringify(['held']);
+    return JSON.stringify(['sales',t.officialPct??null,t.officialSource??null,t.carryUnknown===true,t.saleHistory??null,t.pendingSale??null]);
+  }
+  /**
+   * Bounds of one piece's weight change between two evaluations (before → after an action), never mixing worlds: with the
+   * same collection floor and the same inputs for every trait the change is exactly 0; when every unmeasured trait keeps
+   * its inputs, both results move with the same unknown sum and the change is monotone in it, so it lies between the
+   * low-with-low and high-with-high differences; otherwise the cross differences bound it.
+   */
+  function weightChange(before,after,sameFloor){
+    if(before.traits.length!==after.traits.length||before.number.value!==after.number.value)throw new Error('weightChange compares one piece');
+    const pairs=before.traits.map((t,i)=>[t,after.traits[i]]),same=([a,b])=>traitInput(a)===traitInput(b);
+    if(sameFloor&&pairs.every(same))return {lo:0,hi:0};
+    const dl=after.lo.weight-before.lo.weight,dh=after.hi.weight-before.hi.weight;
+    if(sameFloor&&pairs.every(([a,b])=>a.measured&&b.measured||!a.measured&&!b.measured&&same([a,b])))return {lo:Math.min(dl,dh),hi:Math.max(dl,dh)};
+    return {lo:after.lo.weight-before.hi.weight,hi:after.hi.weight-before.lo.weight};
   }
 
   /** Units (25% each) a result contributes; bounds stay separate for ranges. */
@@ -196,15 +230,34 @@
     unitTotals.set(snap,total);return total;
   }
   /** Official per-block rate of one unit (base units): v = floor(poolPerWeek ÷ weekBlocks ÷ K), as the weights endpoint reports. */
+  const rates=new Map();
   function unitRate(K){
     if(!Number.isSafeInteger(K)||K<=0)throw new Error('Programme units must be a positive integer');
-    return Number(BigInt(RULES.poolPerWeekBase)/(BigInt(RULES.weekBlocks)*BigInt(K)));
+    let v=rates.get(K);if(v===undefined){v=Number(BigInt(RULES.poolPerWeekBase)/(BigInt(RULES.weekBlocks)*BigInt(K)));rates.set(K,v);}
+    return v;
   }
   /** Weekly SHNAKAS for `mine` units out of `all` units (both {lo,hi}): units × v × weekBlocks, exactly the official
    * perBlock × 1008. Bounds widen for ranges. */
   function weeklyAllocation(mine,all){
     const week=(u,K)=>{if(!Number.isSafeInteger(u)||u<0)throw new Error('Holding units must be a non-negative integer');return u*unitRate(K)*RULES.weekBlocks/10**RULES.tokenDecimals;};
     return {lo:week(mine.lo,all.hi),hi:week(mine.hi,all.lo)};
+  }
+  /** SHNAKAS one block pays `mine` units out of all programme units: units × v ÷ 10^8, the official per-block figure. */
+  function blockAllocation(mine,all){
+    const block=(u,K)=>{if(!Number.isSafeInteger(u)||u<0)throw new Error('Holding units must be a non-negative integer');return u*unitRate(K)/10**RULES.tokenDecimals;};
+    return {lo:block(mine.lo,all.hi),hi:block(mine.hi,all.lo)};
+  }
+
+  /**
+   * Bounds of a weekly change in one world: before U0 of K0 programme units, after U0 + dU of K0 + dK (units, {lo,hi} each),
+   * so the change is c·[U0·(r(K0 + dK) − r(K0)) + dU·r(K0 + dK)] with r the per-unit rate. It is linear in U0 and monotone in
+   * dU and dK, so their bounds give its extremes; K0 is scanned over its integer range (one value when exact).
+   */
+  function weeklyChangeBounds(U0,dU,K0,dK){
+    const c=RULES.weekBlocks/10**RULES.tokenDecimals;let lo=Infinity,hi=-Infinity;
+    for(let k=K0.lo;k<=K0.hi;k++)for(const u of [U0.lo,U0.hi])for(const du of [dU.lo,dU.hi])for(const dk of [dK.lo,dK.hi]){
+      const v=c*(u*(unitRate(k+dk)-unitRate(k))+du*unitRate(k+dk));if(v<lo)lo=v;if(v>hi)hi=v;}
+    return {lo,hi};
   }
 
   /** 徽章文字：确定值 "+150%"，区间 "+50~150%"。 */
@@ -242,7 +295,8 @@
     if(!Number.isSafeInteger(h)||h<0)throw new Error('Invalid reward-context height');
     const state=h<start?'before':h===start?'boundary':h<=end?'active':h<=RULES.claimUntil?'ended':'closed';
     const index=state==='active'?Math.floor((h-start-1)/W):null;
-    const next=state==='before'?start:state==='boundary'?start+1:state==='active'?start+(index+1)*W+1:null;
+    // Next boundary: the first rewarded block (week 1) before and at the start, the next week's first block while active.
+    const next=state==='before'||state==='boundary'?start+1:state==='active'?start+(index+1)*W+1:null;
     const remaining=next===null?0:next-h,t=snapshot.blockTime;
     const eta=next!==null&&t?.height===h&&Number.isSafeInteger(t.timestamp)?(t.timestamp+remaining*600)*1000:null;
     return {state,start,end,claimUntil:RULES.claimUntil,index,week:index===null?null:index+1,first:index===null?null:start+index*W+1,last:index===null?null:start+(index+1)*W,next,remaining,eta};
@@ -261,9 +315,53 @@
       const firstWeek=Math.max(0,Math.ceil((event[1]-RULES.startBlock)/RULES.weekBlocks));
       if(firstWeek>=RULES.weeks)return {state:'no-future-week',phase,event:event[2],eventHeight:event[1]};
       const eligibleAt=RULES.startBlock+firstWeek*RULES.weekBlocks+1;
-      if(snap.snapshot.height<eligibleAt)return {state:'waiting',phase,event:event[2],eventHeight:event[1],eligibleAt};
+      if(snap.snapshot.height<eligibleAt)return {state:'waiting',phase,event:event[2],eventHeight:event[1],listHeight:event[3],eligibleAt};
     }
     return {state:'unverified',phase};
+  }
+  // Note weeks (official engine): a note created at block h — mint, buy, reclaim or transfer — earns from week index
+  // ceil((h − start) ÷ 1008), 0 when h ≤ start; a note spent at block t — listing or sending — keeps only the weeks before
+  // index floor((t − 1 − start) ÷ 1008). Listing records are [assetId, listing height, close height | null, kind].
+  const startWeek=h=>h<=RULES.startBlock?0:Math.ceil((h-RULES.startBlock)/RULES.weekBlocks);
+  const spendWeek=t=>Math.floor((t-1-RULES.startBlock)/RULES.weekBlocks);
+  const byListing=records=>[...records].sort((a,b)=>a[1]-b[1]||(a[2]??Infinity)-(b[2]??Infinity));
+  /**
+   * A piece's notes from its public listing records, oldest first: the mint note, then one per close (a purchase creates
+   * the buyer's note, a reclaim the lister's new one); each listing spends the note before it. A note earns weeks
+   * firstWeek … lastWeek (week indexes; lastWeek null while unspent). Every piece minted so far was minted before rewards
+   * started, so the mint note earns from index 0; a late mint (RULES.lateMintNumbers) was minted after the start at a block
+   * the records do not show, so its mint note's firstWeek is null (unknown). Records out of chain order are rejected.
+   */
+  function notesOf(records,lateMint=false){
+    if(!Array.isArray(records))throw new Error('Listing records must be an array');
+    const notes=[{created:null,by:'mint',firstWeek:lateMint?null:0,lastWeek:null,spent:null}];
+    for(const [,listing,close,kind] of byListing(records)){
+      const note=notes.at(-1);
+      if(!['active','sale','cancel'].includes(kind)||note.spent||note.created!==null&&listing<note.created||kind!=='active'&&!(close>=listing))throw new Error('Listing records out of chain order');
+      note.spent={listing,close,kind};note.lastWeek=Math.min(RULES.weeks-1,spendWeek(listing)-1);
+      if(kind!=='active')notes.push({created:close,by:kind,firstWeek:startWeek(close),lastWeek:null,spent:null});
+    }
+    return notes;
+  }
+  /**
+   * One owner's run of notes: from the mint or a purchase, through that owner's reclaims (only the lister reclaims), up to
+   * a sale, an open listing or the present. Private transfers are not public: a note received privately looks like part
+   * of the sender's run.
+   * anchor {height, listedAt, seller}: the piece was mine at block `height`, unlisted (listedAt null) or in my listing made
+   * at listedAt. A listing open at the anchor that later sold is unclear — my sale, or the seller's listing I bought —
+   * unless seller is true (that listing is known to be mine).
+   * Returns {state:'held'|'listed'|'sold'|'unclear', notes: the run, sale: {listedAt, soldAt} | null}.
+   */
+  function ownership(records,anchor,lateMint=false){
+    const notes=notesOf(records,lateMint);let at;
+    if(anchor.listedAt!==null){
+      at=notes.findIndex(n=>n.spent?.listing===anchor.listedAt);if(at<0)throw new Error('The anchor listing is not in the records');
+      const l=notes[at].spent;if(l.kind==='sale'&&anchor.seller!==true)return {state:'unclear',notes:[],sale:{listedAt:l.listing,soldAt:l.close}};
+    } else at=notes.findLastIndex(n=>n.created===null||n.created<=anchor.height);
+    let s=at,e=at;while(notes[s].by==='cancel')s--;while(notes[e].spent?.kind==='cancel')e++;
+    const run=notes.slice(s,e+1),end=run.at(-1).spent;
+    return end===null?{state:'held',notes:run,sale:null}:end.kind==='active'?{state:'listed',notes:run,sale:null}
+     :{state:'sold',notes:run,sale:{listedAt:end.listing,soldAt:end.close}};
   }
   /** A block-anchored planning estimate, never a live tip or eligibility deadline. */
   function launchStatus(snapshot) {
@@ -272,5 +370,5 @@
     return {height:RULES.startBlock,remaining,state:remaining?'before':'reached',eta};
   }
 
-  return { RULES, MAX_TRAIT_PCT, traitTier, formatRatio, numberTier, evaluate, evaluateSnapshot, snapshotTraits, recentSalesTier, units, programmeUnits, unitRate, weeklyAllocation, rewardPhase, rewardBoundaries, rewardContext, launchStatus, formatBonus, formatWeight };
+  return { startWeek, spendWeek, notesOf, ownership, RULES, MAX_TRAIT_PCT, traitTier, formatRatio, basisRatio, numberTier, evaluate, evaluateSnapshot, snapshotTraits, recentSalesTier, traitInput, weightChange, units, programmeUnits, unitRate, weeklyAllocation, blockAllocation, weeklyChangeBounds, rewardPhase, rewardBoundaries, rewardContext, launchStatus, formatBonus, formatWeight };
 });

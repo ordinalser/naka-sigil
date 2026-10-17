@@ -1,6 +1,6 @@
 # Naka Sigil visual system
 
-Original stepped shield/crown/violet gaze, graphite surfaces and restrained amber accents fit Shielded Nakas and Ord Dropz. No external artwork, fonts, animation or custom cursor. Primary weights and block height use bitmap digits; labels use readable system monospace with Chinese fallbacks.
+Original stepped shield/crown/violet gaze, graphite surfaces and restrained amber accents fit Shielded Nakas and Ord Dropz. No external artwork or fonts and no custom cursor. Motion is brief and functional — a found card's reveal on the market, a newly added holding's highlight, the Look up sheet's entrance and a loading pulse — and all of it honours reduced motion. Primary weights and block height use bitmap digits; labels use readable system monospace with Chinese fallbacks.
 
 ## Meaning and hierarchy
 
@@ -23,6 +23,8 @@ The inspection bubble shares an edge with its originating badge (no gap, rounded
 Hover closes in the same pointer-exit event, with no timeout or fade, including when the badge remains focused. Moving through the pointer into the surface preserves inspection without a close timer. Internal evidence scrolling preserves inspection; scrolling elsewhere dismisses it. Keyboard focus, Enter/Space and touch open it; Escape, outside click, viewport resize, scrolling outside the surface and window blur dismiss it. Focused keyboard inspection does not require mouse motion. Text is always created as text nodes.
 
 ## Toolbar popup
+
+*Superseded: the popup became the wallet-style holdings popup in v0.11.0 (below), and Live / Fixed block was removed in v0.11.3. The popup always follows the latest block; a past block is a temporary lookup that never replaces the Live data.*
 
 Primary **Live / Fixed block** controls share one source contract. New installs default to Live, saved explicit modes survive. The two mode buttons lead their own row, clearly apart from the language switch in the header corner, with a short status (pixel square + one line) beside them; failure details and the retained data height are in the status tooltip rather than a diagnostics section. Fixed opens a temporary block-height dialog; Cancel preserves mode/data, and successful confirmation changes both atomically, pausing automatic checks. Query results show the shared mode beside the calculation block; return to Overview to change it. Live receives heartbeats from popup, Compare and market, with 20-second worker keepalive during long batches.
 
@@ -137,3 +139,192 @@ Number entry takes several comma-separated numbers; valid ones are added in inpu
 The popup keeps a34px pixel amount, a short week label/progress, and three secondary metrics. The desktop workspace uses a compact horizontal card: accrued amount left, current rate/projected week/claimable right. Narrow screens stack naturally. No Vault/Showcase actions or repeated explanation paragraphs; reference assumptions and accumulation height are hover details. Pending/error feedback stays visible. Amount formatting does not change calculation precision.
 
 弹窗使用34px像素累计数字，搭配短周标签、进度及三个辅助指标。独立工作台采用紧凑横向卡：累计在左，当前速率、本周预计、可领取在右；窄屏自然纵排。移除保险库、截图展示按钮与重复说明，参考假设和累计区块放到悬停提示；等待和错误反馈仍可见。显示位数调整不改变计算精度。
+
+## Compact amount and weight share (v0.11.2) / 累计与算力占比
+
+Popup amount30px, desktop40px. Weight share is restored beside the primary amount using the existing allocation: unlisted holding units / all catalogue units, not private confirmed reward entitlement. Per-block, projected-week and claimable metrics are compact inline label/value pairs rather than three stacked columns; longer ranges wrap as whole metric groups. No balance or NFT storage changes.
+
+弹窗30px、桌面40px累计数字，旁边恢复总算力占比（未挂单持仓权重单位÷全目录权重单位，非个人已确认奖励份额）。三个辅助指标用紧凑同行标签和数字，较长范围按指标组自然换行。不改变奖励精度或用户NFT存储。
+
+
+## One-band reward hero (v0.11.3) / 单条奖励横幅
+
+The hero is one band: this week's SHNAKAS (pixel figure) on the left; Projected, Weekly and Week share as three equal stats with the same type size on the right (there is no Claimable stat: what is still claimable only the official wallet knows); a 2px week bar; one status line (“5 earning this week · 1 starts next week · 1 listed”). Weight share is one stat among equals instead of a second headline. The extension page header shrank to one band as well: title and intro left, block basis right. Popup 30px figure, desktop 40px.
+
+横幅只有一条：左边本周 SHNAKAS 像素数字；右边“本周预计”“每周”“本周占比”三个等宽、同字号的指标（不设“可领取”：还有多少可领只有官方钱包知道）；下方 2px 周进度条和一行状态（“5 枚计入本周 · 1 枚下周起计 · 1 枚挂单中”）。权重占比不再作为第二个大标题，与其它指标同级。独立页顶部也压成一条：左边标题和简介，右边区块信息。弹窗数字 30px，桌面 40px。
+
+## No layout jumps (v0.11.3) / 加载不抖动
+
+Every state renders the same parts in the same order. A value that cannot be computed yet keeps its slot and is hidden (the figure, its unit, a stat, a tile's amount); the status line says what is loading. Holding tiles always have three caption lines. Artwork elements are cached per place and reused across renders, so refreshes never reload images. A newer block without a newer accumulator keeps the last figure instead of blanking it. Measured: every hero and tile box is identical across loading, failed and loaded states in the popup and on the extension page.
+
+所有状态按相同顺序渲染相同部件。暂时算不出的数值保留位置、隐藏显示（大数字及单位、指标、瓦片金额），状态行说明正在读取。持仓瓦片始终是三行说明。图片元素按位置缓存、跨渲染复用，刷新不会重新加载图片。新块已到但累计表未更新时保留上一块的数字，不清空。实测弹窗和独立页在“读取中/失败/已加载”三种状态下，横幅和每个瓦片的位置尺寸完全一致。
+
+## Every reason names the NFT (v0.11.3) / 原因精确到这一枚
+
+No generic eligibility sentence remains. A tile tooltip, a lookup, a market inspection and the weight card all say what happened to that piece and from which week it counts, with blocks: “listed at block L (week 1), sold at block S: nobody earns that week for this piece; the buyer earns from week 2 (block 972,709)”. A purchase or reclaim inspection says what doing it now means for this week and the next. About lists every case as one row (what happened · this week · later).
+
+不再有笼统的资格说明。瓦片提示、查询页、市场明细和权重卡片都说这一枚发生了什么、从哪一周开始计，并写出区块号；购买或撤单的明细说明“现在做”对本周和下周意味着什么。说明页把每种操作列成一行（发生了什么 · 本周 · 之后）。
+
+## Holdings: weight card, weekly totals, left your vault (v0.11.3) / 持仓：权重卡片、每周收益、已离手
+
+On the extension page a holding's weight opens the market's breakdown card (traits, ratios, number bonus, this NFT's eligibility) plus its average weight over this week from the official accumulator; the rest of the tile opens the listing simulator. Finished weeks appear as a small table once there is one; pieces sold appear under “Left your vault” with the weeks they keep. A holding added while it was listed (not from your own Vault or Wallet page) whose listing then sold asks once whether that was your sale or a listing you bought.
+
+独立页上，持仓的权重数字悬停显示与市场一致的明细卡片（特征、倍数、编号加成、这一枚的资格），并附本周平均权重（官方累计表）；点瓦片其它位置打开挂单模拟。有已结束的周时才显示“每周收益”小表；卖出的 Naka 放在“已离手”，写明保留哪几周。加入时正在挂单（且不是从自己的金库或钱包页加入）的持仓，之后这个挂单成交时只问一次：是你卖出的，还是你买入的。
+
+## Planner by goal (v0.11.3) / 计算器按目标组织
+
+Five tabs, each opening with one line of “I want …” and one of “how”: Best buy (listings that raise my weekly SHNAKAS, best value per 0.001 BTC first, gain split into my holdings now and the bought piece from next week), Reach 400% (select holdings; steps with buy links; my own or a teammate's listing reads “reclaim your listing (free)” automatically), Lock a trait (this block's +100% with the exact listings to buy, and whether a monopoly is possible, with advice once it is), Simulate (my holdings listed with an ask field each and results as you type; any number can be listed, sold or reclaimed; results show K, how many pieces rise or fall, my weekly total and each of my pieces before → after), Team (a name and numbers per teammate, a shared plan with a buyer per purchase and guard lines). The popup's list head links to it as “Planner ↗”.
+
+五个分页，每页先写一行“我想……”和一行“怎么做”：买哪单划算（只列能让我每周增加的挂单，默认按每 0.001 BTC 换来多少排序，增量拆成“现有持仓（成交后立即）”和“买到的这一枚（下周起）”）、冲 400%（点选持仓，按清单购买；自己或队友的挂单自动写成“撤掉自己的挂单（免费）”）、锁定特征（本区块冲 +100% 要买的具体挂单，以及能否垄断、垄断后的建议）、模拟（持仓逐行带挂价输入框，输入即算；也可输入任意编号假设挂单、成交或撤单；结果给出全网 K、多少枚升降、我的每周合计和每一枚前后对比）、组队（每个队友一个名字和编号，队伍方案给出每单购买人和守护线）。弹窗列表头的“特征计算器 ↗”直接打开它。
+
+## Planner, market jumps and readable results (v0.11.4) / 计算器、市场定位与结果可读性
+
+**Jump to the market, not the item page.** Every link to one Naka, buy links above all, opens the collection page with `#naka-find=<number>`: the number goes into the page's own search box, the card is scrolled to and outlined, and a small note at the top says what to look for. When many people are buying, an item page can still offer a piece that was just bought and fail at checkout; the collection grid shows it as sold. Link labels say “View on market ↗” / “Buy ↗”.
+
+**Reach 400%.** Holdings below 400% start selected as blue ✓ chips; other numbers go into one field (commas or spaces). Each card leads with that Naka's weekly SHNAKAS before → after in large type (“▲ 88.35 → 103.53 / week (+14.98)”), then cost, gain per 0.001 BTC, numbered steps, the change across all my holdings and what the pieces bought earn from next week. Listings already being bought appear as muted “no need to buy” steps.
+
+**Lock a trait.** Only traits where acting now raises our weekly SHNAKAS, best gain per 0.001 BTC first. Each card: the trait and tier change, the steps with links, the effect (“▲ Ours +18.82 / week (#2700 gain)”) and the ask below which a later listing undoes it. Every other trait is one line under “Out of reach for now” with its reason: nothing to buy and its sales too low, ours with it already at the 400% cap, or the bonus cancelled by the rise in K.
+
+**Simulate.** Each holding has an ask field and quick asks Floor / 1.5× / 2× / 3× (the chosen one stays pressed). Results use ▲ / ▼ with green / red for rises and falls, give K and how many Nakas move, the safe ask ranges that move nobody (or why none exists), and each of my pieces before → after.
+
+**Team.** One box for every teammate's numbers, no names. Targets are chips marked Me / Teammates. The result reads top-down: how many reach 400% and the total cost; the weekly change of my and my teammates' current holdings; what the pieces bought earn, split by who pays; the steps in order, each tagged I buy / Teammates buy / Shared with the targets it serves; each target before → after (or why it was left out); the K change; guard lines with an optional baseline.
+
+**About.** The cases table has five groups (public actions read automatically, private actions, no effect on eligibility, timing, other), each row giving this week, later and how Naka Sigil knows; a coloured edge marks earns (green), does not earn (red) and context (violet). The popup stacks each row as a card; the extension page shows four columns.
+
+**Market inspection head.** When Compare is full its button reads “Full 4/4 · open Compare ↗”; both buttons then move together to a second row instead of breaking the brand.
+
+**单枚跳转到市场，而不是商品页。** 所有指向某一枚的链接（尤其是去购买）都打开带 `#naka-find=<编号>` 的集合页：编号填进页面自己的搜索框，滚到那张卡片并描边，顶部一条小提示说明看什么。扫货时商品页可能还在卖一枚刚被买走的 Naka，结账才失败；集合网格会直接显示已售。链接文字为“前往市场 ↗”“去购买 ↗”。
+
+**冲 400%。** 未满 400% 的持仓默认选中（蓝色 ✓）；其它编号填在一个框里（逗号或空格分隔）。每张卡片先用大字写这一枚的每周 SHNAKAS 前后对比（“▲ 每周 88.35 → 103.53（+14.98）”），再写花费、每 0.001 BTC 换来的增量、编号步骤、我的全部持仓变化，以及买到的枚数下周起的收益。正在成交确认的挂单以灰色“不用买”步骤显示。
+
+**锁定特征。** 只列现在操作能让我方每周增加的特征，按每 0.001 BTC 的增量排序。每张卡片：特征与档位变化、带链接的步骤、效果（“▲ 我方每周 +18.82（#2700 受益）”）以及之后别人挂出低于多少会打回去。其余特征在“暂时做不到”下各占一行写明原因：没有挂单可买且成交价不够、我方带它的已到 400% 封顶、或加成被 K 的增长抵消。
+
+**模拟。** 每枚持仓有挂价输入框和“地板 / 1.5× / 2× / 3×”快捷挂价（选中的保持按下）。结果用 ▲ / ▼ 和绿 / 红表示升降，给出全网 K 和多少枚变化、不影响任何人的安全挂价区间（没有时说明原因）以及我每一枚的前后对比。
+
+**组队。** 所有队友的编号填进一个框，不需要名字。目标以“我 / 队友”标签的芯片显示。结果自上而下：几枚能到 400% 和总花费；我和队友现有持仓的每周变化；买到的枚数按出钱方拆分的收益；按顺序的步骤，每步标明“我买 / 队友买 / 一起出钱”和帮到哪些目标；每个目标的前后对比（或为什么这次不冲）；K 的变化；可记录基线的守护线。
+
+**说明页。** 情形表分五组（插件自动识别的公开操作、私下操作、不影响资格的操作、时间点、其它），每行写本周、之后和插件怎么知道；左侧色条区分计入（绿）、不计（红）和说明（紫）。弹窗里每行是一张卡片，独立页是四列表格。
+
+**市场明细标题。** 比较已满时按钮写“已满 4/4 · 去比较页 ↗”，两个按钮一起换到第二行，不把品牌名挤断。
+
+## Raise weight, the market card reveal and the block in view (v0.12.0) / 增加权重、市场卡牌揭示与常驻区块
+
+**Last block instead of Weekly.** The hero's third figure was the weekly rate at the current weights: nearly the projection again, and a forecast further out. It is now what the latest block paid the holdings that count this week (units × v ÷ 10⁸), a fact that moves block by block and is the rate the projection extends. Before rewards start the week-1 rate stays, since no block pays yet.
+
+**Raise weight.** The Trait planner is named for its purpose, in the popup link and on the extension page, and keeps four tabs. *Best buy* is for my holdings. *Reach 400%* starts with every holding below 400% selected, with quiet All / None links that never outshine the chips; numbers added beside my holdings (a teammate's or any) are kept on this device, shared with Lock a trait and used nowhere else. The pieces selected get one plan, shown as one table: a row per step in order (buy links, reclaims, listings already closing in grey), a column per piece it takes to 400% with that piece's weight and weekly change in the head, and ● where a step lifts a piece (the traits in its tooltip). Above it: how many reach 400%, the cost, the gain per 0.001 BTC, and the weekly change of my holdings, of the added numbers and of the pieces bought; below it, each piece left out with its reason. *Lock a trait* means owning a trait outright: the traits we can own with the listings to buy, the cost, the bonus after and the weekly change; the traits already ours on one line each; the rest as a table of numbers (bonus now, all, ours, to buy, held by others, unminted, missing). *Simulate* lays each holding out on one line (number and weight, ask with a × to clear it, quick asks) with the result under it, and has Clear all. The Team tab and guard lines are gone: their purpose is covered by the added numbers in Reach 400% and Lock a trait.
+
+**The market reveals the card.** A link to one Naka no longer filters the grid to that card. The page scrolls from the top down to it (loading on the way) and the card is revealed like a drawn card: a turning gold-to-violet rim, a wave of light, sparks, a sweep of shine, and a ribbon with what buying it gives (after-sale weight, my weekly change). Its cheaper and dearer neighbours stay in view. A card someone is already buying gets a grey rim and a note instead of a celebration. With reduced motion the card is framed without movement.
+
+**Listings closing.** A listing already being bought or reclaimed carries a small Selling / Reclaiming tag on its badge and a note at the top of its inspection; my own listing in that state says so in its holding line.
+
+**The block stays in view.** The extension page's sticky top bar carries the block, its age and Live, so the block every figure follows stays visible while scrolling through Raise weight. The listings section no longer has its own Raise my weight filter: Best buy does that job (the market page keeps its filter).
+
+**最新一块代替每周。** 横幅第三个数原来是按当前权重算的每周速率：几乎就是“本周预计”的另一种说法，而且预测得更远。现在显示最新一块分给本周计入持仓的数量（单位 × v ÷ 10⁸），是事实，每块随挂单变化，也正是“本周预计”往后外推用的速率。奖励开始前没有区块在发，仍显示第 1 周起的每周速率。
+
+**增加权重。** 特征计算器按用途改名为“增加权重”（弹窗链接和独立页都改），保留四个分页。买哪单划算针对我的持仓。冲 400% 默认选中所有未满 400% 的持仓，旁边是不抢眼的“全选 / 全不选”；“增加任意（队友）编号”保存在本机，与锁定特征共用，不影响其它页面。选中的几枚合起来算一份方案，用一张表展示：每行一步（购买链接、撤单、灰色的已在成交或撤单中的挂单），每列一枚能冲到 400% 的 Naka，表头写它的权重和每周变化，● 表示这一步帮到它（悬停看特征）。表上方是几枚可到 400%、花多少、每 0.001 BTC 换来多少，以及我的持仓、添加的编号、买到的枚数各自的每周变化；表下方逐条写这次没冲的及原因。锁定特征就是整个垄断一个特征：能垄断的写出要买的挂单、花费、垄断后的加成和每周变化；已经垄断的各占一行；其余用数字表格列出现在加成、共、我们、可买、别人持有、未铸造和还差。模拟每枚持仓一行（编号和权重、带 × 清空的挂价框、快捷挂价），结果在下方，并有“全部清空”。组队分页和守护线去掉：用途已经由冲 400% 和锁定特征里的添加编号覆盖。
+
+**市场页揭示卡片。** 跳到某一枚不再把网格筛成一张卡。页面从顶部滑到那张卡片（边滑边加载），像抽到一张卡一样揭示：金到紫的旋转边框、一圈光波、火花、一道扫光，以及写着买入后权重和我每周增量的横幅；前后便宜和更贵的挂单都还在眼前。别人正在买的卡片用灰色边框和提示代替庆祝。开启“减少动态效果”时只显示静止的边框。
+
+**成交中的挂单。** 正在被买或正在撤单的挂单，徽章上有“成交中 / 撤单中”小标签，明细顶部有说明；我自己处在这种状态的挂单，持仓说明里也会写明。
+
+**区块常驻。** 独立页的常驻顶栏里放区块号、出块时间和“实时”，滚动到增加权重时也能看到所有数字依据的区块。“市场挂单”去掉自己的“增加我的权重”筛选：买哪单划算已经做这件事（市场页上的筛选保留）。
+
+
+## The popup's four tabs, Raise weight as answers, and plans one row per piece (v0.12.1) / 弹窗四个分页、增加权重给结论、冲 400% 一枚一行
+
+**Four tabs, Look up in the header.** The popup's tabs are Holdings, Raise weight, Block and About. Looking up a number is used often but is not a tab of its own: a magnifier beside the language switch opens it as a page of its own, with Back and its title in place of the brand. Compare lives on that page under the lookup, with its way to the full comparison. A result opened from the search page goes Back to it with the number kept and selected; one opened from a holding tile goes Back to Holdings.
+
+**Raise weight in the popup gives answers, the page does the work.** The tab shows two cards and two lines, each leading to its place on the extension page. *Best buy*: the three listings adding the most weekly SHNAKAS per 0.001 BTC, each opening its card on the market. *Reach 400%*: the three pieces whose own plan gives most per BTC (weight before → 400%, cost and purchases, our weekly gain), each opening that plan, unfolded, on the page. *Lock a trait*: one line (how many traits buying listings makes ours and from what cost, or the closest one and how many pieces it still lacks). *Simulate*: one line. Everything is computed only while the tab is shown, after it has painted, and kept per block, holdings, added numbers and language. Without holdings the tab asks for one, with the same Add button as Holdings.
+
+**Reach 400%: one row per piece.** Each piece below 400% (holdings and added numbers) is one row with its own cheapest plan: weight before → 400% (or the most it can reach), cost with the number of purchases and reclaims, this piece's weekly SHNAKAS before → after, ours in all per week (the change of our pieces plus what the pieces bought earn from next week) and that total per 0.001 BTC; rows are sorted by that value, free plans first and pieces out of reach last. A row unfolds its numbered steps (each with the traits it lifts) and what the plan changes. Nothing is ticked at first; ticking two or more shows one combined plan above the table, its steps numbered with chips naming the pieces each one lifts, how many reach 400%, the cost beside the plans one by one added up, and the weekly changes. All / None are quiet text. The numbers added beside my holdings sit in one compact bar: label, field, Add, the numbers with ×, and a short note.
+
+**Lock a trait: the way, not only the gap.** Three groups. *Ours once the listings are bought*: cards with the listings to buy, the cost, the bonus after and the weekly change. *Already ours*. *Needs a private deal too*: one card per trait, fewest missing first, with the listings to buy, the numbers others hold unlisted (or just bought) as a wanted list with **Copy numbers** (written as `#379, #1025`, which the number fields here and most chats read), and unminted numbers. A long wanted list shows its first 24 with Show all; only the first 12 traits show until asked. The traits are those of our pieces: at block 971,815 no trait had every piece listed, so a trait none of ours carries cannot be owned by buying listings alone.
+
+**Hero order and the cursor.** The hero reads Last block → Projected → Week share. Help text no longer turns the cursor into a question mark: things that can be clicked show a pointer and everything else the ordinary arrow, as on the extension page; hover text stays.
+
+**About: what to do and what it means.** The cases drop the column that said how the extension knows. Each row is the action, this week and later weeks, marked by a small square (green counts, red does not, violet explains); the popup stacks the two answers with small labels, the extension page uses three columns with one header row.
+
+**四个分页，查询放顶栏。** 弹窗分页为持仓、增加权重、区块、说明。查询编号常用但不单独占一个分页：语言切换旁的放大镜打开查询页（二级页，左上角返回，标题代替品牌名），比较放在查询页里查询的下方，并能跳到完整比较。从查询页打开的结果返回查询页并保留、选中编号；从持仓卡片打开的结果返回持仓。
+
+**弹窗里的增加权重只给结论，独立页做完整规划。** 两张卡片加两行入口，各自通往独立页对应位置。买哪单划算：每 0.001 BTC 换来每周增量最多的 3 单，点开就是市场上的那张卡。冲 400%：单独冲最划算的 3 枚（现在权重 → 400%、花费和买几单、我们每周合计），点开就是独立页上展开的那一行。锁定特征一行（买下挂单就能垄断的有几个、最低多少钱；或者最接近的一个还差几枚）。模拟一行。只在打开这个分页时、画完之后才计算，按区块、持仓、添加的编号和语言缓存。没有持仓时提示先添加，按钮与持仓页相同。
+
+**冲 400%：一枚一行。** 每枚未满 400% 的（持仓和添加的编号）一行，是它单独冲的最省钱做法：现在权重 → 400%（够不到的写最高多少），花费和买几单、撤几单，这一枚每周前后，我们每周合计（持仓的变化加上买到的几枚下周起的收益）和每 0.001 BTC 换来多少；按性价比排序，免费的在前，够不到的在最后。点一行展开带编号的步骤（每步写提升哪些特征）和效果。默认不勾选；勾选两枚以上，表格上方出现合并方案：带编号的步骤，每步用小标签写帮到哪几枚，几枚可到 400%，花费旁写单独方案相加的花费，以及每周变化。“全选 / 全不选”是不抢眼的文字。添加编号收成一行：标签、输入框、添加、带 × 的编号、短说明。
+
+**锁定特征：给办法，不只摆差距。** 分三组。买下挂单就能垄断：卡片写要买的挂单、花费、垄断后加成和每周变化。已经垄断。还要私下收购才能垄断：每个特征一张卡片，差得最少的在前，列出要买的挂单、别人手里没挂单（或刚被买走）的编号（求购清单，带“复制编号”，格式 `#379, #1025`，本插件的编号输入框和大多数聊天都能直接用），以及未铸造的编号。求购清单长时先显示 24 个，可展开；特征先显示 12 个。列出的特征来自我们的 Naka：971,815 区块没有任何特征全部在挂单里，所以我们没有的特征不可能只靠买挂单垄断。
+
+**横幅顺序与光标。** 横幅顺序为最新一块 → 本周预计 → 本周占比。提示文字不再把光标变成问号：能点的显示手指，其它都是普通箭头，与独立页一致；悬停提示照常显示。
+
+**说明：做什么、意味着什么。** 情形表去掉“插件怎么知道”一列。每行是操作、本周、之后各周，用小方块标记（绿计入、红不计、紫说明）；弹窗里两项结果上下排列并带小标签，独立页三列加一行表头。
+
+## Look up as a sheet, Own a trait and copying numbers (v0.12.2) / 查询浮层、垄断特征与复制编号
+
+**Look up is a sheet over the middle.** The magnifier opens Look up and Compare as a sheet between the header and the tab bar; both stay exactly where they are and the tab underneath stays as it was, so nothing jumps. Back closes it (a result opened on the search page goes back to it with the number selected; one opened from a holding tile closes the sheet); a tab closes it and switches; Escape closes it. **Look up at a block** asks for the number itself, filled from the search field or empty, before the reward week and the height, so the dialog works on its own.
+
+**Own a trait** (formerly Lock a trait) says what owning gives and how to get there in two lines, with the tip that adding all holdings and teammates' numbers finds the closest traits. Three groups, each one grid: the trait across, then a label column (buy listed, reclaim, once ours, private deal) and the content; quiet dividers instead of boxes, neutral number chips, an amber-outlined **Copy numbers** in front of "Private deal for N", gold only for the figure that matters. Every row says how long its bonus lasts once owned: 20+ pieces with no listing hold +100% whatever the floors do; a smaller trait holds while the collection floor stays in a stated range (or its sales give no exact range). The keep-listed advice names the line as 3× the collection floor (it moves with the floor), whether to list, keep or reprice, that the piece earns nothing while listed and that anyone can buy it, which ends the monopoly, and our weekly total with and without it. Rows that need a private deal also show the bonus once owned and whether it is stable; a listing of ours that someone is buying shows as "ours · selling".
+
+**Numbers added are never missed.** The bar holds the field, Add and "Saved separately; My holdings are unchanged", then the numbers with × and Remove all (with Undo); every result starts with what it counts ("Counting my 5 holdings + 3 added numbers"), and the popup's Raise weight lists the added numbers under its basis.
+
+**Copying numbers.** Copy all numbers (My holdings, in the popup and on the page) and Copy numbers (a wanted list) give the same text: plain numbers, ascending, comma and space ("6, 314, 888"), which every Add box reads — lists pass between holders and teammates as they are. The control is a quiet text link; it says "Copied N numbers" for a moment.
+
+**Nothing flickers within a block.** The only change within a block is a listing starting to close. Best buy's ranking does not depend on it (its card just leaves such listings out); Reach 400% and Own a trait recompute only when a listing of ours, or one carrying a trait of our pieces, changes, and keep the previous result on screen (dimmed after a moment) until the new one replaces it in place; a lookup result rebuilds only for its own piece.
+
+**The card reveal leaves the card alone.** A 2 px gold rim drawn once around the card in the gutter, one short glow outside it, four tiny sparks in the gutters and the ribbon above; nothing is drawn over the artwork and the card itself is not scaled or brightened. A piece someone is buying gets a grey rim; reduced motion shows the rim and ribbon still.
+
+**查询改成浮层。** 放大镜在顶栏和底部分页之间打开“查询 · 比较”浮层，顶栏和分页位置完全不变，下面的分页保持原样，不再跳动。返回关闭浮层（从查询页打开的结果返回查询页并选中编号；从持仓卡片打开的结果直接关闭）；点任一分页先关浮层再切换；按 Esc 关闭。**按区块查询**的弹窗第一项就是编号，带入查询框的编号，没有就留空，然后才是奖励周和区块高度，弹窗可以单独完成查询。
+
+**垄断特征**（原“锁定特征”）用两句话说明垄断的好处和做法，并提示持仓和队友编号加得越全，越能找到最接近垄断的特征。分三组，每组一张网格：特征名占一行，下面左列是标签（买下挂单、撤单、垄断后、需私下收购），右列是内容；行间只用细线，不再用方框；编号块用中性深灰；“复制编号”是琥珀描边按钮，放在“需私下收购 N 枚”前面；只有关键数字用金色。每一行都写明垄断后加成能维持多久：20 件以上且没人挂单，始终 +100%，与地板无关；少于 20 件的写明集合地板在什么区间内保持（成交依据给不出精确区间时如实说明）。守线建议写明线是集合地板的 3 倍（随地板变）、是新挂、保留还是改价、这枚挂着不计奖且谁都能买走（买走就不再垄断），以及挂和不挂时我们的每周合计。需要私下收购的行也写出垄断后加成和是否稳定；我方正被买走的挂单标“我方·成交中”。
+
+**添加的编号不会被忽略。** 编号栏是输入框、“添加”和“独立保存，不影响我的持仓”，下面是带 × 的编号和“全部移除”（可撤销）；每个结果区开头写明按什么计算（“按我的持仓 5 枚 + 添加的编号 3 枚计算”），弹窗“增加权重”也在依据行下列出添加的编号。
+
+**复制编号。** “复制全部编号”（弹窗和独立页的我的持仓）与“复制编号”（求购清单）格式相同：纯数字、从小到大、逗号加空格（“6, 314, 888”），任何“添加”框都能直接读入，持有人和队友之间可以原样互传。按钮是低调的文字链接，复制后短暂显示“已复制 N 个编号”。
+
+**同一区块内不再闪动。** 区块内唯一的变化是有挂单开始成交或撤单。买哪单划算的排序与它无关（只在显示时去掉这些挂单）；冲 400% 和垄断特征只在我方挂单或带我方特征的挂单状态变化时才重算，并且旧结果一直显示（稍后变暗），算完原地替换；查询结果只在这一枚自己的状态变化时重建。
+
+**卡牌揭示不碰卡片。** 卡缝里一圈 2px 金边描一遍、卡片外一次短暂柔光、卡缝里四颗小火花，横幅在卡片上方；画面上不加任何光效，卡片本身不缩放、不变亮。别人正在买的卡是灰色边框；减少动态效果时只显示静止的边框和横幅。
+
+## Own a trait as a table, wanted posts and the Telegram group (v0.12.3) / 垄断特征改成表格、求购信息与 Telegram 群
+
+**Own a trait reads like Reach 400%.** One table with the same rows, hover, ▸ and unfolded detail: the trait (its value, the type in small grey under it), ours / all, listed, missing (gold), bonus now → once owned (green when it rises, with "stable" or "moves with the collection floor" under it), cost (to own by buying: the listings' total and how many; needing private deals: the listings to buy first), and ours per week. The groups are rows inside the table — ours once the listings are bought, already ours (only when some trait is), needs private deals — and the nearest trait needing private deals starts unfolded. No boxes, no violet; number chips are quiet charcoal.
+
+**Copy → join → paste.** An unfolded trait that needs private deals has one action line: **Copy wanted post** ("求购 87, 826, 1466" / "Want to buy 87, 826, 1466") and right beside it **Post it in the Naka Telegram group ↗**. After copying, the line says the post is copied and the group link turns into the filled amber action for a few seconds, so the next step is the obvious one. Pasted into any Add box, the same post imports its numbers.
+
+**The popup's three answers fit one screen.** Best buy, Reach 400% and Own a trait each show two rows in the same card pattern; Own a trait lists the traits buying makes ours first, then the nearest ones, the number still missing in gold on the right. At 380×600 all three cards are fully visible without scrolling; Simulate is a line below them. The About tab ends with **Join the Telegram group ↗**.
+
+**Number fields.** Every field that takes several numbers reads commas (, ， 、), spaces and line breaks; a pasted multi-line list keeps its breaks as separators, and the field holds all 3,333 numbers.
+
+**垄断特征和冲 400% 一个样子。** 一张表，行高、悬停、▸ 和展开行都与冲 400% 相同：特征（特征值，类型用灰色小字写在下面）、我们 / 共、在售、还差（金色）、加成（现在 → 垄断后，上升为绿色，下面写“稳定”或“随集合地板变”）、花费（买下就能垄断的写挂单合计和单数；需要私下收购的写先买哪几单）、我们每周。三个分组是表里的分组行：买下挂单就能垄断、已经垄断（有才显示）、需要私下收购才能垄断；差得最少的那个默认展开。不再有方框和紫色，编号块是安静的深灰。
+
+**复制 → 进群 → 粘贴。** 需要私下收购的特征展开后只有一行操作：**复制求购信息**（“求购 87, 826, 1466” / “Want to buy 87, 826, 1466”），紧挨着 **进入 Naka Telegram 群求购 ↗**。复制后这一行提示已复制，群链接在几秒内变成实心琥珀色按钮，下一步一眼可见。同一段文字粘贴进任何“添加”框，都能导入这些编号。
+
+**弹窗三个结论一屏可见。** 买哪单划算、冲 400%、垄断特征三张卡片样式相同，各显示两行；垄断特征先列买下就能垄断的，再列最接近的，右侧用金色写还差几枚。380×600 下三张卡片不用滚动就能完整看到，模拟放在下面一行。说明页最后一行是 **进入 Telegram 交流群 ↗**。
+
+**编号输入。** 所有可以输入多个编号的地方都接受逗号（, ， 、）、空格和换行；粘贴多行清单时换行会变成分隔符，输入框能容纳全部 3,333 个编号。
+
+## A holding that sells (v0.12.4) / 持仓卖出之后
+
+**Sold holdings leave on their own, and the popup says so.** Each new block the worker reads the public listing records; a holding listed after it was added and then sold is the owner's sale and moves to Left with the full weeks it held before listing (nothing to delete by hand). While that reward week lasts, a quiet line above the tiles names it: "Sold this week: #888 (block S). Moved to Left", with the weeks still claimable mentioned only when it kept any, and View ↗ to Left on the extension page.
+
+**A sale the records cannot attribute is asked where it shows.** When a piece was added while its listing was already open (not from your own Vault or Wallet page) and that listing sells, the public records look the same whether you sold your listing or bought it. The tile then reads "Confirm sale" instead of a next-week start, and the line above the tiles asks "#1500: listed at block L, sold at block S. Did you sell it or buy it?" with both answers; I sold it moves it to Left, I bought it keeps it. The extension page asks the same through the same rule.
+
+**卖出的持仓自动移走，弹窗会告诉你。** 每出一个新区块，后台都会读公开挂单记录；加入后才挂出、随后成交的持仓就是你卖出的，会自动移到“已离手”，并保留挂单前完整持有的周（不用手动删除）。这一奖励周内，持仓卡片上方用一行灰字写明：“本周卖出 #888（区块 S），已移到已离手”，只有确实保留了完整周时才加上“挂单前完整持有的周仍可领取”，并可点“查看 ↗”到独立页的已离手。
+
+**分不清的成交就地问你。** 如果加入时那一单就已经在挂（不是从你自己的金库或钱包页加入的），之后成交了，公开记录看起来一样，分不清是你卖出了自己的挂单还是你买下了这单。这时卡片显示“待确认”，不再写“下周起”，卡片上方问：“#1500：区块 L 挂单，区块 S 成交。是你卖出还是买入？”并给出两个按钮；选“是我卖出的”就移到已离手，选“是我买入的”就保留。独立页用同一条规则询问。
+
+
+## Tab order, a line you can dismiss, and updating in place (v0.12.5) / 分页顺序、可关掉的提示与原地升级
+
+**Tabs.** The popup's tabs read Holdings, Block, Raise weight, About again: Block sits where it was in the released v0.11, before the newer Raise weight.
+
+**This week's sales, once.** The line above the tiles is now one short muted line without a box: "Sold this week: #888, #1500. Moved to Left", then View ↗ and ×. It names each piece once (one sold twice this week too) and three at most ("#888, #1500, #2700 and 2 more"), in sale order; its tooltip keeps each sale's block and whether full weeks stay claimable, which Left on the extension page also shows. View (it opens the extension page at Left) or × marks this week's sales as seen, so the line stays away until a sale not seen yet, and then names only that one. When the last holding sold, the line stands above the first-run card. Closing it hands the keyboard to the next line, or to Manage; the second click of a double click on × never opens the tile that moved up under it. A question about a sale the records cannot attribute is different: it needs an answer, so it keeps its box until answered. "Left your vault" in the weekly band counts pieces, not sales.
+
+**Updating in place.** Replacing the folder's files and pressing Reload is the way to update; every holding, comparison, added number and setting is kept. If Chrome is only restarted instead, it loads the new pages but keeps running the previous background worker, which cannot produce the data they read. Each page asks the worker which version it runs; when it is not the page's own, the popup and the extension page show one centred Finish the update card (the sigil, one sentence, a Reload the extension button) in place of their content, rather than numbers this version cannot read. The button asks the new worker to open the same page again, since Chrome closes every extension page on reload: the popup reopens on its usual view (Chrome allows that from version 127; earlier it shows on the next click), the extension page at the same section. The upgrade step (drop the retired fixed-mode keys, the last check's status and a public snapshot the new version cannot read, which the next check downloads again) touches no data of the user's, and runs once per version when the new worker first starts, rather than only on Chrome's install event, which a reload after such a restart does not send.
+
+**A reward or none, said plainly.** The Chinese interface no longer says a piece 计入 or 不计 (counts or not) in a week, which read as bookkeeping: the cases table, the line under the weekly figure ("5 枚本周有奖励"), every piece's explanation and the planner's notes now say 有奖励 or 没有奖励 (gets a reward or not), and the schedule names 最后有奖励的区块 (the last block with rewards). English already said earns or nothing.
+
+**分页。** 弹窗分页恢复为持仓、区块、增加权重、说明：区块回到已发布的 v0.11 里的位置，排在后加的增加权重前面。
+
+**本周卖出，只提示一次。** 持仓卡片上方那一行改成没有边框的一行灰字：“本周卖出 #888、#1500，已移到已离手”，后面是“查看 ↗”和“×”（关闭）。每一枚只写一次（本周卖出两次的也一样），最多写出三枚（“本周卖出 #888、#1500、#2700 等 5 枚”），按成交先后排列；悬停仍能看到每笔的成交区块，以及是否还有可领取的完整周，独立页的已离手里也都有。点“查看”（直接打开独立页的已离手）或“×”后，本周这些成交记为已看过，这一行不再出现；之后有还没看过的成交才会重新出现，并且只写新的那一笔。最后一枚持仓也卖出时，这一行显示在首次使用卡片上方。关掉后键盘焦点移到下一条提示或“管理”；双击“×”时第二下不会打开上移到指针下的那张卡片。分不清买卖、需要你回答的那种提示不同，回答之前一直带框显示。本周概览里的“已离手 N 枚”按枚数计，不按成交笔数。
+
+**原地升级。** 升级方法是替换目录里的文件后点“重新加载”，持仓、比较、添加的编号和设置都会保留。如果只是重启了 Chrome，Chrome 会加载新的页面，却继续运行旧版本的后台，新页面需要的数据它给不出来。现在每个页面都会问后台在运行哪个版本；版本不一致时，弹窗和独立页不再显示读不了的数字，而是在中间显示一张“完成更新”卡片（徽记、一句说明、“重新加载插件”按钮）。重新加载时 Chrome 会关闭插件的所有页面，所以按钮会请新后台把同一个页面再打开：弹窗回到平常的界面（Chrome 127 起支持；更早的版本下次点图标时就是正常界面），独立页回到原来的位置。升级步骤只删除早已停用的固定区块模式留下的键、上次检查的状态，以及新版本读不了的公开快照（下次检查会重新下载），不碰任何用户数据；它在新版本后台第一次启动时执行一次，不再只依赖 Chrome 的安装事件，因为这种重启之后再重新加载时 Chrome 不会发出安装事件。
+
+**有没有奖励，直接说。** 中文界面不再用“计入 / 不计”这种像记账的说法：各种操作表、本周概览那一行（“5 枚本周有奖励”）、每一枚的说明和增加权重里的提示，都直接写“有奖励”或“没有奖励”；奖励时间表写“最后有奖励的区块”。英文原本就写 earns / nothing。

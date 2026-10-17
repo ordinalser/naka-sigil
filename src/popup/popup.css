@@ -21,7 +21,7 @@ button,input,a { -webkit-tap-highlight-color:transparent; font:inherit; }
 button,a,input,summary { outline-offset:3px; }
 :focus-visible { outline:2px solid var(--accent); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
-.popup-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; padding:0 6px 5px 0; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#645446 transparent; }
+.popup-scroll,.sheet-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; padding:0 4px 4px 0; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#645446 transparent; }
 .footnote { color:var(--muted); font-size:10px; line-height:1.7; margin-top:9px; overflow-wrap:anywhere; }
 .text-btn { display:inline-block; margin-top:8px; padding:0; background:none; border:0; color:var(--accent); font-size:11px; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
 .field { width:100%; min-width:0; min-height:38px; padding:9px 8px; background:#080808; border:1px solid var(--line); color:var(--text); border-radius:0; font-size:12px; clip-path:var(--notch); }
@@ -49,9 +49,6 @@ button,a,input,summary { outline-offset:3px; }
 /* ------------------------------------------------------------ Mode row: buttons lead, short status follows (details on hover) */
 .live-primary { flex:none; margin:0 0 10px; padding:7px 0; background-image:var(--dots),var(--dots); background-size:4px 1px; background-repeat:repeat-x; background-position:0 0,0 100%; }
 .mode-line { display:flex; align-items:center; gap:12px; }
-.mode-options { display:flex; border:1px solid #514536; clip-path:var(--notch); }
-.mode-options button { padding:5px 11px; background:transparent; color:var(--muted); border:0; font-size:11px; cursor:pointer; }
-.mode-options button[aria-pressed=true] { background:var(--accent); color:#21170c; font-weight:700; }
 .live-state { display:flex; align-items:center; gap:6px; flex:1; min-width:0; min-height:12px; margin:0; color:var(--muted); font-size:9px; line-height:1.35; }
 .live-state::before { content:''; flex:none; width:6px; height:6px; background:currentColor; }
 .live-state--ok { color:#96d6a5; }
@@ -119,7 +116,6 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
 .lookup-compare[data-compare=full] { color:#d3cabc; border-style:dashed; }
 
 /* ------------------------------------------------------------ Fixed-block dialog (height editing is temporary) */
-#syncForm { display:flex; gap:7px; margin-top:8px; }
 #syncHint { margin-top:5px; font-size:9px; line-height:1.35; }
 .status--done { color:#96d6a5; }
 .status--running,.status--interrupted { color:var(--warn); }
@@ -135,34 +131,23 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
 #fixedDialog .status { margin-top:12px; font-size:10px; }
 #fixedDialog button:disabled { opacity:.5; cursor:default; }
 
-/* ------------------------------------------------------------ Query: quiet navigation, a full-height result, then its action.
-   Mode is read beside the calculation block; settings stay on Overview. */
-.has-lookup { padding:12px; }
-.has-lookup .head { padding:0 0 8px; margin-bottom:8px; background-image:var(--dots); background-size:4px 1px; background-repeat:repeat-x; background-position:0 100%; }
-.has-lookup .lookup-back { display:inline-flex; }
-.has-lookup .sigil-frame,.has-lookup .brand,.has-lookup .block-chip,.has-lookup .tabbar,.has-lookup .lookup-how { display:none; }
-.has-lookup .segmented { margin-left:auto; }
-.has-lookup .segmented { margin:0 0 0 auto; }
-.has-lookup .live-primary { margin-bottom:8px; padding:0 84px 8px 0; background-image:var(--dots); background-position:0 100%; }
-.has-lookup .mode-options,.has-lookup .live-state { display:none; }
-.has-lookup .compare-panel { display:none; }
-.has-lookup .view-explore { flex:1; min-height:0; }
-.has-lookup #lookupTitle { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
-.has-lookup .popup-scroll { display:flex; flex-direction:column; padding:0; scrollbar-gutter:auto; }
-.has-lookup .lookup-section { display:flex; flex-direction:column; flex:1; min-height:0; margin:0; }
-.has-lookup #lookupForm { flex:none; }
-.has-lookup #lookupResult[data-state=found] { display:flex; flex:1; min-height:0; margin-top:8px; }
-.has-lookup .lookup-card { display:flex; flex-direction:column; flex:1; min-width:0; margin:0; padding:8px; }
+/* ------------------------------------------------------------ A result in the sheet (.has-lookup): the number field stays,
+   the result card and its actions follow at their natural height and scroll with the sheet; the heading, the how-to line
+   and Compare step aside. Mode is read beside the calculation block. */
+.has-lookup .lookup-how,.has-lookup .compare-panel { display:none; }
+.has-lookup .lookup-section { margin:0; }
+.has-lookup #lookupResult[data-state=found] { margin-top:8px; }
+.has-lookup .lookup-card { display:flex; flex-direction:column; min-width:0; margin:0; padding:8px; }
 .has-lookup .lookup-head { gap:6px; margin-bottom:4px; font-size:13px; }
 .has-lookup .lookup-link { font-size:10px; }
-.has-lookup .naka-purchase { display:flex; flex-direction:column; flex:1; min-height:0; }
+.has-lookup .naka-purchase { display:flex; flex-direction:column; }
 .lookup-context { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .lookup-height,.lookup-time { display:inline; }
 .lookup-time { color:#938e9c; font-size:9px; margin-left:6px; }
 .lookup-mode { flex:none; align-self:flex-start; padding:2px 5px; border:1px solid #5f506c; color:#cfc0e2; font-size:9px; }
 .lookup-mode[data-state=error] { border-color:#8a4f47; color:var(--red); }
 .has-lookup .naka-listing { margin-top:6px!important; }
-.has-lookup .naka-compare { flex:1; margin:3px 0; }
+.has-lookup .naka-compare { margin:3px 0; }
 .has-lookup .naka-compare th,.has-lookup .naka-compare td { padding:1px 4px; }
 .has-lookup .naka-compare .naka-compare__total td { padding:4px 6px; }
 .has-lookup .naka-weight__pixels { height:24px; }
@@ -172,14 +157,9 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
 .has-lookup .naka-compare__ratio { margin-top:1px; }
 .has-lookup .naka-purchase__caution p { margin-top:2px!important; }
 .has-lookup .naka-purchase__caution { margin-top:3px; padding-top:3px; }
-.has-lookup #lookupCompare { flex:none; width:100%; min-height:34px; margin-top:8px; font-size:11px; }
-.has-lookup #lookupCompare:focus-visible { outline-offset:-3px; }
 
 /* Short windows keep the same hierarchy with a compact, complete ledger. */
 @media (max-height:520px) {
-  .has-lookup { padding:8px; }
-  .has-lookup .segmented button { min-height:28px; padding:4px 7px; font-size:10px; }
-  .has-lookup .live-primary { margin-bottom:7px; padding-bottom:6px; }
   .has-lookup .field,.has-lookup .btn { min-height:32px; padding-top:6px; padding-bottom:6px; font-size:11px; }
   .has-lookup .lookup-prefix { top:5px; }
   .has-lookup #lookupResult[data-state=found] { margin-top:6px; }
@@ -198,19 +178,19 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
   .has-lookup .naka-compare__name { font-size:10px; line-height:1.2; }
   .has-lookup .naka-compare__ratio { line-height:1.05; margin-top:1px; }
   .has-lookup .naka-purchase__caution { margin-top:3px; padding-top:2px; }
-  .has-lookup #lookupCompare { min-height:30px; margin-top:6px; }
 }
 
 /* One historical-lookup dialog, shared with the existing fixed-block controls. */
 .lookup-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}.lookup-heading #lookupTitle{margin:0!important}.lookup-heading .text-btn{font-size:10px;flex:none}.has-lookup .lookup-heading{display:none}
 button.lookup-mode{background:transparent;font-family:inherit;line-height:inherit;cursor:pointer}button.lookup-mode:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
-#fixedDialog{max-height:calc(100% - 32px);overflow:auto}.fixed-label{display:block;color:var(--muted);font-size:10px;margin:12px 0 5px}#rewardBoundary{width:100%;font-size:11px;height:34px;padding:5px 7px}#historyNumberRow[hidden]{display:none}#historyNumber{width:100%;height:38px}#fixedDialog .fixed-actions{gap:12px}#fixedDialog .fixed-actions .btn{font-size:11px}
+#fixedDialog{max-height:calc(100% - 32px);overflow:auto}.fixed-label{display:block;color:var(--muted);font-size:10px;margin:12px 0 5px}#rewardBoundary{width:100%;font-size:11px;height:34px;padding:5px 7px}.history-field{position:relative}#historyNumber{width:100%;height:38px;padding-left:26px}#historyNumber[aria-invalid=true]{border-color:var(--red)}#fixedDialog .fixed-actions{gap:12px}#fixedDialog .fixed-actions .btn{font-size:11px}
 @media(max-height:520px){.lookup-heading{margin-bottom:7px}#fixedDialog{padding:12px}.fixed-label{margin-top:8px}#fixedDialog .fixed-actions{margin-top:10px}}
 
 /* Query actions: compare and holdings side by side under the result. */
 .lookup-actions { display:flex; gap:8px; margin-top:8px; }
 .lookup-actions > button { flex:1; min-width:0; }
-.has-lookup .lookup-actions #lookupCompare,.has-lookup .lookup-actions #lookupHolding { flex:1 1 0; width:auto; margin-top:0; min-height:34px; font-size:11px; }
+.has-lookup .lookup-actions #lookupCompare,.has-lookup .lookup-actions #lookupHolding,.has-lookup .lookup-actions #lookupPlan { flex:1 1 0; width:auto; margin-top:0; min-height:34px; font-size:11px; }
+.lookup-plan { color:#d6cbea; border-color:#5d4f78; background:#1f1a29; }
 .lookup-holding[aria-pressed=true] { color:#9ce0bc; border-color:#58866b; background:#183125; }
 /* ------------------------------------------------------------ Wallet-style shell: header, one view at a time, bottom tab bar.
    Palette: neutral charcoal cards; one hero figure in gold; orange-gold for actions; green only for "live / gain";
@@ -222,9 +202,33 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .sub { margin-top:3px; color:#c0b4d3; font-size:9px; }
 .segmented { align-self:center; margin:0; }
 .segmented button { min-height:26px; padding:4px 7px; font-size:10px; }
-.lookup-back { display:none; }
-/* The scroll area keeps its content exactly as wide as the header; the thin scrollbar sits in the body padding. */
-.popup-scroll { margin-right:-12px; padding:0 4px 4px 0; }
+/* Header: the magnifier opens Look up as a sheet over the middle and stays pressed while it is open. */
+.head-search { flex:none; display:grid; place-items:center; width:28px; height:28px; padding:0; background:transparent; border:1px solid var(--line); color:#a49e95; cursor:pointer; clip-path:var(--notch); }
+.head-search:hover { color:var(--accent); border-color:#79603d; }
+.head-search[aria-expanded=true] { color:var(--accent); border-color:#79603d; background:#28221a; }
+.head-search svg { display:block; width:14px; height:14px; }
+/* The magnifier and Back take focus when the sheet opens or closes; their pixel clip-path would cut a ring drawn outside. */
+.head-search:focus-visible,.lookup-back:focus-visible { outline-offset:-3px; }
+/* The middle, between the header rule and the tab bar: the tab in use scrolls here, and Look up opens over it as a sheet.
+   It reaches 12px into the body padding on the right, where the thin scrollbar sits. */
+/* The previous worker still runs (files replaced, extension not reloaded): one card in place of the views and tabs. */
+.update-card { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin:0 12px 0 0; padding:28px 24px; background:var(--card); border:1px solid var(--card-line); border-top:2px solid #ffcf6b; text-align:center; }
+.update-card[hidden] { display:none; }
+.update-sigil { color:var(--accent); margin-bottom:6px; }
+.update-sigil .pixel-sigil { width:48px; height:56px; }
+.update-card h2 { font-size:16px; }
+.update-card p { max-width:290px; color:var(--muted); font-size:11px; line-height:1.6; }
+.update-card p span { display:block; }
+.update-reload { width:100%; max-width:290px; margin-top:10px; padding:10px; font-size:12px; }
+.update-card .update-hint { color:#8f877c; font-size:10px; }
+.stage { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; margin-right:-12px; }
+/* The sheet covers the whole middle; the tab underneath stays rendered (inert), so nothing moves when it opens or closes. */
+.sheet { position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; background:var(--bg); animation:sheet-in .14s ease-out; }
+@keyframes sheet-in { from { opacity:0; transform:translateY(-6px); } }
+@media (prefers-reduced-motion:reduce) { .sheet { animation:none; } }
+.sheet-head { flex:none; display:flex; align-items:center; gap:10px; margin:0 12px 8px 0; padding-bottom:8px; background-image:var(--dots); background-size:4px 1px; background-repeat:repeat-x; background-position:0 100%; }
+.sub-title { flex:1; min-width:0; font-size:13px; }
+.sheet-scroll { display:flex; flex-direction:column; gap:8px; }
 .view { display:flex; flex-direction:column; gap:8px; }
 .view[hidden] { display:none !important; }
 :root { --card:#1a1918; --card-line:#2e2a25; --gold:#ffd25e; }
@@ -257,8 +261,8 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 
 /* Home · first run: a preview of what holdings will look like (the weekly figure at zero, four empty tiles), one
    primary action, and the two Ord Dropz pages that add a whole page at once. The card fills the view. */
-body:not(.has-lookup) .popup-scroll { display:flex; flex-direction:column; }
-body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
+.popup-scroll { display:flex; flex-direction:column; }
+.popup-scroll > .view { flex:1 0 auto; }
 .holdings-empty { display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:14px; flex:1 0 auto; padding:18px 16px; background:var(--card); border:1px solid var(--card-line); border-top:2px solid #ffcf6b; }
 .empty-preview { display:flex; flex-direction:column; gap:10px; padding:12px; background:#151413; border:1px dashed #3a332b; }
 .empty-preview .hc-value { color:#6f6658; }
@@ -310,7 +314,6 @@ body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
 
 /* Block tab: mode, the block card, the reward schedule and history lookup. */
 .mode-row { display:flex; align-items:center; gap:10px; }
-.mode-row .mode-options button { padding:5px 12px; font-size:11px; }
 .mode-row .live-state { flex:1; }
 .view-block .snapshot-card { margin:0; padding:11px 12px; background:var(--card); box-shadow:none; border:1px solid var(--card-line); border-top:2px solid var(--accent); }
 .height-line { display:flex; align-items:center; gap:8px; padding:4px 0 2px; }
@@ -357,6 +360,7 @@ body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
 .compare-gain { color:#9ce0bc !important; }
 .compare-gain[data-change=down] { color:var(--red) !important; }
 .compare-gain[data-change=same] { color:var(--muted) !important; }
+.compare-gain[data-change=unknown] { color:#e8c58c !important; }
 .compare-weight { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
 .compare-weight small { color:var(--muted); font-size:9px; }
 .compare-weight .naka-weight__pixels { height:18px; }
@@ -395,15 +399,17 @@ body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
 .about-body .naka-about__tile { padding:8px 2px; }
 .about-links { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin-top:12px; color:var(--muted); font-size:10px; }
 .about-links a { color:var(--accent); font-size:10px; }
+/* The last line: the community group on Telegram, a quiet link just under the folds. */
+.about-tg { margin-top:-6px; padding:0 2px; font-size:10px; }
+.about-tg a { color:var(--accent); }
 
-/* Bottom tab bar: three jobs, one font, pixel icons. */
+/* Bottom tab bar: four jobs, one font, pixel icons. */
 .tabbar { flex:none; display:grid; grid-template-columns:repeat(4,1fr); margin:4px -16px -16px; padding:6px 8px 8px; background:#151413; border-top:1px solid #3a332b; }
 .tabbar button { position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; padding:5px 0 3px; background:none; border:0; color:#8f877c; font-size:10px; cursor:pointer; }
 .tabbar button:hover { color:var(--text); }
 .tabbar button[aria-current=true] { color:var(--accent); }
 .tabbar button[aria-current=true]::before { content:''; position:absolute; top:-7px; left:32%; right:32%; height:2px; background:var(--accent); }
 .tab-icon svg { display:block; width:18px; height:18px; }
-.tab-badge { position:absolute; top:1px; left:calc(50% + 7px); min-width:14px; padding:0 3px; background:var(--accent); color:#21170c; font-size:9px; font-weight:700; line-height:13px; text-align:center; }
 /* Add-a-number dialog: same frame as the fixed-block dialog. */
 #addDialog { width:calc(100% - 32px); max-width:348px; margin:auto; padding:18px; background:var(--panel); color:var(--text); border:1px solid #75644c; border-top:3px solid var(--accent); box-shadow:6px 6px #0008; }
 #addDialog::backdrop { background:#080708b8; }
@@ -423,13 +429,80 @@ body:not(.has-lookup) .view:not([hidden]) { flex:1 0 auto; }
 .view-block .schedule { gap:5px; }
 .add-hint { margin:6px 0 0; color:#8f877c; font-size:10px; }
 
-/* A holdings breakdown adds real content: keep the ledger's natural height and
- * scroll inside the fixed popup instead of flex-shrinking Chinese lines into one another. */
-.has-lookup .popup-scroll { display:block; }
-.has-lookup .view-explore,.has-lookup .lookup-section { display:block; flex:none; }
-.has-lookup #lookupResult[data-state=found] { display:block; flex:none; }
-.has-lookup .lookup-card,.has-lookup .naka-purchase,.has-lookup .naka-compare { flex:none; }
-.has-lookup .naka-purchase > * { flex-shrink:0; }
-.has-lookup .naka-purchase__caution,.has-lookup .naka-holdings { flex-shrink:0; }
+/* Fixed Block mode is history-only; the mode switch stays hidden. */
+/* The reward hero carries its own frame. */
+.holdings-hero:has(.naka-reward) { padding:0; background:none; border:0; }
+.hc-figure:has(.naka-reward) { display:block; }
+/* Tile caption: three fixed lines (number and weight, this week's SHNAKAS, status). Hidden values keep their line. */
+.hc-earn.is-blank { visibility:hidden; }
+.hc-sub { grid-column:1 / -1; min-height:11px; color:#8f877c; font-size:8px; line-height:1.35; overflow:hidden; text-overflow:ellipsis; }
+.hc-sub--waiting { color:#c4b5fd; }
+.hc-sub--listed,.hc-sub--paused { color:#c9a36b; }
+.hc-sub--gone,.hc-sub--ended,.hc-sub--unknown { color:#a49e95; }
+.hc-tile[data-status=waiting] .hc-earn { color:#a79fc0; }
 
-.mode-options,#modeFixed,#modeLive{display:none!important}.hc-figure:has(.naka-reward-miner){display:block;padding:0}.hc-accrued{grid-column:1/-1;font-size:8px;color:#c9b99b;line-height:1.4}.holdings-hero:has(.naka-reward-miner){padding:0;background:transparent}
+/* Raise weight: the answers in three cards of two rows (best buy, reach 400%, own a trait), compact enough that all three
+   show on the popup's first screen, then one line for Simulate; every part opens its place on the extension page. Same
+   charcoal cards and pixel titles as the other tabs. */
+.view-raise { gap:8px; }
+.raise-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.raise-head h2 { font-size:12px; }
+.raise-basis { margin-top:-4px; color:var(--muted); font-size:10px; }
+/* Which added numbers the answers count as ours: one line, so the cards stay on the first screen however many there are. */
+.raise-scope { margin-top:-4px; color:var(--muted); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.raise-body { display:flex; flex-direction:column; gap:8px; }
+/* Cards being recomputed stay readable; a dim appears only if the work takes a noticeable moment. */
+.raise-body[aria-busy=true] > * { opacity:.55; transition:opacity .2s .25s; }
+.raise-card { display:flex; flex-direction:column; gap:5px; padding:7px 10px 8px; background:var(--card); border:1px solid var(--card-line); }
+.raise-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.raise-card-head h3 { margin:0; font-size:11px; }
+.raise-card-head .list-link { padding:0; }
+.raise-row { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; padding:3px 7px 3px 3px; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; text-decoration:none; cursor:pointer; }
+.raise-row:hover { border-color:#8a6d3d; }
+.raise-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.raise-art { display:block; width:32px; height:32px; background:#0c0b0b; }
+.raise-art img,.raise-art .hc-fallback { display:block; width:32px; height:32px; image-rendering:pixelated; color:var(--accent); }
+.raise-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.raise-info strong { display:flex; align-items:baseline; gap:6px; min-width:0; font-size:11px; white-space:nowrap; }
+.raise-info small { color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.raise-to { color:#9ce0bc; }
+.raise-tag { padding:0 3px; border:1px solid #5d5296; color:#cfc6ff; font-size:8px; font-weight:400; line-height:12px; }
+/* Own a trait: the value in full (cut short only when it alone is too long); its type follows on the same line when all
+   of it fits, otherwise it wraps out of sight (the row's title names both). */
+.raise-trait { flex-wrap:wrap; max-height:1.5em; overflow:hidden; }
+.raise-value { flex:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.raise-type { color:var(--muted); font-size:9px; font-weight:400; }
+.raise-gain { display:flex; flex-direction:column; align-items:flex-end; gap:1px; white-space:nowrap; }
+.raise-gain b { color:#9ce0bc; font-size:13px; line-height:1.3; }
+.raise-gain small { color:var(--muted); font-size:9px; }
+/* The figure: a weekly gain in mint (above), a loss red, no change muted, a range across zero amber; the pieces a trait
+   still lacks gold. */
+.raise-gain[data-tone=down] b { color:var(--red); }
+.raise-gain[data-tone=same] b { color:var(--muted); }
+.raise-gain[data-tone=unknown] b { color:#e8c58c; }
+.raise-gain[data-tone=missing] b { color:var(--gold); }
+.raise-note { color:var(--muted); font-size:10px; line-height:1.55; }
+.raise-link { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:baseline; gap:10px; padding:7px 10px; background:var(--card); border:1px solid var(--card-line); color:var(--text); font:inherit; font-size:10px; text-align:left; cursor:pointer; }
+.raise-link::after { content:'›'; color:#8f877c; font-size:14px; line-height:1; }
+.raise-link strong { font-size:11px; white-space:nowrap; }
+.raise-link span { color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.raise-link:hover strong,.raise-link:hover::after { color:var(--accent); }
+.raise-empty { display:flex; flex-direction:column; gap:12px; padding:16px 14px; background:var(--card); border:1px solid var(--card-line); color:var(--muted); font-size:11px; line-height:1.6; }
+
+/* Holdings notes above the tiles: a sale only the owner can attribute (asked in place) and pieces sold this week that moved
+   to Left. Quiet lines; the question carries the only buttons. */
+.hc-notes { display:flex; flex-direction:column; gap:6px; }
+.hc-notes:empty { display:none; }
+.hc-note { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin:0; padding:6px 8px; background:#161514; border:1px solid var(--card-line); color:var(--muted); font-size:10px; line-height:1.5; }
+.hc-note--ask { border-left:2px solid var(--warn); color:#e8dccb; }
+.hc-note-actions { display:flex; gap:6px; }
+.hc-note-btn { padding:2px 8px; background:transparent; border:1px solid #79603d; color:#ffbd62; font:inherit; font-size:10px; cursor:pointer; }
+.hc-note-btn:hover { background:#28221a; border-color:#ffb347; }
+.hc-note .inline-error { flex-basis:100%; margin:0; }
+/* This week's sales: one muted line without a box, View and × at its end; the tooltip has the blocks. */
+.hc-note--left { flex-wrap:nowrap; align-items:center; gap:8px; padding:0; background:none; border:0; }
+.hc-note-text { flex:1; min-width:0; }
+.hc-note-close { flex:none; display:inline-grid; place-items:center; min-width:24px; min-height:24px; margin:-5px -6px -5px -4px; padding:0; background:none; border:0; color:var(--muted); font:inherit; font-size:12px; line-height:1; cursor:pointer; }
+.hc-note-close:hover { color:var(--text); }
+.hc-sub--confirm { color:var(--warn); }
+

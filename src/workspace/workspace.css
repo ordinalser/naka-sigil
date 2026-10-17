@@ -24,46 +24,58 @@ button:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible,[
 .ws-brand svg{width:24px;height:28px;color:var(--gold)}
 .ws-version{padding:1px 6px;border:1px solid #4a4250;color:#bfb2d6;font-size:10px;line-height:16px}
 .ws-tabs{display:flex;gap:2px;margin:0 auto;padding:3px;background:#17181d;border:1px solid #2e2e36}
-.ws-tab{display:flex;align-items:center;gap:8px;padding:6px 14px;color:#b9b2a7;font-size:13px;text-decoration:none;border-bottom:2px solid transparent}
+.ws-tab{display:flex;align-items:center;gap:8px;padding:6px 14px;white-space:nowrap;color:#b9b2a7;font-size:13px;text-decoration:none;border-bottom:2px solid transparent}
 .ws-tab:hover{color:var(--ink);background:#202128}
 .ws-tab[aria-current]{color:#ffd99c;background:#2a2519;border-bottom-color:var(--gold)}
 .ws-tab-count{min-width:22px;padding:0 5px;background:#26272e;color:#d8d0c3;font-size:11px;line-height:18px;text-align:center}
 .ws-tab[aria-current] .ws-tab-count{background:#3d3420;color:#ffd99c}
 .ws-top-end{display:flex;align-items:center;gap:14px}
 .ws-lang{display:flex;gap:0;border:1px solid #3d3b44}
-.ws-lang button{padding:4px 9px;font-size:12px;border:0;background:transparent;color:#aaa49b}
+.ws-lang button{padding:4px 9px;font-size:12px;border:0;background:transparent;color:#aaa49b;white-space:nowrap}
 .ws-lang button[aria-pressed=true]{background:var(--gold);color:#1c140a;font-weight:700}
 .ws-market{font-size:12px;white-space:nowrap}
 main{max-width:1280px;min-width:0;margin:auto;padding:26px 32px 48px}
 
-/* Headline and one-line block basis. */
-.ws-hero{margin:0 0 22px}
-h1{font-family:var(--mono);font-size:clamp(26px,3.2vw,38px);line-height:1.15;margin:0;font-weight:800;letter-spacing:-.055em}
-#intro{color:var(--muted);margin:6px 0 12px;font-size:13px}
-.ws-basis{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin:0;font-size:12px;color:var(--muted)}
-.ws-block{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-weight:600}
+/* Headline: title and one line of intro. The block it all follows sits in the sticky top bar, so it stays in view. */
+.ws-hero{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "intro" "note";margin:0 0 18px}
+h1{grid-area:title;font-family:var(--mono);font-size:clamp(22px,2.4vw,30px);line-height:1.15;margin:0;font-weight:800;letter-spacing:-.05em}
+#intro{grid-area:intro;color:var(--muted);margin:5px 0 0;font-size:13px}
+.ws-basis{display:flex;align-items:center;gap:6px 10px;margin:0;font-size:11px;color:var(--muted);white-space:nowrap}
+.ws-block{display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:600}
 .ws-block-number{display:inline-flex;align-items:center}
-.ws-block-digits{display:block;height:15px;width:auto}
-.ws-age{padding-left:14px;border-left:1px solid #4a4650}
+.ws-block-digits{display:block;height:14px;width:auto}
+.ws-age{padding-left:10px;border-left:1px solid #4a4650}
 .ws-source{color:#d8b57b;border:1px solid #5d4c33;padding:0 7px;font-size:11px;line-height:20px}
-.ws-demo-note{font-size:11px;color:#c7b097;margin:8px 0 0}
+.ws-demo-note{grid-area:note;font-size:11px;color:#c7b097;margin:8px 0 0}
+/* The previous worker still runs (files replaced, extension not reloaded): one card in place of the page's sections. */
+body.is-stale main>:not(#updateCard){display:none}
+.ws-update{max-width:540px;margin:72px auto;padding:36px 40px 30px;background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--gold);text-align:center}
+.ws-update[hidden]{display:none}
+.ws-update-sigil{color:var(--gold)}
+.ws-update-sigil svg{display:block;width:56px;height:66px;margin:0 auto}
+.ws-update h2{margin:16px 0 8px;font-size:20px}
+.ws-update p{margin:0 auto;max-width:440px;color:var(--muted);font-size:13px}
+.ws-update p span{display:block}
+body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
+#updateReload{margin:22px 0 12px;padding:11px 26px;background:var(--gold);color:#1c140a;border:0;font-weight:800;box-shadow:3px 3px 0 #0a0a0c}
+#updateReload:hover,#updateReload:focus-visible{background:#ffc66e}
+.ws-update .ws-update-hint{font-size:11px;color:#8f887e}
 
 /* Shared section heading. */
 .ws-section-head{display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px}
 .ws-section-head h2{font-size:20px;margin:0;letter-spacing:-.02em}
 
 /* My holdings: the weekly SHNAKAS figure leads, wallet-style tiles follow. */
-.ws-portfolio{margin:0 0 40px;padding:26px 28px 24px;background:#1b1a17;border:1px solid #33302a;border-top:3px solid #ffcf6b;scroll-margin-top:84px}
+.ws-portfolio{margin:0 0 40px;padding:20px 24px 20px;background:#1b1a17;border:1px solid #33302a;border-top:3px solid #ffcf6b;scroll-margin-top:84px}
 .ws-portfolio-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 28px;flex-wrap:wrap}
 .ws-portfolio-title{display:flex;align-items:baseline;gap:12px}
 .ws-portfolio-title h2{margin:0;font-size:24px;letter-spacing:-.02em}
 .ws-portfolio-count{color:var(--muted);font-size:13px}
-.ws-portfolio-summary{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right}
-.ws-portfolio-summary small{font-size:12px;color:#a7a198}
-.ws-portfolio-total{display:flex;align-items:flex-end;gap:12px;margin:0;color:#ffd25e;line-height:1}
-.ws-portfolio-digits{display:block;height:44px;width:auto;filter:drop-shadow(0 0 5px #ffb34740)}
-.ws-portfolio-unit{font:700 14px/1 var(--mono);color:#ffd25e;padding-bottom:2px}
-.ws-holding-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;margin:22px 0 12px}
+/* Copy all numbers: quiet text beside the count, never louder than the holdings. */
+.ws-copy-all{padding:0;background:none;border:0;color:#8f887e;font-size:11px;text-decoration:underline;text-decoration-color:#4a4650;text-underline-offset:3px}
+.ws-copy-all:hover{color:var(--ink);text-decoration-color:currentColor}
+
+.ws-holding-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:0 0 12px}
 .ws-holding{position:relative;display:flex;flex-direction:column;padding:0;background:var(--panel2);border:1px solid #2f3038;min-width:0;outline-offset:2px}
 .ws-holding:hover{border-color:#5d5241}
 .ws-holding-art{position:relative;aspect-ratio:1;background:#0d0e10;line-height:0}
@@ -78,9 +90,13 @@ h1{font-family:var(--mono);font-size:clamp(26px,3.2vw,38px);line-height:1.15;mar
 .ws-holding-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .ws-holding-top strong{color:#e5d8bd;font-size:14px}
 .ws-holding-top .naka-weight{font-size:15px;font-weight:800}
-.ws-holding-weekly{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0;color:#ffd25e;font-size:10px;line-height:1.3}
+.ws-holding-weekly{display:flex;align-items:baseline;gap:6px;margin:0;color:#ffd25e;font-size:10px;line-height:1.3;white-space:nowrap}
 .ws-holding-weekly.is-zero{color:#8f877c}
-.ws-holding-weekly b{font-size:16px}
+.ws-holding-weekly b{font-size:16px;font-variant-numeric:tabular-nums}
+.ws-holding-weekly b.is-blank{visibility:hidden}
+.ws-holding-sub{display:block;min-height:15px;color:#9e9991;font-size:10px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-holding-sub--waiting{color:#c4b5fd}
+.ws-holding-sub--listed,.ws-holding-sub--paused{color:#e8c58c}
 .ws-holding-listed{color:#e8c58c;font-size:11px}
 /* Add tile: one clear "+" in the grid; the number is entered in a small popover. */
 .ws-holding-add{align-items:center;justify-content:center;gap:10px;min-height:180px;background:transparent;border:1px dashed #6b5d45;color:#e6c68f;font-size:13px}
@@ -91,6 +107,184 @@ h1{font-family:var(--mono);font-size:clamp(26px,3.2vw,38px);line-height:1.15;mar
 @keyframes ws-new{0%{transform:scale(.86);box-shadow:0 0 0 0 #94dcb4;border-color:#94dcb4}35%{transform:scale(1.04);box-shadow:0 0 0 6px #94dcb455}100%{transform:none;box-shadow:0 0 0 14px #94dcb400;border-color:#2f3038}}
 @media(prefers-reduced-motion:reduce){.ws-holding.is-new{animation:none;border-color:var(--mint)}}
 .ws-holdings-how{margin:4px 0 0}
+/* The market's weight bubble (lib/popover.js, styled by content/content.css) adds this week's average weight. */
+.ws-wcard-avg{margin:8px 0 0;padding-top:6px;border-top:1px solid #39353d;color:#d8c19b;font-size:11px}
+/* Owner confirmation, weekly totals and sold pieces under the grid. */
+.ws-confirm{margin:14px 0 0;padding:10px 14px;background:#1f1c2a;border:1px solid #4d4466;border-left:3px solid var(--violet);font-size:12px}
+.ws-confirm strong{display:block;margin-bottom:4px;color:#d6cbea}
+.ws-confirm p{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;margin:4px 0 0;color:#cfc6b5}
+.ws-weeks,.ws-left{margin:18px 0 0}
+.ws-weeks h3,.ws-left h3{margin:0 0 8px;font-size:14px}
+.ws-left-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #2a2a31}
+.ws-left-row>div:nth-child(2){display:flex;flex-direction:column;gap:2px;min-width:0}
+.ws-left-row strong{color:#e5d8bd;font-size:13px}
+.ws-left-row small{color:#a49e95;font-size:11px}
+.ws-left-row .ws-image img,.ws-left-row .ws-image .ws-art-fallback{width:40px;height:40px}
+.ws-left-actions{display:flex;gap:14px;margin-left:auto}
+
+/* Raise weight: one goal per tab. The goal line says what the tab is for and how to use it; results follow in one frame. */
+.ws-planner{margin:0 0 40px;scroll-margin-top:84px}
+.ws-planner>.ws-section-head{margin-bottom:10px}
+.ws-pbasis{color:var(--muted);font-size:11px}
+.ws-ptabs{display:flex;flex-wrap:wrap;gap:2px;margin-left:auto;padding:3px;background:#17181d;border:1px solid #2e2e36}
+.ws-ptabs button{padding:6px 14px;border:0;background:transparent;color:#b9b2a7;font-size:13px}
+.ws-ptabs button:hover{color:var(--ink);background:#202128}
+.ws-ptabs button[aria-selected=true]{background:#2a2519;color:#ffd99c;box-shadow:inset 0 -2px var(--gold)}
+.ws-pgoal{padding:12px 18px;background:#1d1a15;border:1px solid #3a3123;border-bottom:0}
+.ws-pgoal strong{display:block;color:#ffd99c;font-size:14px}
+.ws-pgoal p{margin:4px 0 0;color:#bdb6aa;font-size:12px;line-height:1.6;max-width:980px}
+.ws-ppanel{padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-top:2px solid #bda471}
+
+.ws-plabel{display:flex;flex-direction:column;gap:4px;min-width:0;color:var(--muted);font-size:11px}
+.ws-plabel input{width:min(360px,70vw)}
+.ws-plabel-text{margin:0 0 6px;color:var(--muted);font-size:11px}
+
+.ws-pout{min-width:0}
+.ws-pnote{margin:10px 0 0;color:#99938a;font-size:11px;line-height:1.6}
+.ws-pmuted{color:#8f887e!important}
+.ws-pdown{color:#efb29f}
+.ws-pkey{margin:0 0 6px;color:#ffd99c;font-size:13px;font-weight:700}
+.ws-pmsg{margin:-6px 0 8px;color:#ffd08b;font-size:11px}.ws-pmsg:empty{display:none}
+/* Best buy: one row per listing, gain first. */
+.ws-ppanel>.ws-sort{margin:0 0 12px}
+.ws-pbuys{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:10px}
+.ws-pbuy{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;padding:10px 12px;background:#15161b;border:1px solid #2f3038}
+.ws-pbuy>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ws-pbuy strong{color:#e9d3ac;font-size:13px}
+.ws-pgain{color:var(--mint);font-size:17px;font-weight:800}
+.ws-pbuy small{color:#a49e95;font-size:11px}
+.ws-pbuy .ws-image img,.ws-pbuy .ws-image .ws-art-fallback{width:48px;height:48px}
+/* Simulate: any number first, then my holdings with an ask field each; results sit under their row. */
+.ws-psim-any{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin:0 0 8px}
+.ws-psim-any .ws-plabel input{width:140px}
+.ws-psim-info{padding-bottom:10px;color:#cfc6b5;font-size:12px}
+.ws-psim-list{display:grid;gap:0}
+.ws-psim-head{display:flex;align-items:baseline;gap:14px;margin:18px 0 6px}
+.ws-psim-head h3{margin:0;font-size:13px}
+.ws-psim-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 0;border-bottom:1px solid #2a2a31}
+.ws-psim-row.is-focus{background:#1f1c2a}
+.ws-psim-row .ws-image img,.ws-psim-row .ws-image .ws-art-fallback{width:44px;height:44px}
+.ws-psim-who{display:flex;flex-direction:column;width:96px}
+.ws-psim-who strong{color:#e5d8bd;font-size:13px}.ws-psim-who small{color:#a49e95;font-size:11px}
+.ws-psim-row .ws-plabel,.ws-psim-any .ws-plabel{flex-direction:row;align-items:center;gap:8px}
+.ws-psim-row .ws-plabel input{width:118px;padding:6px 8px}
+.ws-psim-out{flex-basis:100%;min-width:0;padding-left:58px}
+.ws-psim-out:empty{display:none}
+.ws-psim-res{padding:8px 12px;background:#15161b;border-left:2px solid #6b5d45;font-size:12px}
+.ws-psim-res p{margin:0 0 4px}
+.ws-psim-rows{display:grid;gap:2px;margin:4px 0 0;padding-left:16px;color:#cfc6b5;font-size:11px}
+/* An input with a × that clears it. */
+.ws-pfield{position:relative;display:inline-flex;align-items:center}
+.ws-pfield input{padding-right:28px}
+.ws-pclear{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:0 6px;background:none;border:0;color:#8f887e;font-size:15px;line-height:20px}
+.ws-pclear:hover{color:var(--ink)}
+/* Tick all or none: quiet text beside the label, never louder than the rows. */
+.ws-pselect{display:flex;align-items:baseline;gap:4px 14px;margin:0 0 8px}
+.ws-pselect .ws-plabel-text{margin:0}
+.ws-pselect-btn{padding:0;background:none;border:0;color:#8f887e;font-size:11px;text-decoration:underline;text-decoration-color:#4a4650;text-underline-offset:3px}
+.ws-pselect-btn:hover:not(:disabled){color:#c5b3e5;text-decoration-color:currentColor}
+.ws-pselect-btn:disabled{opacity:.4;text-decoration:none}
+.ws-pchip-tag{margin-left:6px;padding:0 4px;border:1px solid #4a4650;color:#bdb6aa;font-size:9px;line-height:14px}
+/* Numbers added beside my holdings (a teammate's or any): one quiet bar — label, field, Add and a short note, then the
+   numbers saved (each with ×, Remove all from two on) and the answer to the last change. Each result area under it names
+   what it counts (scope line), so numbers saved on an earlier visit never count unnoticed. */
+.ws-pextras{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px;padding:7px 10px;background:#15161b;border:1px dashed #3d3b44}
+.ws-pextras-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;white-space:nowrap}
+.ws-pextras-label input{width:min(200px,40vw);padding:5px 26px 5px 8px;font-size:12px}
+.ws-padd{padding:5px 12px;font-size:12px}
+.ws-phint{color:#7f796f;font-size:10px}
+.ws-pextras-list{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%}
+.ws-pextras-list:empty{display:none}
+.ws-pextras-list .ws-pselect-btn{margin-left:6px}
+.ws-pextra{display:inline-flex;align-items:center;gap:2px;padding:1px 1px 1px 8px;background:#1c1d22;border:1px solid #3d3b44;color:#d8d0c3;font-size:11px;font-variant-numeric:tabular-nums}
+.ws-pextra-x{padding:0 6px;background:none;border:0;color:#8f887e;font-size:14px;line-height:18px}
+.ws-pextra-x:hover{color:var(--ink)}
+.ws-pextras .ws-pmsg{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;flex-basis:100%;margin:0}
+.ws-pscope{margin:0 0 8px;color:#bdb6aa;font-size:11px}
+/* A result being replaced stays readable; it dims only when the new one takes a moment. */
+.ws-pout,.ws-pjoint-box{transition:opacity .15s}
+.ws-pout[aria-busy=true],.ws-pjoint-box[aria-busy=true]{opacity:.55;transition-delay:.2s}
+/* Reach 400%: one row per target, best value first; a row unfolds its own steps. Ticked rows (two or more) get one
+   combined plan above the table, its steps numbered, each with the pieces it lifts. */
+.ws-ptable-wrap{max-width:100%;overflow-x:auto;scrollbar-color:#776b53 #202024}
+.ws-pplan .ws-prow>td,.ws-plock .ws-prow>td{padding:6px 10px;white-space:nowrap}
+.ws-pplan .ws-prow>td small,.ws-plock .ws-prow>td small{display:block;color:#8f887e;font-size:10px}
+.ws-prow.is-expandable{cursor:pointer}
+.ws-prow:hover>td,.ws-prow.is-open>td{background:#1f2026}
+.ws-prow[data-state=capped] .ws-pweight{color:#e8c58c}
+.ws-ppick{width:28px}
+.ws-ppick input{width:15px;height:15px;margin:0;accent-color:#ffb348;cursor:pointer}
+.ws-pwho{display:inline-flex;align-items:center;gap:8px}
+.ws-pwho .ws-image{padding:0;border:0;background:none}
+.ws-pwho .ws-image img,.ws-pwho .ws-image .ws-art-fallback{width:30px;height:30px}
+.ws-pwho strong{color:#e5d8bd;font-size:13px}
+.ws-pweight{color:var(--mint);font-weight:700}
+.ws-pvalue{color:#ffd99c;font-weight:700}
+.ws-pmore{width:30px;text-align:center}
+.ws-pexpand{padding:0 6px;background:none;border:0;color:#a49e95;font-size:14px;line-height:20px}
+.ws-pexpand:hover{color:var(--ink)}
+.ws-pdetail>td{padding:0 10px 12px 48px;background:#1f2026;border-bottom:1px solid #3a373e}
+.ws-pdetail-in{padding:8px 12px;border-left:2px solid #6b5d45;background:#17181d}
+.ws-psteps-title{margin:0 0 4px;color:var(--muted);font-size:11px}
+.ws-psteps{display:grid;gap:3px;margin:0 0 10px;padding-left:22px;font-size:12px}
+.ws-psteps li::marker{color:#8f887e;font-size:11px}
+.ws-psteps li a{color:#e9d3ac}
+.ws-psteps li small{display:block;color:#8f887e;font-size:11px}
+.ws-pserves{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:12px;vertical-align:baseline}
+.ws-pserve{padding:0 5px;border:1px solid #4a4650;color:#d8d0c3;font-size:10px;line-height:16px}
+.ws-pjoint{margin:0 0 14px;padding:10px 14px 12px;background:#1d1a15;border:1px solid #3a3123;border-left:3px solid var(--gold)}
+.ws-pjoint-head h3{margin:0 0 6px;color:#ffd99c;font-size:13px}
+.ws-pjoint-sum{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px;margin:0 0 6px}
+.ws-pjoint-sum strong{color:#ffd99c;font-size:15px}
+.ws-pjoint-sum span{color:#cfc6b5;font-size:12px}
+.ws-pjoint-sum small{font-size:11px}
+.ws-pjoint-gains{display:flex;flex-wrap:wrap;gap:4px 22px;margin:0 0 10px;font-size:12px}
+.ws-pleft{display:grid;gap:6px;margin:10px 0 0;padding-left:18px;color:#e8c58c;font-size:12px}
+.ws-pleft small{display:block;color:#a49e95;font-size:11px}
+.ws-pdetail-in>.ws-pleft{margin:0 0 8px}
+/* Own a trait: one table as in Reach 400% (its rows, hover, ▸ and unfolded row), split by group rows: what buying makes
+   ours, what already is, what also needs a private deal. Gold marks only the pieces missing and the costs, mint only gains.
+   An unfolded trait puts its labels in a quiet first column; listings are links, the numbers to ask for neutral chips with
+   one line under them: copy the wanted post (amber outline), then the Telegram group, which fills amber once copied. */
+.ws-plock .ws-pgroup>th{padding:18px 10px 6px;color:var(--ink);font-size:12px;font-weight:700}
+.ws-plock tbody:first-of-type .ws-pgroup>th{padding-top:10px}
+.ws-plock .ws-pgroup>th span{margin-left:10px;color:var(--muted);font-size:11px;font-weight:400}
+.ws-pnone>td{color:#8f887e;font-size:11px}
+.ws-pmiss{color:#ffd99c;font-weight:700}
+.ws-pcost{color:#ffd99c}
+.ws-plock .ws-pdetail>td{padding-left:10px}
+.ws-plock-in{display:grid;grid-template-columns:minmax(10em,max-content) minmax(0,1fr);align-items:baseline;gap:8px 16px;font-size:12px;line-height:20px}
+.ws-plock-label{color:var(--muted);font-size:11px;white-space:nowrap}
+.ws-plock-cell{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;min-width:0;color:#cfc6b5}
+.ws-plock-cell a{color:#e9d3ac;white-space:nowrap}
+.ws-plock-note{grid-column:1/-1;margin:0;color:#99938a;font-size:11px;line-height:1.6}
+.ws-plock-advice{color:#e5d8bd}
+.ws-pwanted{display:grid;gap:8px;min-width:0}
+.ws-pchips{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px}
+.ws-pwant{display:inline-flex;align-items:baseline;gap:4px;padding:0 6px;border:1px solid #34333b;background:#1c1d22;color:#d8d0c3;font-size:11px;line-height:18px;font-variant-numeric:tabular-nums}
+.ws-pwant.is-closing{border-style:dashed;color:#a49e95}
+.ws-pwant small{color:#e8c58c;font-size:9px}
+.ws-pact{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:11px}
+.ws-pcopy,.ws-ptg{padding:0 10px;border:1px solid;font-size:11px;line-height:22px;white-space:nowrap}
+.ws-pcopy{background:#221e16;border-color:#6b5d45;color:#e6c68f}
+.ws-ptg{background:#1c1d22;border-color:#4a4650;color:#d8d0c3;text-decoration:none}
+.ws-pcopy:hover,.ws-ptg:hover{border-color:var(--gold);color:#ffd99c}
+.ws-ptg.is-next{background:var(--gold);border-color:var(--gold);color:#1c140a;font-weight:700}
+.ws-pdone{color:#d8d0c3}
+/* Narrow: the table keeps to its frame, so the unfolded line and its group link stay in view: tighter cells, and the bonus
+   column (head and note) may wrap. */
+.ws-plock th.ws-pbonus,.ws-pbonus small{white-space:normal}
+@media(max-width:800px){.ws-plock thead th,.ws-plock .ws-pgroup>th,.ws-plock .ws-prow>td,.ws-plock .ws-pnone>td,.ws-plock .ws-pdetail>td{padding-left:6px;padding-right:6px}}
+@media(max-width:700px){.ws-plock-in{grid-template-columns:minmax(0,1fr);row-gap:4px}}
+.ws-pnum{text-align:right!important;font-variant-numeric:tabular-nums}
+
+/* Weekly totals table. */
+.ws-ptable{width:100%;border-collapse:collapse;font-size:12px}
+.ws-ptable th{padding:6px 10px;border-bottom:1px solid #3a373e;color:var(--muted);font-size:11px;font-weight:400;text-align:left;white-space:nowrap}
+.ws-ptable td{padding:7px 10px;border-bottom:1px solid #26262c;vertical-align:middle}
+.ws-pmine{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:800px){.ws-psim-out{padding-left:0}.ws-psim-who{width:auto}}
+.ws-holding.is-simulable{cursor:pointer}
 
 /* Compare. */
 .ws-compare{margin:0 0 40px;scroll-margin-top:84px}
@@ -223,16 +417,18 @@ h1{font-family:var(--mono);font-size:clamp(26px,3.2vw,38px);line-height:1.15;mar
 /* Four comparison columns need 136 + 4 × 235 px; below that the table scrolls sideways. */
 @media(max-width:1140px){.ws-scroll-hint{display:block}}
 @media(max-width:1100px){.ws-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:900px){.ws-top-inner{flex-wrap:wrap;padding:10px 16px}.ws-tabs{order:3;width:100%;margin:0}.ws-tab{flex:1;justify-content:center}.ws-top-end{margin-left:auto}html{scroll-padding-top:120px}}
+@media(max-width:1240px){.ws-top-inner{flex-wrap:wrap;row-gap:8px}.ws-tabs{order:3;width:100%;margin:0}.ws-tab{flex:1;justify-content:center}.ws-basis{margin-left:auto}html{scroll-padding-top:120px}}
+@media(max-width:900px){.ws-top-inner{padding:10px 16px}}
 @media(max-width:800px){
   main{padding:20px 16px}
   .ws-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ws-table th,.ws-table td{padding-left:12px;padding-right:12px}
 }
-@media(max-width:700px){.ws-portfolio{padding:20px 16px}.ws-portfolio-digits{height:30px}.ws-portfolio-summary{align-items:flex-start;text-align:left}.ws-holding-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ws-plus{margin-left:0}}
+@media(max-width:700px){.ws-portfolio{padding:18px 16px}.ws-holding-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ws-plus{margin-left:0}}
 @media(max-width:480px){
-  .ws-market{display:none}
-  .ws-tab{padding:6px 8px;font-size:12px}
+  .ws-market,.ws-age,.ws-version{display:none}
+  .ws-tab{gap:4px;padding:6px 5px;font-size:12px;white-space:nowrap}
+  .ws-tab-count{min-width:0;padding:0 4px}
   #intro{font-size:12px}
   .ws-cards{grid-template-columns:1fr}
   .ws-table th:first-child{position:sticky;left:0;background:#191a1f;z-index:1;box-shadow:1px 0 #3a373e}
@@ -241,3 +437,26 @@ h1{font-family:var(--mono);font-size:clamp(26px,3.2vw,38px);line-height:1.15;mar
   .ws-candidate .ws-image img{width:64px;height:64px}
   .ws-candidate{grid-template-columns:64px 1fr auto}
 }
+
+/* Raise weight: direction of a change, the figure that matters, quick asks. */
+.ws-pmove{display:inline-flex;align-items:baseline;gap:6px}
+.ws-parrow{font-size:.85em;width:1em;text-align:center}
+.ws-pmove--up{color:var(--mint)}.ws-pmove--down{color:#efb29f}.ws-pmove--same{color:#a49e95}.ws-pmove--unknown{color:#e8c58c}
+
+.ws-pquick{display:inline-flex;flex-wrap:wrap;gap:4px}
+.ws-pquick-btn{padding:4px 8px;font-size:11px;background:#1c1d22;border:1px solid #4a4650;color:#cfc6b5}
+.ws-pquick-btn:hover{border-color:#8c7346;color:#ffd99c}
+.ws-pquick-btn[aria-pressed=true]{border-color:#b99861;background:#2a2519;color:#ffd99c}
+.ws-ptoggle[aria-pressed=true]{color:#ffd99c;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.ws-psim-title{margin:0 0 6px!important;color:#ffd99c;font-weight:700}
+.ws-psim-res>.ws-pmove{display:flex;margin:0 0 4px}
+.ws-psim-rows{list-style:none;padding-left:0}
+
+.ws-pcount{margin:0 0 10px}
+.ws-pshow{margin-top:10px}
+
+/* Holdings: an unattributed sale, answered on its own line. */
+.ws-confirm-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:6px 0 0}
+.ws-confirm-actions{display:inline-flex;gap:12px}
+.ws-confirm-error{flex-basis:100%;color:#efb29f;font-size:11px}
+.ws-holding[role=button]:focus-visible{outline:2px solid #ffd25e;outline-offset:2px}

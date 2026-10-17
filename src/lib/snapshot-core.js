@@ -24,6 +24,7 @@
   const NUMBER_TRAIT_TYPE = 'Shielded #';
   const META_CONCURRENCY = 8;
   const RULES_RECENT_SALES = 3;
+  const HELD_SUPPLY = 20; // zero-listed traits with at least this many catalog pieces get +100% without sales (rules.js)
   const STATE_NOTES_PAST_END = 999999999; // /state?since=<cursor>: notes after the cursor, all listing records
   const FETCH_ATTEMPTS = 3;
   const SEP = '\u0000';
@@ -99,11 +100,15 @@
   /** Last confirmed trait sale at H. Conflicting prices in the same block have no proven order. */
   /**
    * Recent sales per trait at height H, from /state listings: SOLD records carry soldHeight (matches the buying
-   * note height for every record checked). Keeps each trait's three newest sales plus any sale tied with the third
-   * in the same block, newest first, so an ambiguous same-block order stays visible to the rule engine.
+   * note height for every record checked). Only traits with fewer than 20 catalog pieces (minted and not yet minted) are
+   * ever priced from sales, so only they keep a history: each keeps its three newest sales plus any sale tied with the
+   * third in the same block, newest first, so an ambiguous same-block order stays visible to the rule engine.
    * @returns Map<key, Array<[price, height]>>
    */
   function saleHistoryAt(listings,H,traitsByAsset) {
+    const supply=new Map(),minted=new Set(traitsByAsset.keys());
+    for(const traits of traitsByAsset.values())for(const [t,v] of traits)supply.set(t+SEP+v,(supply.get(t+SEP+v)??0)+1);
+    for(const [p,traits] of PENDING_CATALOG)if(!minted.has(p))for(const [t,v] of traits)supply.set(t+SEP+v,(supply.get(t+SEP+v)??0)+1);
     const all=new Map();
     for(const l of listings) {
       if(l.state!=='SOLD')continue;
@@ -112,7 +117,7 @@
       const traits=traitsByAsset.get(l.assetId);
       if(!traits)throw new Error('Sold asset missing metadata');
       const price=priceSats(l);
-      for(const [type,value] of traits){const key=type+SEP+value;if(!all.has(key))all.set(key,[]);all.get(key).push([price,l.soldHeight]);}
+      for(const [type,value] of traits){const key=type+SEP+value;if(supply.get(key)>=HELD_SUPPLY)continue;if(!all.has(key))all.set(key,[]);all.get(key).push([price,l.soldHeight]);}
     }
     const keep=RULES_RECENT_SALES;
     for(const [key,list] of all){
@@ -198,19 +203,63 @@
     return m;
   }
 
-  /** Latest public sale/cancellation per known piece at H; no notes, owner or payout data retained. */
+  /** Latest public sale/cancellation per known piece at H: [id, close height, kind, listing height]. The listing height is
+   * when the previous holder's note was spent; no notes, owner or payout data retained. */
   function rewardEventsAt(listings,notes,H,inscriptionByAsset) {
     const heights=txHeights(notes),events=new Map();
     for(const l of listings){const h=closeHeight(l,heights),id=inscriptionByAsset.get(l.assetId);
       if(h===null||h>H||!id)continue;
-      const kind=l.state==='SOLD'?'sale':'cancel',prev=events.get(id);
-      if(!prev||h>prev[1])events.set(id,[id,h,kind]);
-      else if(h===prev[1]&&prev[2]!==kind)events.set(id,[id,h,'exit']);
+      latestExit(events,id,h,l.state==='SOLD'?'sale':'cancel',l.height);
     }
     return [...events.values()].sort((a,b)=>a[0].localeCompare(b[0]));
   }
+  /** Every public listing record at H, minimal: [assetId, listing height, close height or null, 'active'|'sale'|'cancel'].
+   * The worker keeps only the records of the user's own holdings, locally, to date each holding's note weeks. */
+  function listingRecords(listings,H){
+    const out=[];
+    for(const l of listings){
+      if(!Number.isSafeInteger(l.height)||l.height<0)throw new Error(`挂单 ${l.nf} 缺少有效的挂单高度`);
+      if(l.height>H)continue;
+      const kind=l.state==='ACTIVE'?'active':l.state==='SOLD'?'sale':l.state==='CLAIMED'?'cancel':null;
+      if(kind===null)throw new Error(`挂单 ${l.nf} 的状态 ${l.state} 未知，需要先确认它的关闭语义`);
+      const close=kind==='active'?null:kind==='sale'?l.soldHeight:l.claimHeight;
+      if(kind!=='active'&&(!Number.isSafeInteger(close)||close<l.height))throw new Error(`挂单 ${l.nf} 缺少有效的关闭高度`);
+      out.push([l.assetId,l.height,close!==null&&close>H?null:close,close!==null&&close>H?'active':kind]);
+    }
+    return out;
+  }
+  /** Keep the newest exit per piece; a sale and a reclaim closing in the same block become 'exit' (latest listing height). */
+  function latestExit(events,id,h,kind,listed){
+    const prev=events.get(id);
+    if(!prev||h>prev[1])events.set(id,[id,h,kind,listed]);
+    else if(h===prev[1])events.set(id,[id,h,prev[2]===kind?kind:'exit',Math.max(prev[3],listed)]);
+  }
+  /**
+   * Same events from listing records alone: /state?since=<past end> carries soldHeight on SOLD records and claimHeight on
+   * CLAIMED records (the buying / reclaiming note heights), so the live path needs no notes. A record closed above H, or
+   * a SOLD / CLAIMED record without its height, is not an event at H; a missing height is an error, never skipped.
+   */
+  function rewardEventsFromRecords(listings,H,inscriptionByAsset) {
+    const events=new Map();
+    for(const l of listings){
+      if(l.state==='ACTIVE')continue;
+      if(l.state!=='SOLD'&&l.state!=='CLAIMED')throw new Error(`挂单 ${l.nf} 的状态 ${l.state} 未知，需要先确认它的关闭语义`);
+      const h=l.state==='SOLD'?l.soldHeight:l.claimHeight;
+      if(!Number.isSafeInteger(h)||!Number.isSafeInteger(l.height)||h<l.height)throw new Error(`挂单 ${l.nf} 缺少有效的关闭高度`);
+      const id=inscriptionByAsset.get(l.assetId);if(h>H||!id)continue;
+      latestExit(events,id,h,l.state==='SOLD'?'sale':'cancel',l.height);
+    }
+    return [...events.values()].sort((a,b)=>a[0].localeCompare(b[0]));
+  }
+  /** Only an exit inside the reward week of H can still make a holding wait at H (a note created in week w earns from
+   * week w + 1), so the snapshot keeps just those; before the programme starts none matter. */
+  function rewardEventsThisWeek(events,H) {
+    const R=typeof module==='object'&&module.exports?require('./rules.js'):globalThis.ShnakasRules;
+    const phase=R.rewardPhase({height:H});
+    return phase.state==='active'?events.filter(e=>e[1]>=phase.first&&e[1]<=H):[];
+  }
   /** 组装快照数据（与插件运行时读取的格式一致）。 */
-  function buildSnapshot({ collection, height, indexerHeight, generatedAt, active, traitsByAsset, numberStart, inscriptionByAsset, saleHistory, rewardEvents }) {
+  function buildSnapshot({ collection, height, indexerHeight, generatedAt, active, traitsByAsset, numberStart, inscriptionByAsset, saleHistory, rewardEvents, closing }) {
     const { collectionFloor, floors } = floorsOf(active, traitsByAsset);
     const minted = new Set([...traitsByAsset.keys()].map((assetId) => numberStart + assetId));
     const pendingCatalog = PENDING_CATALOG.filter(([p]) => !minted.has(numberStart + p));
@@ -239,8 +288,13 @@
       traits,
       items,
       offers: active.map(l => [inscriptionByAsset.get(l.assetId), priceSats(l)]).sort((a,b) => a[0].localeCompare(b[0])),
+      // Block each active listing was confirmed in: the seller's note was spent there, so that whole week earns nothing.
+      listedAt: active.map(l => [inscriptionByAsset.get(l.assetId), l.height]).sort((a,b) => a[0].localeCompare(b[0])),
       ...(active.some(l=>Number.isSafeInteger(l.tickets)&&l.tickets>=0)?{credits:active.filter(l=>Number.isSafeInteger(l.tickets)&&l.tickets>=0).map(l=>[inscriptionByAsset.get(l.assetId),l.tickets]).sort((a,b)=>a[0].localeCompare(b[0]))}:{}),
-      ...(rewardEvents?{rewardEvents}:{}),
+      ...(rewardEvents?{rewardEvents:rewardEventsThisWeek(rewardEvents,height)}:{}),
+      // Active listings the market already marks as closing: bought (confirming in the next block; the official item page
+      // shows "Sold · confirming") or being reclaimed. They still count for this block's weights; nobody can buy them.
+      ...(closing?{closing:closing.map(([assetId,kind])=>[inscriptionByAsset.get(assetId),kind]).sort((a,b)=>a[0].localeCompare(b[0]))}:{}),
       ...(saleHistory?{saleHistory:[...saleHistory].map(([key,list])=>[index.get(key),list]).sort((a,b)=>a[0]-b[0])}:{}),
       ...(pendingCatalog.length?{pending:pendingCatalog.map(([p,traits])=>[numberStart+p,...traits.map(([t,v])=>index.get(t+SEP+v))])}:{}),
     };
@@ -264,15 +318,22 @@
       else if(v.source==='ask'||v.floor!==null||v.source==='zeroListed'&&(v.pieces<20||v.pct!==100)||v.source==='none'&&v.pct!==0||['sales','none','lastBlock'].includes(v.source)&&v.pieces>=20)throw new Error('Official zero-listing basis differs');
       return [idx,v.pct,v.source,v.pieces];});
     const candidate={...snapshot,rewardBasis:{height:data.height,traits:rows}};
+    // Every catalog piece, minted or not, against our engine; then the programme totals and per-block rates.
+    if(data.pieces.length!==Object.keys(snapshot.items).length+(snapshot.pending?.length??0))throw new Error('Official reward basis does not cover the catalog');
     for(const[id,row]of Object.entries(snapshot.items)){const r=R.evaluateSnapshot(candidate,id);if(!r.exact||r.lo.weight!==pieces.get(row[0]-snapshot.collection.numberStart))throw new Error('Official per-piece total differs');}
+    for(const row of snapshot.pending??[]){const r=R.evaluate({number:row[0],traits:R.snapshotTraits(candidate,row.slice(1))},snapshot.snapshot.collectionFloor);if(!r.exact||r.lo.weight!==pieces.get(row[0]-snapshot.collection.numberStart))throw new Error('Official unminted piece total differs');}
+    const K=R.programmeUnits(candidate),v=K.lo===K.hi?R.unitRate(K.lo):null;
+    if(K.lo!==K.hi||data.K!==K.lo||String(data.v)!==String(v)||String(data.basePerBlock)!==String(4*v))throw new Error('Official programme units or rate differ');
+    for(const p of data.pieces)if(String(p.perBlock)!==String(p.weight*v))throw new Error('Official per-block reward differs');
     return candidate;
   }
   async function withRewardBasis(snapshot, historical=false) {
     if(historical&&snapshot.snapshot.height<snapshot.snapshot.indexerHeight)return snapshot;
     let data;try {data=await fetchJson(`${API}/rewards/weights/now`,1);}
     catch {return snapshot;} // An unavailable endpoint leaves rare traits uncertain; never inherit stale units.
-    // Fixed historical blocks cannot borrow the current tip's units.
-    if(historical&&data?.height!==snapshot.snapshot.height)return snapshot;
+    // The endpoint serves only its own newest block: read at another block (the chain moved during this sync) it says
+    // nothing about this one, exactly like an unavailable endpoint.
+    if(data?.height!==snapshot.snapshot.height)return snapshot;
     // A successful same-block but inconsistent response is an error, never a silent fallback.
     return attachRewardBasis(snapshot,data);
   }
@@ -435,8 +496,11 @@
       const k = known.get(l.inscriptionId);
       if (k && k.number !== numberStart + l.assetId) throw new Error(`挂单 ${l.nf} 的资产号 ${l.assetId} 与已知编号 ${k.number} 不符`);
       if (!k) unknownListed = true;
-      if (l.listedAt <= H) active.push(l);
+      // /listings names the confirmation height listedAt; /state names it height. One shape from here on.
+      if (typeof l.pending !== 'boolean' || typeof l.cancelling !== 'boolean') throw new Error(`挂单 ${l.nf} 缺少 pending / cancelling 标记`);
+      if (l.listedAt <= H) active.push({ ...l, height: l.listedAt });
     }
+    const closing = active.filter(l => l.pending || l.cancelling).map(l => [l.assetId, l.pending ? 'sale' : 'cancel']);
 
     // 有新铸造的藏品（挂单里出现未知铭文，或已铭刻数多于已知藏品数）时，才读 /collection（约 38KB）并补拉它们的元数据
     // /pulse 没给已铭刻数时无法判断有没有新藏品，按「可能有」处理去核对 /collection（多 38KB，但结果一定对）
@@ -465,21 +529,44 @@
     // Sale history for small zero-listed traits, as the official market page loads it on each block: /state
     // with a note cursor past the end returns every listing record (~2.6 MB) and no notes. A different height or a
     // failed request leaves history absent, so affected hypothetical branches stay ranges instead of going stale.
-    const saleHistory = await recentSalesAtTip(H, traitsByAsset);
+    const tip = await recordsAtTip(H, traitsByAsset, inscriptionByAsset);
     const snapshot = buildSnapshot({
       collection: base.collection, height: H, indexerHeight: H, generatedAt: generatedAt(),
-      active, traitsByAsset, numberStart, inscriptionByAsset, ...(saleHistory ? { saleHistory } : {}),
+      active, traitsByAsset, numberStart, inscriptionByAsset, closing, ...(tip ? { saleHistory: tip.saleHistory, rewardEvents: tip.rewardEvents } : {}),
     });
     snapshot.snapshot.blockTime = await readBlockTime(H);
-    return { snapshot:await withRewardBasis(snapshot), metaFetched };
+    return { snapshot:await withRewardBasis(snapshot), metaFetched, records: tip ? tip.records : null };
   }
 
-  async function recentSalesAtTip(H, traitsByAsset) {
+  /**
+   * Listings already closing at block H, from a /listings read between blocks: [inscription ID, 'sale' | 'cancel']
+   * (pending: bought and confirming in the next block; cancelling: a reclaim on its way), sorted by ID. Returns null when
+   * the read's active listings (confirmed at or before H) are not exactly the snapshot's: the listing set moved, and the
+   * next block's rebuild carries it. Prices are not compared: an edited price replaces the old order in place.
+   */
+  function closingRows(listings, snap) {
+    if (!Array.isArray(listings)) throw new Error('/listings 返回的不是数组');
+    const H = snap.snapshot.height, active = new Map();
+    for (const l of listings) {
+      if (!Number.isSafeInteger(l.assetId) || l.assetId < 0) throw new Error(`挂单 ${l.nf} 的资产号非法：${l.assetId}`);
+      if (typeof l.inscriptionId !== 'string' || !ID_RE.test(l.inscriptionId)) throw new Error(`挂单 ${l.nf} 的铭文 ID 非法`);
+      if (!Number.isSafeInteger(l.listedAt) || l.listedAt < 0) throw new Error(`挂单 ${l.nf} 缺少确认高度 listedAt`);
+      if (typeof l.pending !== 'boolean' || typeof l.cancelling !== 'boolean') throw new Error(`挂单 ${l.nf} 缺少 pending / cancelling 标记`);
+      if (l.listedAt <= H) { if (active.has(l.inscriptionId)) throw new Error(`挂单 ${l.inscriptionId} 重复`); active.set(l.inscriptionId, l); }
+    }
+    const offers = new Set(snap.offers.map(o => o[0]));
+    if (active.size !== offers.size || [...active.keys()].some(id => !offers.has(id))) return null;
+    return [...active.values()].filter(l => l.pending || l.cancelling).map(l => [l.inscriptionId, l.pending ? 'sale' : 'cancel']).sort((a, b) => a[0].localeCompare(b[0]));
+  }
+
+  /** Sale history and the latest public sale / reclaim per piece at the tip, from one listing-record read. A failed read
+   * or another height returns null: the snapshot then carries neither, and the live loop rebuilds that block. */
+  async function recordsAtTip(H, traitsByAsset, inscriptionByAsset) {
     let state;
     try { state = await fetchJson(`${API}/state?since=${STATE_NOTES_PAST_END}`, 1); }
     catch { return null; }
     if (!state || state.lastHeight !== H || !Array.isArray(state.listings)) return null;
-    return saleHistoryAt(state.listings, H, traitsByAsset);
+    return { saleHistory: saleHistoryAt(state.listings, H, traitsByAsset), rewardEvents: rewardEventsFromRecords(state.listings, H, inscriptionByAsset), records: listingRecords(state.listings, H) };
   }
 
   // Optional display metadata, never a dependency of weight calculation.
@@ -501,6 +588,6 @@
 
   return {
     readBlockTime, BLOCK_API, FORMAT, API, COLLECTION, NUMBER_TRAIT_TYPE,
-    attachRewardBasis, rewardEventsAt, txHeights, closeHeight, activeListingsAt, saleHistoryAt, PENDING_CATALOG, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
+    attachRewardBasis, rewardEventsAt, rewardEventsFromRecords, rewardEventsThisWeek, listingRecords, closingRows, txHeights, closeHeight, activeListingsAt, saleHistoryAt, PENDING_CATALOG, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
   };
 });

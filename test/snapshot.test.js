@@ -302,8 +302,10 @@ test('Block time lookup validates height, hash and seconds; API failure remains 
 test('Official current reward basis reconciles trait units, canonical supply and every piece at the same block',()=>{
   const C=require('../src/lib/snapshot-core.js'),R=require('../src/lib/rules.js');
   const s={...BASE_REAL,collection:{...BASE_REAL.collection,numberStart:1000},snapshot:{height:100,collectionFloor:1000},traits:[['Body','Pepe',1000,1],['Body','Ape',null,0]],items:{[ID('a')]:[1000,0],[ID('b')]:[1001,1]}};
-  const data={height:100,F:'1000',values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:3},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:4}],pieces:[{p:0,pct:100,weight:4},{p:1,pct:150,weight:6}]};
+  // Programme totals as the endpoint reports them: K = 4 + 6 units, v per unit and block, perBlock = weight × v.
+  const v=R.unitRate(10),data={height:100,F:'1000',K:10,v:String(v),basePerBlock:String(4*v),values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:3},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:4}],pieces:[{p:0,pct:100,weight:4,perBlock:String(4*v)},{p:1,pct:150,weight:6,perBlock:String(6*v)}]};
   const verified=C.attachRewardBasis(s,data);
+  for(const mutate of [x=>x.K=11,x=>x.v=String(v-1),x=>x.basePerBlock='1',x=>x.pieces[1].perBlock='1',x=>x.pieces.pop()]){const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad),'programme totals and per-block rates are checked');}
   assert.equal(R.evaluateSnapshot(verified,ID('b')).lo.weight,150);assert.equal(R.evaluateSnapshot(verified,ID('b')).traits[0].method,'official-sales');
   assert.equal(s.rewardBasis,undefined,'does not mutate an accepted snapshot');
   const carried=structuredClone(data);carried.values[1].source='lastBlock';
@@ -313,7 +315,7 @@ test('Official current reward basis reconciles trait units, canonical supply and
   for(const mutate of [x=>x.height++,x=>x.F='999',x=>x.values[0].pct=25,x=>x.values[1].source='ask',x=>x.values[1].pieces=0,x=>x.pieces[1].pct=200,x=>x.pieces[1].weight='6',x=>x.pieces.push(x.pieces[0])]){
     const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad));
   }
-  const none=structuredClone(data);none.values[1]={...none.values[1],source:'none',pct:0};none.pieces[1]={p:1,weight:4,pct:100};assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,none),ID('b')).exact,true);
+  const v8=R.unitRate(8),none=structuredClone(data);none.values[1]={...none.values[1],source:'none',pct:0};none.K=8;none.v=String(v8);none.basePerBlock=String(4*v8);none.pieces=[{p:0,weight:4,pct:100,perBlock:String(4*v8)},{p:1,weight:4,pct:100,perBlock:String(4*v8)}];assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,none),ID('b')).exact,true);
 });
 
 test('Listing credits are optional output metadata: known zero survives while unavailable values are omitted',()=>{
@@ -327,7 +329,41 @@ test('Public reward exits retain only known IDs, closed heights and kinds at the
   const C=require('../src/lib/snapshot-core'),a=ID('a'),b=ID('b'),ids=new Map([[1,a],[2,b]]);
   const ls=[listing('sale',1,100,1,{state:'SOLD',soldTxid:'buy'}),listing('cancel',1,200,2,{state:'CLAIMED',claimTxid:'return'}),listing('unknown',3,100,1,{state:'SOLD',soldTxid:'other'}),listing('active',2,100,1)];
   const notes=[note('buy',10),note('return',20),note('other',9)];
-  assert.deepEqual(C.rewardEventsAt(ls,notes,15,ids),[[a,10,'sale']]);
-  assert.deepEqual(C.rewardEventsAt(ls,notes,20,ids),[[a,20,'cancel']]);
+  // The fourth field is the listing height: where the previous holder's note was spent.
+  assert.deepEqual(C.rewardEventsAt(ls,notes,15,ids),[[a,10,'sale',1]]);
+  assert.deepEqual(C.rewardEventsAt(ls,notes,20,ids),[[a,20,'cancel',2]]);
   assert.deepEqual(C.rewardEventsAt(ls,notes,8,ids),[]);
+});
+
+test('Live reward events come from listing records alone and keep only exits inside the current reward week',()=>{
+  const C=require('../src/lib/snapshot-core.js'),S=971700,ids=new Map([[1001,'a'.repeat(64)+'i0'],[1002,'b'.repeat(64)+'i0'],[1003,'c'.repeat(64)+'i0']]);
+  const ls=[
+    {nf:'1',assetId:1001,state:'SOLD',height:S-5,soldHeight:S+10},
+    {nf:'2',assetId:1001,state:'CLAIMED',height:S-9,claimHeight:S-2},
+    {nf:'3',assetId:1002,state:'CLAIMED',height:S+1,claimHeight:S+20},
+    {nf:'4',assetId:1003,state:'ACTIVE',height:S+2},
+    {nf:'5',assetId:1002,state:'SOLD',height:S+30,soldHeight:S+40},
+  ];
+  assert.deepEqual(C.rewardEventsFromRecords(ls,S+25,ids),[[ids.get(1001),S+10,'sale',S-5],[ids.get(1002),S+20,'cancel',S+1]]);
+  assert.deepEqual(C.rewardEventsFromRecords(ls,S+40,ids).find(e=>e[0]===ids.get(1002)),[ids.get(1002),S+40,'sale',S+30]);
+  // Minimal records for the worker: listing height, close height (null while open at H) and kind.
+  assert.deepEqual(C.listingRecords(ls,S+25),[[1001,S-5,S+10,'sale'],[1001,S-9,S-2,'cancel'],[1002,S+1,S+20,'cancel'],[1003,S+2,null,'active']]);
+  assert.throws(()=>C.rewardEventsFromRecords([{nf:'x',assetId:1001,state:'SOLD',height:S}],S+1,ids),/关闭高度/);
+  assert.throws(()=>C.rewardEventsFromRecords([{nf:'x',assetId:1001,state:'BURNED',height:S}],S+1,ids),/未知/);
+  const events=[['a',S+5,'sale'],['b',S+1008,'cancel'],['c',S+1009,'sale']];
+  assert.deepEqual(C.rewardEventsThisWeek(events,S+1008),[['a',S+5,'sale'],['b',S+1008,'cancel']]);
+  assert.deepEqual(C.rewardEventsThisWeek(events,S+1009),[['c',S+1009,'sale']]);
+  assert.deepEqual(C.rewardEventsThisWeek(events,S),[]);
+});
+
+test('Closing rows from a /listings read between blocks: the same active listings, pending as sale, cancelling as cancel',()=>{
+  const {closingRows}=require('../src/lib/snapshot-core.js');
+  const id=n=>String(n).padStart(64,'0')+'i0',snap={snapshot:{height:100},offers:[[id(1),10],[id(2),20]]};
+  const l=(n,o={})=>({nf:'n'+n,inscriptionId:id(n),assetId:n,price:'10',listedAt:90,pending:false,cancelling:false,...o});
+  assert.deepEqual(closingRows([l(2,{cancelling:true}),l(1,{pending:true})],snap),[[id(1),'sale'],[id(2),'cancel']]);
+  assert.deepEqual(closingRows([l(1),l(2),l(3,{listedAt:101})],snap),[],'a listing confirmed after the block is not part of it');
+  assert.equal(closingRows([l(1)],snap),null,'a listing gone without a new block: left to the rebuild');
+  assert.equal(closingRows([l(1),l(3)],snap),null);
+  for(const bad of [[l(1,{pending:'yes'}),l(2)],[l(1,{listedAt:null}),l(2)],[l(1,{inscriptionId:'x'}),l(2)],[l(1),l(1),l(2)]])assert.throws(()=>closingRows(bad,snap));
+  assert.throws(()=>closingRows({},snap));
 });
