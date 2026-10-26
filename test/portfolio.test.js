@@ -161,3 +161,50 @@ test('Stored records with a row that is not a row read as no records, never thro
    assert.equal(H.saleToConfirm(snap,id(1),records,undefined,{kind:'held'}),null);
   }
 });
+
+test('Weekly allocation counts unlisted holdings only; a cancelled listing is counted once, in the piece, not again among the others',()=>{
+ const s=fixture();
+ assert.deepEqual(H.current(s,[id(1)]).allocation.units,{lo:0,hi:0},'listed: no units');assert.deepEqual(H.current(s,[id(4)]).allocation.units,{lo:4,hi:4});
+ assert.deepEqual(H.current(s,[id(1),id(4)]).allocation.units,{lo:4,hi:4});assert.deepEqual(H.current(s,[id(1),id(4)]).allocation.all,{lo:22,hi:22},'K: #1003 and #1005 at 125% (Blue 1.25×), the other three at 100%');
+ // Reclaiming my #1001 (the 100 floor): the floor becomes 125, Red 150 and Blue 125 lose their tiers, all five pieces are 100% (K = 20),
+ // v = floor(26,664,000,000,000 ÷ 1008 ÷ 20) = 1,322,619,047. Mine afterwards: #1001 and #1004, 4 units each.
+ const a=H.impact(s,[id(1),id(4)],id(1),'cancel').allocation;
+ assert.deepEqual(a.after.units,{lo:8,hi:8});assert.deepEqual(a.after.all,{lo:20,hi:20});
+ assert.deepEqual(a.after.weekly,{lo:106655.99995008,hi:106655.99995008},'8 × v × 1008 ÷ 10⁸');
+ assert.deepEqual(a.others.after,{lo:53327.99997504,hi:53327.99997504},'#1004 alone: 4 units');assert.deepEqual(a.piece,{lo:53327.99997504,hi:53327.99997504});assert.equal(a.pieceCounts,true);
+ assert.deepEqual(a.before.weekly,{lo:48479.99998464,hi:48479.99998464},'before: #1004 alone, 4 of K = 22 units, v = 1,202,380,952');
+});
+test('In the last reward week a bought or reclaimed piece earns nothing: no later week pays it',()=>{
+ const S=R.RULES.startBlock,W=R.RULES.weekBlocks,s=fixture();s.snapshot.height=S+77*W+5;
+ for(const [raw,action] of [[[id(4)],'sale'],[[id(1),id(4)],'cancel']]){const x=H.impact(s,raw,id(1),action);assert.equal(x.state,'ready',action);assert.equal(x.allocation.pieceCounts,false,action);assert.deepEqual(x.allocation.piece,{lo:0,hi:0},action);
+  assert.deepEqual(x.allocation.after.units,{lo:4,hi:4},`${action}: only #1004 counts afterwards`);}
+ // A note created at block h earns from week index ceil((h − start) ÷ 1008): landing in week 77 it earns from week 78 (index 77), the
+ // last one; landing in the first block of week 78 (the block after week 77's last) it would earn from index 78, which does not exist.
+ const inside=fixture();inside.snapshot.height=S+76*W+1;assert.equal(H.impact(inside,[id(4)],id(1)).allocation.pieceCounts,true);
+ const edge=fixture();edge.snapshot.height=S+77*W;assert.equal(H.impact(edge,[id(4)],id(1)).allocation.pieceCounts,false);
+ const after=fixture();after.snapshot.height=S+78*W+1;assert.equal(H.impact(after,[id(4)],id(1)).state,'ended');
+});
+test('The Wallet page absence record is read only in its own shape; a private run noticed by it is a left run',()=>{
+ const good={height:971800,week:0,ids:[id(1),id(2)],dismissed:[id(2)]};
+ assert.deepEqual(H.absentOf(good),good);assert.notEqual(H.absentOf(good),good,'a copy');assert.deepEqual(H.absentOf({height:971800,week:77,ids:[],dismissed:[]}).ids,[]);
+ for(const bad of [undefined,null,[],'x',{},{...good,height:-1},{...good,height:1.5},{...good,week:78},{...good,week:-1},{...good,week:'0'},{...good,ids:undefined},{...good,ids:['bad']},{...good,ids:[1]},{...good,dismissed:'x'},{...good,dismissed:[null]}])assert.equal(H.absentOf(bad),null,JSON.stringify(bad));
+ assert.equal(H.ABSENT,'nakaWalletAbsent');
+ const run={listedAt:null,soldAt:null,weeks:null,source:'wallet-absent'},left=H.leftOf({[id(1)]:{number:1001,runs:[run]}});
+ assert.deepEqual(left,{[id(1)]:{number:1001,runs:[run]}});
+ assert.deepEqual(H.soldThisWeek([{id:id(1),number:1001,run}],{state:'active',first:2000},undefined),{keys:[],fresh:[]},'no sale block: not a sale of this week');
+});
+
+test('Incremental listing batches preserve rank order and exact portfolio allocation changes',()=>{
+ const s=fixture(),own=[id(4),id(5)],full=H.rank(s,own),chunks=s.offers.flatMap(offer=>H.rank(s,own,[offer])).sort(H.rankOrder),view=rows=>rows.map(r=>({id:r.id,price:r.price,allocation:r.impact.allocation}));
+ assert.deepEqual(view(chunks),view(full));
+});
+
+test('Buy sequence includes all purchased pieces in cumulative weekly output, with one shared denominator',()=>{
+ const s=fixture();s.saleHistory=[[0,[]],[1,[]]];const original=JSON.stringify(s),m=P.create(s,{priorSales:[id(1)]}),x=H.impact(s,[id(4)],id(2),'sale',m);
+ assert.equal(x.state,'ready');assert.deepEqual(x.allocation.before.units,{lo:4,hi:4});assert.deepEqual(x.allocation.after.units,{lo:12,hi:12});assert.deepEqual(x.allocation.after.all,{lo:20,hi:20});assert.deepEqual(x.allocation.piece,R.weeklyAllocation({lo:8,hi:8},{lo:20,hi:20}));assert.equal(JSON.stringify(s),original);
+ const independent=H.impact(s,[id(4)],id(2));assert.notDeepEqual(independent.allocation.after.units,x.allocation.after.units,'independent comparison does not inherit sequence purchases');
+});
+test('A simultaneous reclaim of another holding counts in the post-purchase fleet, but a sale leaves it',()=>{
+ const s=fixture();s.saleHistory=[[0,[]],[1,[]]];s.closing=[[id(2),'cancel']];const x=H.impact(s,[id(2),id(4)],id(1));assert.deepEqual(x.allocation.after.units,{lo:12,hi:12});
+ s.closing=[[id(2),'sale']];const sold=H.impact(s,[id(2),id(4)],id(1));assert.deepEqual(sold.allocation.after.units,{lo:8,hi:8});
+});

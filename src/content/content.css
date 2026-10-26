@@ -225,3 +225,21 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-badge--closing > :not(.shn-badge__closing) { opacity:.55; }
 .shn-badge__closing { flex-basis:100%; padding:2px 4px; font-size:9px; font-weight:800; letter-spacing:.02em; text-align:center; color:#ffd7a1; background:#3a2a14; border:1px solid #8a6230; }
 .shn-badge__closing--cancel { color:#d9d3ff; background:#251f3a; border-color:#5d5296; }
+
+/* Clicked inspections retain their snapshot and expose an explicit, keyboard-accessible dismissal. */
+.shn-pop__tools{box-sizing:border-box;display:flex;gap:8px;align-items:center;justify-content:space-between;width:100%;min-height:29px;padding:4px 9px;background:#24201b;border:1px solid #796345;border-top:0;color:#e0cfb7;font:10px/1.5 ui-monospace,monospace}
+.shn-pop__tools[hidden]{display:none!important}
+.shn-pop__tools button{font:inherit;border:0;background:transparent;color:#f4d39b;cursor:pointer;padding:2px 3px}
+.shn-pop__tools button:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
+.shn-pop__close{margin-left:auto;white-space:nowrap}.shn-pop__gone{font-size:9px}
+.shn-pop__tools .shn-pop__refresh{margin:0;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent}
+/* Opt-in only (?shn-debug=1 or #shn-debug). Absent from the page otherwise. */
+.shn-recognize{position:fixed;right:8px;bottom:8px;z-index:2147483646;width:min(320px,calc(100vw - 16px));margin:0;padding:6px 8px;background:#1c1916;color:#e6dccb;border:1px solid #6d5b42;font:10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;pointer-events:auto}
+.shn-recognize strong{display:block;color:#f4d39b;font-size:10px}
+.shn-recognize p,.shn-recognize small{display:block;margin:2px 0 0;color:#cbbfaa;overflow-wrap:anywhere}
+
+/* Pinning keeps the inspection's geometry; dismissal does not add a footer row. */
+.shn-pop__tools{display:contents}
+.shn-pop__tools .shn-pop__close{position:absolute;right:5px;top:5px;z-index:2;width:22px;height:22px;padding:0;background:#24201b;border:1px solid #796345;font-size:15px;line-height:20px}
+
+.shn-pop--pinned .shn-pop__head{padding-right:24px}

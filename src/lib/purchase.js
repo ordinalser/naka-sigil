@@ -24,32 +24,47 @@
     const units=new Map(rows.map(([key,row])=>[key,R.units(R.evaluate({number:row[0],traits:R.snapshotTraits(snap,row.slice(1))},snap.snapshot.collectionFloor))]));
     const value={rows,units};unitCache.set(snap,value);return value;
   }
-  function create(snap,{action='sale'}={}) {
+  function create(snap,{action='sale',priorSales=[]}={}) {
     if(!['sale','cancel'].includes(action))throw new Error('Unknown listing-removal action');
+    if(!Array.isArray(priorSales)||priorSales.some(id=>typeof id!=='string'))throw new Error('priorSales must be listing ids');
     if(!Array.isArray(snap.offers)) return {snapshot:snap.snapshot,get:()=>({state:'unavailable'})};
-    const offers=new Map(snap.offers), cache=new Map();
+    if(priorSales.some(id=>!snap.offers.some(([other])=>other===id)))throw new Error('priorSales must be active listing ids');
+    const prior=new Set(priorSales);
+    // The world of every scenario is the next block: the listings already closing (snap.closing) leave then whatever is
+    // done — a bought one as a new sale of its traits, a reclaimed one as no trade — exactly as planner.scenario removes them.
+    const offers=new Map(snap.offers), closing=new Map(snap.closing??[]), cache=new Map(), H=snap.snapshot.height, F=snap.snapshot.collectionFloor;
     function get(id) {
       if(cache.has(id)) return cache.get(id);
       if(!offers.has(id)) return {state:'unlisted'};
-      const price=offers.get(id), remaining=snap.offers.filter(([other])=>other!==id);
-      const common={action,rewardContext:R.rewardContext(snap,id,'listed'),price,premium:premium(price,snap.snapshot.collectionFloor),beforeFloor:snap.snapshot.collectionFloor,remaining:remaining.length,credits:relayCredits(snap,id)};
+      if(closing.has(id)&&closing.get(id)!==action)return {state:'closing',closing:closing.get(id),price:offers.get(id)};
+      const price=offers.get(id), remaining=snap.offers.filter(([other])=>other!==id&&!closing.has(other)&&!prior.has(other));
+      const common={action,rewardContext:R.rewardContext(snap,id,'listed'),price,premium:premium(price,F),beforeFloor:F,remaining:remaining.length,credits:relayCredits(snap,id)};
       if(!remaining.length) {const r={state:'no-floor',...common};cache.set(id,r);return r;}
       let floor=Infinity;const floors=new Map();
       for(const [other,p] of remaining) {
         floor=Math.min(floor,p);
         for(const idx of snap.items[other].slice(1)) {const t=floors.get(idx);floors.set(idx,{floor:Math.min(t?.floor??Infinity,p),listed:(t?.listed||0)+1});}
       }
-      // Re-evaluate each affected holding against the SAME removal scenario, including
-      // a changed collection denominator. Preserve official rare units only when all
-      // their inputs (floor and sale history) are unchanged.
-      const evaluated=new Map(),removedIndexes=new Set(snap.items[id].slice(1));
-      // A sale is the newest sale of each removed trait; a cancellation is not a trade.
+      // Every listing that leaves: this one by `action`, the other closing ones as they close. A bought listing is the
+      // newest sale of each of its traits at the next block — this one as the hypothetical newest sale (pendingSale), a
+      // closing one as a sale in the trait's history; a reclaimed one is no trade.
+      const removed=new Map([...closing].filter(([other])=>other!==id));
+      for(const pid of priorSales)if(pid!==id&&offers.has(pid))removed.set(pid,'sale');
+      removed.set(id,action);
+      const removedIndexes=new Set(),cancelled=new Set(),sales=new Map(),operated=new Set(snap.items[id].slice(1));
+      for(const [other,how] of removed)for(const idx of snap.items[other].slice(1)){removedIndexes.add(idx);if(how==='cancel')cancelled.add(idx);else if(other!==id){if(!sales.has(idx))sales.set(idx,[]);sales.get(idx).push(offers.get(other));}}
+      // Re-evaluate each affected holding against the SAME removal scenario, including a changed collection denominator.
+      // Official rare units are preserved only while all their inputs (floor and sale history) are unchanged.
+      const evaluated=new Map();
       function evaluateRow([number,...indexes]) {
         const traits=R.snapshotTraits(snap,indexes).map((t,i)=>{
-          const f=floors.get(indexes[i]),changed=removedIndexes.has(indexes[i]);
-          const preserve=floor===snap.snapshot.collectionFloor && (!changed || (action==='cancel' && t.floor===null));
-          const carryUnknown=t.supply<R.RULES.heldSupply&&(f?.floor??null)===null&&t.saleHistory?.length===0&&((action==='cancel'&&changed&&t.floor!==null&&R.traitTier(t.floor,snap.snapshot.collectionFloor).pct>0)||(!preserve&&t.officialSource==='lastBlock'&&t.officialPct>0));
-          const row={...t,floor:f?.floor??null,listed:f?.listed??0,...(carryUnknown?{carryUnknown:true}:{}),...(action==='sale'&&changed?{pendingSale:price}:{})};
+          const idx=indexes[i],f=floors.get(idx),changed=removedIndexes.has(idx),preserve=floor===F&&!changed;
+          const others=sales.get(idx),sold=action==='sale'&&operated.has(idx);
+          const history=others&&t.saleHistory!==undefined?[...others.map(p=>[p,H+1]),...t.saleHistory]:t.saleHistory;
+          // A small sale-less trait whose last ask goes with no sale to score it keeps an unverified carry (reclaimed from
+          // a bonus tier, or officially carried), not 0%.
+          const carryUnknown=t.supply<R.RULES.heldSupply&&(f?.floor??null)===null&&t.saleHistory?.length===0&&!others&&!sold&&((cancelled.has(idx)&&t.floor!==null&&R.traitTier(t.floor,F).pct>0)||(!preserve&&t.officialSource==='lastBlock'&&t.officialPct>0));
+          const row={...t,floor:f?.floor??null,listed:f?.listed??0,...(history!==undefined?{saleHistory:history}:{}),...(carryUnknown?{carryUnknown:true}:{}),...(sold?{pendingSale:price}:{})};
           if(!preserve){delete row.officialPct;delete row.officialSource;}
           return row;
         });
@@ -86,7 +101,7 @@
       Object.defineProperty(r,'evaluate',{value:evaluate});Object.defineProperty(r,'evaluateRow',{value:evaluateRow});Object.defineProperty(r,'programmeUnits',{value:programmeUnits});Object.defineProperty(r,'unitChange',{value:unitChange});
       cache.set(id,r);return r;
     }
-    return {snapshot:snap.snapshot,get};
+    return {snapshot:snap.snapshot,get,priorSales:[...prior],closing:[...closing]};
   }
   const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   function renderLaunch(snapshot,T,I) {
@@ -138,22 +153,99 @@
     return null;
   }
   const SYMBOL={up:'↑',down:'↓',market:'◆',unknown:'↔',known:'◆'};
+  /** A trait's bonus as shown: exact, or the bounds of an unmeasured one (rules.evaluate sets pctLo–pctHi for every unmeasured method). */
+  const traitPct=t=>t.measured?`+${t.pct}%`:`+${t.pctLo}–${t.pctHi}%`;
+  /** A trait's price basis in short: its official source, the zero-listing rule, or its exact ratio to the collection
+   * floor (rules.basisRatio: the trait floor, or the sales median / mean itself, never the rounded basis price). */
+  function traitRatio(t,floor,T) {
+    switch(t.method) {
+      case 'official-sales':return T.officialSales;
+      case 'official-none':return T.officialNoSales;
+      case 'official-lastBlock':return T.officialLastBlock;
+      case 'carry-unverified':return T.carryUnknown;
+      case 'held':return T.heldTrait(t.supply);
+      case 'sales-median':return `${T.salesMedianShort} ${R.basisRatio(t,floor)}`;
+      case 'no-sales':return T.noSales;
+      case 'sales-ambiguous':return T.salesTied;
+      case 'floor':return R.basisRatio(t,floor);
+      case 'missing-sale':return T.saleUnknown;
+    }
+    throw new Error(`Unknown trait method: ${t.method}`);
+  }
+  /** The piece's output at the shown weight: a full week and the rest of the programme. After a sale or reclaim it starts
+   * the week after the transaction (NakaMining.forecast); held, from this week if it earns now. null when not knowable. */
+  function heroRates(paired,options) {
+    const M=root.NakaMining,A=root.NakaRewards,snap=options.snap,id=options.id;
+    if(!M||!snap||!id||!snap.items?.[id])return null;
+    if(paired){const f=M.forecast(snap,id,{action:options.action==='cancel'?'cancel':'sale',scenario:options.scenario,asIs:Boolean(options.closing)});return f.state==='ready'?{weekly:f.weekly,remaining:f.remaining,from:f.plan.index===null?null:f.plan.index+1}:null;}
+    if(options.listing==='listed')return {weekly:null,remaining:null,from:null};
+    // A holding's own status when the caller knows it; otherwise the public records' reading of this piece.
+    let status=options.status??null;
+    if(!status&&A){const r=A.reason(snap,id);status=r.kind==='held'?{status:'earning'}:r.kind==='before'?{status:'idle'}:Number.isSafeInteger(r.startsWeek)?{status:'waiting',startsWeek:r.startsWeek}:null;}
+    if(!status)return null;
+    const f=M.forecast(snap,id,{action:'hold',status});
+    return f.state==='ready'?{weekly:f.weekly,remaining:f.remaining,from:f.plan.state==='waiting'&&f.plan.index!==null?f.plan.index+1:null}:null;
+  }
+  const shn=v=>v===null||v===undefined?'—':root.NakaExploreUI?root.NakaExploreUI.shn(v):String(v.lo);
+  /** The block line of a details card: "Block 973,091" in front, its age after it; the pages refresh it as time passes. */
+  function paintBasis(n,snapshot,T,I) {
+    n.replaceChildren(node('b','naka-hero__height',T.snapBlock(I.int(snapshot.height))),node('span','naka-hero__age',I.blockAgeShort(T,snapshot)));
+    n.title=I.blockTimeTitle(T,snapshot);return n;
+  }
+  /** Public sales of the piece, read when opened: price, block and the block's local time, newest first. One read per piece
+   * and block, shared by every card that shows it (a card rebuilt while reading picks up the same answer). */
+  const salesReads=new Map();
+  function readSales(id,height){
+    const key=`${id}|${height}`;if(salesReads.has(key))return salesReads.get(key);
+    const job=chrome.runtime.sendMessage({type:'shn-sales',id,height}).then(r=>{if(!r?.ok)throw Error(r?.error??'unavailable');return r.sales;});
+    salesReads.set(key,job);job.catch(()=>salesReads.delete(key));while(salesReads.size>64)salesReads.delete(salesReads.keys().next().value);return job;
+  }
+  function salesBox(snapshot,id,T,I) {
+    const box=node('details','naka-sales'),sum=node('summary','naka-sales__summary'),list=node('div','naka-sales__list');
+    sum.append(node('span','',T.salesTitle),node('span','naka-sales__count',''));box.append(sum,list);let loaded=false;
+    const load=()=>{loaded=true;list.replaceChildren(node('p','naka-sales__note',T.salesLoading));
+      readSales(id,snapshot.height).then(({total,rows})=>{
+        sum.lastChild.textContent=T.salesCount(I.int(total));
+        if(!rows.length){list.replaceChildren(node('p','naka-sales__note',T.salesNone));return;}
+        list.replaceChildren(...rows.map(x=>{const row=node('div','naka-sales__row');row.append(node('b','',`${I.btc(x.price)} BTC`),node('span','',T.salesAt(I.int(x.height))),node('span','naka-sales__time',x.time===null?'—':I.localTime(x.time*1000)));return row;}));
+        if(total>rows.length)list.append(node('p','naka-sales__note',T.salesMore(I.int(total))));
+      }).catch(()=>{loaded=false;const retry=node('button','naka-sales__retry',T.salesRetry);retry.type='button';retry.addEventListener('click',load);const p=node('p','naka-sales__note',T.salesFailed+' ');p.append(retry);list.replaceChildren(p);});};
+    box.addEventListener('toggle',()=>{if(box.open&&!loaded)load();});
+    return box;
+  }
   function inspection(before,after,snapshot,T,I,options={}) {
-    const paired=Boolean(after),beforeLabel=options.action==='cancel'?T.cancelBefore:T.formulaBefore,afterLabel=options.action==='cancel'?T.cancelAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
+    const paired=Boolean(after),afterLabel=options.action==='cancel'?T.cancelAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
     box.dataset.action=options.action??'sale';box.dataset.state=paired?'ready':'current';box.dataset.metric='total-holding-weight';
     const listing=paired?'listed':(options.listing??'unknown'),status=T.listing[listing];
     box.dataset.listing=listing;
-    const basis=node('p','naka-purchase__basis',T.snapBlock(I.blockBasis(T,snapshot)));
-    basis.title=I.blockTimeTitle(T,snapshot);box.append(basis);
+    // Hero: the artwork large on the left. On the right, one left-aligned column: the listing state in a word, the block every
+    // figure here is computed at, then the weight under one caption that says which world it is (after a sale or reclaim,
+    // the formula of a listing as it stands) and from which week it earns, and last the piece's output at that weight: per
+    // week and remaining, side by side, label over figure as everywhere else.
+    const hero=node('div','naka-hero'),side=node('div','naka-hero__side');
+    if(options.snap&&options.id&&root.NakaExploreUI&&options.snap.items?.[options.id]){const art=node('div','naka-hero__art'),img=root.NakaExploreUI.art(options.snap,options.id,'naka-hero__img');img.classList.add('naka-hero__img');art.append(img);hero.append(art);}
     const state=node('p','naka-listing');state.dataset.listing=listing;
     // The eligibility line names this NFT's own blocks and weeks (NakaRewards.explainFor); callers always supply it.
     const explained=options.explain;if(!explained||typeof explained.short!=='string'||typeof explained.full!=='string')throw new Error('Inspection needs the NFT-specific eligibility text');
-    state.append(node('strong','naka-listing__badge',status.label),node('span','naka-listing__meaning',explained.short));
-    state.title=explained.full;box.append(state);
+    // A listing already closing says so in the market's word (Selling, Reclaiming), as its tile does.
+    if(options.closing&&!['sale','cancel'].includes(options.closing))throw new Error('Unknown closing kind');
+    state.append(node('strong','naka-listing__badge',options.closing==='sale'?T.closingSaleTag:options.closing==='cancel'?T.closingCancelTag:status.short??status.label));
+    state.title=`${status.label} · ${explained.full}`;
+    const basis=node('p','naka-purchase__basis');paintBasis(basis,snapshot,T,I);
+    const rates=heroRates(paired,{...options,listing}),from=rates?.from?T.rateFrom(rates.from):null;
+    const caption=[paired?afterLabel:listing==='listed'?T.formulaOnly:null,from].filter(Boolean).join(' · ');
+    const weight=node('div','naka-hero__weight');weight.append(node('span','naka-hero__caption',caption));weight.title=[paired?(options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort):null,explained.full].filter(Boolean).join('\n');weight.append(decorateWeight(node('span','naka-hero__value'),after??before,true));
+    side.append(state,basis,weight);
+    if(rates&&rates.weekly!==null){const dl=node('dl','naka-hero__rates'),cell=(label,value)=>{const d=node('div',''),dd=node('dd',value==='—'?'is-none':'',value);if(value!=='—')dd.append(node('span','naka-hero__unit','SHNAKAS'));d.append(node('dt','',label),dd);dl.append(d);};
+      cell(T.rateWeek,shn(rates.weekly));cell(T.rateRest,shn(rates.remaining));dl.title=`${T.rateHint}\n${explained.full}`;side.append(dl);}
+    // A piece that produces nothing knowable here (listed, undecided, no later week) says why in the figures' place; a
+    // closing listing says so in its own box under the hero instead.
+    else if(!options.closing)side.append(node('p','naka-hero__note',explained.short));
+    hero.append(side);box.append(hero);
     // A listing already closing (bought and confirming, or being reclaimed): said before any figure, nobody else can buy it.
-    if(options.closing){if(!['sale','cancel'].includes(options.closing))throw new Error('Unknown closing kind');const note=node('p','naka-closing',options.closing==='sale'?T.closingSale:T.closingCancel);note.dataset.kind=options.closing;box.append(note);}
+    if(options.closing){const note=node('p','naka-closing',options.closing==='sale'?T.closingSale:T.closingCancel);note.dataset.kind=options.closing;box.append(note);}
 
-    if(paired)box.append(node('p','naka-purchase__assumption',options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort));
+    const beforeLabel=options.action==='cancel'?T.cancelBefore:T.formulaBefore;
     const table=node('table','naka-compare');table.setAttribute('aria-label',paired?(options.action==='cancel'?T.cancelTitle:T.buyTitle):T.weight);
     const cols=node('colgroup','');cols.append(node('col','naka-compare__label-col'),node('col','naka-compare__value-col'));
     const thead=node('thead',''),head=node('tr','');head.append(node('td','naka-compare__formula',T.formulaTitle));
@@ -163,17 +255,14 @@
       const tr=node('tr',cls),th=node('th','',label);th.scope='row';
       tr.append(th,node('td',paired?'naka-compare__after':'naka-compare__before',paired?b:a));body.append(tr);return tr;
     };
-    const total=row(T.totalWeight,undefined,undefined,'naka-compare__total');
-    decorateWeight(total.children[1],after??before,true);total.children[1].dataset.caption=paired?afterLabel:T.formulaColumn;
-    if(paired){const reference=node('small','naka-compare__reference');reference.append(node('span','',beforeLabel+' '),decorateWeight(node('span','naka-compare__original'),before));total.children[0].append(reference);}
-    const pct=t=>t.measured?`+${t.pct}%`:`+0–${R.MAX_TRAIT_PCT}%`,changes=new Set();
+    const pct=traitPct,changes=new Set();
     for(let i=0;i<before.traits.length;i++) {
       const a=before.traits[i],b=paired?after.traits[i]:a;
       const tr=row('',undefined,undefined,'naka-compare__calculation naka-compare__trait');
       tr.children[0].append(node('small','naka-compare__type',a.type==='Hair And Headwear'?T.headwear:a.type),node('span','naka-compare__name',a.value));
       const changed=paired?traitChange(a,b,options.beforeFloor,options.afterFloor):null;
       if(changed){tr.dataset.change=changed;changes.add(changed);}
-      const ratio=(t,floor)=>t.method==='official-sales'?T.officialSales:t.method==='official-none'?T.officialNoSales:t.method==='official-lastBlock'?T.officialLastBlock:t.method==='carry-unverified'?T.carryUnknown:t.method==='held'?T.heldTrait(t.supply):t.method==='sales-median'?`${T.salesMedianShort} ${R.formatRatio(t.basisPrice,floor)}`:t.method==='no-sales'?T.noSales:t.method==='sales-ambiguous'?T.salesTied:t.method==='floor'?R.formatRatio(t.floor,floor):T.saleUnknown;
+      const ratio=(t,floor)=>traitRatio(t,floor,T);
       const basis=t=>t.method.startsWith('official-')?T.officialBasis:t.method==='held'?T.heldRule:t.method==='sales-median'?T.salesMedianBasis(I.btc(t.basisPrice)):t.method==='no-sales'?T.noSalesBasis:t.method==='sales-ambiguous'?T.salesTiedBasis:t.method==='floor'?T.floorOf(I.btc(t.floor),t.listed):T.saleUnknown;
       const cell=tr.children[1],value=node('span','naka-compare__value');
       const oldRatio=ratio(a,options.beforeFloor??snapshot.collectionFloor),newRatio=ratio(b,options.afterFloor??snapshot.collectionFloor);
@@ -187,16 +276,22 @@
       cell.title=changed?`${beforeLabel}: ${pct(a)} · ${basis(a)}\n${afterLabel}: ${pct(b)} · ${basis(b)}`:basis(b);
     }
     if(before.number.pct)row(`${T.number} ${before.number.value}`,`+${before.number.pct}%`,`+${before.number.pct}%`,'naka-compare__calculation');
-    if(options.action!=='cancel' && options.credits!==null && options.credits!==undefined){const credit=row(T.relayCredits,String(options.credits),String(options.credits),'naka-compare__credits');credit.title=T.relayCreditsMeaning;}
-    const floor=row(T.collectionFloorBTC,I.btc(options.beforeFloor??snapshot.collectionFloor),I.btc(options.afterFloor??snapshot.collectionFloor),'naka-compare__floor');
-    if(paired && options.beforeFloor!==options.afterFloor){floor.dataset.change='market';changes.add('market');floor.children[1].prepend(node('span','naka-compare__old',I.btc(options.beforeFloor)),node('span','naka-compare__arrow',' → '));floor.children[1].append(node('span','naka-change naka-change--market','◆'));}
     box.append(table);
     if(changes.size)table.title=T.changedRows;
-    box.append(node('p','naka-purchase__formula',`${T.buyRatioNote} · ${T.base} ${R.RULES.basePct}% · ${T.capShort} ${R.RULES.capPct}%`));
-    const caution=node('div','naka-purchase__caution');
-    caution.append(node('p','naka-purchase__provisional',T.inspectProvisional));
+    // Context under the weight table, not part of it: the collection floor every ratio is measured against (and how the
+    // sale moves it), and the listing's relay credits.
+    const facts=node('dl','naka-facts'),fact=(label,value,hint)=>{const d=node('div','naka-facts__item');d.append(node('dt','',label));const dd=node('dd','');dd.append(...value);d.append(dd);if(hint)d.title=hint;facts.append(d);return d;};
+    const floorBefore=options.beforeFloor??snapshot.collectionFloor,floorAfter=options.afterFloor??snapshot.collectionFloor,moved=paired&&floorBefore!==floorAfter;
+    const floorItem=fact(T.collectionFloorBTC,moved?[node('span','naka-compare__old',I.btc(floorBefore)),node('span','naka-compare__arrow',' → '),node('b','',I.btc(floorAfter)),node('span','naka-change naka-change--market','◆')]:[node('b','',I.btc(floorAfter))]);
+    if(moved){floorItem.dataset.change='market';changes.add('market');}
+    if(options.action!=='cancel' && options.credits!==null && options.credits!==undefined)fact(T.relayCredits,[node('b','',String(options.credits))],T.relayCreditsMeaning);
+    box.append(facts);
+    if(options.sales!==false&&root.chrome?.runtime?.sendMessage&&options.id&&options.snap)box.append(salesBox(snapshot,options.id,T,I));
+    // Fine print, one line: how a ratio is read and what a private claim pays. Notes only when they apply.
+    // Each part stays whole when the line wraps in a narrow card.
+    const caution=node('div','naka-purchase__caution'),formula=node('p','naka-purchase__formula');[T.buyRatioNote,`${T.base} ${R.RULES.basePct}%`,`${T.capShort} ${R.RULES.capPct}%`,T.claimShort].forEach((part,i)=>{if(i)formula.append(' · ');formula.append(node('span','naka-purchase__part',part));});
+    formula.title=T.inspectProvisional;caution.append(formula);
     if(before.unmeasured || after?.unmeasured)caution.append(node('p','naka-purchase__note naka-purchase__range-note',T.buyRangeNote));
-    const eligibility=node('p','naka-purchase__eligibility',explained.full);if(paired&&options.action!=='cancel')eligibility.title=T.pastRewardNote;caution.append(eligibility);
     if(options.activity)caution.append(node('p','naka-purchase__activity',T.activityShort));
     if(options.notice)caution.append(node('p','naka-purchase__note',options.notice));
     box.append(caution);
@@ -205,7 +300,7 @@
   function renderCurrent(result,snapshot,T,I,options={}) {return inspection(result,null,snapshot,T,I,options);}
   function render(model,id,T,I,options={}) {
     const scenario=model.get(id);if(scenario.state!=='ready')return null;
-    const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,{...scenario,...options});box.dataset.id=id;return box;
+    const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,{...scenario,scenario,...options});box.dataset.id=id;return box;
   }
-  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,numberTag,numberBadge,decorateWeight,traitChange};
+  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,paintBasis,numberTag,numberBadge,decorateWeight,traitChange,traitPct,traitRatio};
 });

@@ -1,4 +1,71 @@
 /* Naka Sigil popup: original pixel geometry, charcoal/amber/violet. No external artwork or fonts. */
+/* Block tab, three cards in the popup's own language: the hero (the block in amber pixels with its freshness, the reward
+   week and how far into it, the week bar, then floor, listings and what 100% earns a week in pixel figures), the reward
+   schedule (one row per date: blocks left and the estimated date), and one week's network output. Titles are the popup's
+   pixel titles; figures keep their places while they load; the tab fits without scrolling. */
+.view-block { gap:10px; }
+.block-hero { display:flex; flex-direction:column; gap:8px; padding:11px 12px 12px; background:#1d1a15; border:1px solid #3a3123; border-top:2px solid #ffcf6b; }
+.bh-main { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.bh-block { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.bh-height { display:block; height:30px; color:var(--accent); }
+.bh-height .pixel-height { height:30px; filter:drop-shadow(0 0 4px #ffaf4530); }
+.bh-meta { display:flex; align-items:center; gap:8px; margin:0; color:var(--muted); font-size:10px; }
+.bh-meta .live-state { flex:none; font-size:10px; }
+.bh-age { flex:none; font-variant-numeric:tabular-nums; }
+.bh-meta .source-chip { flex:none; }
+.bh-week-now { display:flex; flex-direction:column; align-items:flex-end; gap:3px; padding-top:2px; white-space:nowrap; }
+.bh-week-now b { color:#ffd99c; font-size:13px; font-weight:750; }
+.bh-week-blocks { color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; }
+.block-hero .week-bar { height:3px; margin:0; background:#3a332a; }
+.block-hero .week-bar i { background:#ffcf6b; }
+.bh-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:2px 0 0; }
+.bh-stat { min-width:0; }
+.bh-stat dt { color:#9f978b; font-size:10px; white-space:nowrap; }
+.bh-stat dd { display:flex; align-items:flex-end; gap:4px; margin:4px 0 0; }
+.bh-stat .stat-pixels { display:block; width:auto; max-width:100%; height:14px; color:#f4eee4; }
+.bh-stat .stat-unit { color:var(--muted); font-size:9px; line-height:1; }
+/* The two cards under the hero: the popup's card frame and pixel title, figures one step below the hero. */
+.block-network .nl-network { display:flex; flex-direction:column; gap:10px; padding:0; }
+.block-network .nl-card { padding:9px 12px 10px; }
+.block-network .nl-card-head,.block-network .nl-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 7px; padding:0; }
+.block-network .nl-card h3 { margin:0; color:#efe6d6; font-size:11px; font-weight:700; }
+.block-network .nl-card-count { color:var(--muted); font-size:10px; }
+.nl-calendar { display:flex; flex-direction:column; gap:4px; margin:0; }
+.nl-when-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.nl-when-row dt { color:#9f978b; font-size:10px; }
+.nl-when-row dd { display:flex; align-items:baseline; gap:8px; margin:0; font-variant-numeric:tabular-nums; }
+.nl-when-row dd b { color:#efe6d6; font-size:12px; font-weight:700; }
+.nl-when-row dd span { min-width:76px; color:#8f877c; font-size:10px; text-align:right; }
+.block-network .nl-section-name { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.block-network .nl-select { min-height:24px; padding:3px 6px; font-size:10px; }
+.block-network .nl-period { margin:0; color:#8f877c; font-size:10px; font-variant-numeric:tabular-nums; min-height:14px; }
+.nl-out { display:flex; flex-direction:column; gap:10px; }
+/* One sum read top down: the whole on one line, a hairline split under it, each part under its half. */
+.nl-out__sum { display:flex; flex-direction:column; gap:6px; }
+.nl-out__line { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.nl-out__line span { color:#9f978b; font-size:10px; }
+.nl-out__line b { color:#e7ddcc; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.nl-out__line.is-pending b { color:#8f877c; font-size:10px; font-weight:400; }
+/* Claimed is a separate fact: its own line under a dotted rule, apart from the sum above. */
+.nl-out__claimed { padding-top:9px; border-top:1px dashed #2c2925; }
+.nl-out__claimed b { color:#cfc5b4; }
+.nl-out__pair { display:flex; justify-content:space-between; gap:12px; margin:0; }
+.nl-out__pair .nl-part:last-child { text-align:right; }
+.nl-out__pair .nl-part:last-child dt { justify-content:flex-end; }
+.nl-split { display:flex; height:1px; background:#2c2925; overflow:hidden; }
+.nl-split i { display:block; height:100%; transition:width .35s; }
+.nl-split__earned { background:#5b7c6d; }
+.nl-split__missed { background:#8f5f4e; }
+.nl-part { min-width:0; }
+.nl-part dt { display:flex; align-items:center; gap:5px; color:#9f978b; font-size:10px; white-space:nowrap; }
+.nl-part--earned dt::before,.nl-part--missed dt::before { content:''; width:5px; height:5px; flex:none; }
+.nl-part--earned dt::before { background:#5b7c6d; }
+.nl-part--missed dt::before { background:#8f5f4e; }
+.nl-part dd { margin:3px 0 0; color:#e7ddcc; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.nl-part--missed dd { color:#d29c86; }
+.nl-part__extra { margin-left:6px; color:#9c8278; font-size:10px; font-weight:400; }
+.block-network .nl-network-body.is-loading .nl-out b,.block-network .nl-network-body.is-loading .nl-out dd { opacity:.45; }
+.block-network .nl-note { margin:8px 0 0; color:var(--muted); font-size:10px; }
 
 /* ------------------------------------------------------------ Base */
 :root {
@@ -21,7 +88,7 @@ button,input,a { -webkit-tap-highlight-color:transparent; font:inherit; }
 button,a,input,summary { outline-offset:3px; }
 :focus-visible { outline:2px solid var(--accent); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
-.popup-scroll,.sheet-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; padding:0 4px 4px 0; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#645446 transparent; }
+.popup-scroll,.sheet-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; padding:0 4px 16px 0; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#645446 transparent; }
 .footnote { color:var(--muted); font-size:10px; line-height:1.7; margin-top:9px; overflow-wrap:anywhere; }
 .text-btn { display:inline-block; margin-top:8px; padding:0; background:none; border:0; color:var(--accent); font-size:11px; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
 .field { width:100%; min-width:0; min-height:38px; padding:9px 8px; background:#080808; border:1px solid var(--line); color:var(--text); border-radius:0; font-size:12px; clip-path:var(--notch); }
@@ -50,6 +117,7 @@ button,a,input,summary { outline-offset:3px; }
 .live-primary { flex:none; margin:0 0 10px; padding:7px 0; background-image:var(--dots),var(--dots); background-size:4px 1px; background-repeat:repeat-x; background-position:0 0,0 100%; }
 .mode-line { display:flex; align-items:center; gap:12px; }
 .live-state { display:flex; align-items:center; gap:6px; flex:1; min-width:0; min-height:12px; margin:0; color:var(--muted); font-size:9px; line-height:1.35; }
+.live-retry { flex:none; margin:0; padding:0 6px; height:16px; border:1px solid currentColor; background:transparent; color:inherit; font:inherit; font-size:9px; cursor:pointer; }
 .live-state::before { content:''; flex:none; width:6px; height:6px; background:currentColor; }
 .live-state--ok { color:#96d6a5; }
 .live-state--error { color:var(--red); }
@@ -142,16 +210,13 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
 .has-lookup .lookup-link { font-size:10px; }
 .has-lookup .naka-purchase { display:flex; flex-direction:column; }
 .lookup-context { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.lookup-height,.lookup-time { display:inline; }
-.lookup-time { color:#938e9c; font-size:9px; margin-left:6px; }
+.naka-hero .naka-listing .lookup-mode { margin-left:2px; }
 .lookup-mode { flex:none; align-self:flex-start; padding:2px 5px; border:1px solid #5f506c; color:#cfc0e2; font-size:9px; }
 .lookup-mode[data-state=error] { border-color:#8a4f47; color:var(--red); }
 .has-lookup .naka-listing { margin-top:6px!important; }
 .has-lookup .naka-compare { margin:3px 0; }
 .has-lookup .naka-compare th,.has-lookup .naka-compare td { padding:1px 4px; }
-.has-lookup .naka-compare .naka-compare__total td { padding:4px 6px; }
 .has-lookup .naka-weight__pixels { height:24px; }
-.has-lookup .naka-compare__total .naka-weight__dash { height:24px; }
 .has-lookup .naka-weight__rule { top:11px; }
 .has-lookup .naka-compare__name { font-size:11px; line-height:1.2; margin-top:1px; }
 .has-lookup .naka-compare__ratio { margin-top:1px; }
@@ -165,15 +230,11 @@ summary { padding:3px 0; color:var(--muted); cursor:pointer; }
   .has-lookup #lookupResult[data-state=found] { margin-top:6px; }
   .has-lookup .lookup-card { padding:5px; }
   .has-lookup .lookup-head { margin-bottom:4px; font-size:12px; }
-  .lookup-height,.lookup-time { display:inline; font-size:9px; }
-  .lookup-time { margin-left:6px; }
   .lookup-mode { padding:1px 4px; font-size:9px; }
   .has-lookup .naka-listing { margin-top:5px!important; }
   .has-lookup .naka-compare { margin:4px 0; }
   .has-lookup .naka-compare th,.has-lookup .naka-compare td { padding:0 2px; }
-  .has-lookup .naka-compare .naka-compare__total td { padding:5px; }
   .has-lookup .naka-weight__pixels { height:20px; }
-  .has-lookup .naka-compare__total .naka-weight__dash { height:20px; }
   .has-lookup .naka-weight__rule { top:9px; }
   .has-lookup .naka-compare__name { font-size:10px; line-height:1.2; }
   .has-lookup .naka-compare__ratio { line-height:1.05; margin-top:1px; }
@@ -224,7 +285,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .stage { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; margin-right:-12px; }
 /* The sheet covers the whole middle; the tab underneath stays rendered (inert), so nothing moves when it opens or closes. */
 .sheet { position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; background:var(--bg); animation:sheet-in .14s ease-out; }
-@keyframes sheet-in { from { opacity:0; transform:translateY(-6px); } }
+@keyframes sheet-in { from { transform:translateY(-4px); } }
 @media (prefers-reduced-motion:reduce) { .sheet { animation:none; } }
 .sheet-head { flex:none; display:flex; align-items:center; gap:10px; margin:0 12px 8px 0; padding-bottom:8px; background-image:var(--dots); background-size:4px 1px; background-repeat:repeat-x; background-position:0 100%; }
 .sub-title { flex:1; min-width:0; font-size:13px; }
@@ -259,7 +320,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .hc-share { color:var(--muted); font-size:10px; }
 .hc-how { color:var(--muted); font-size:10px; line-height:1.55; }
 
-/* Home · first run: a preview of what holdings will look like (the weekly figure at zero, four empty tiles), one
+/* Home · first run: a preview of what holdings will look like (the weekly figure at zero, one row of three empty tiles), one
    primary action, and the two Ord Dropz pages that add a whole page at once. The card fills the view. */
 .popup-scroll { display:flex; flex-direction:column; }
 .popup-scroll > .view { flex:1 0 auto; }
@@ -268,7 +329,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .empty-preview .hc-value { color:#6f6658; }
 .empty-preview .hc-pixels { filter:none; height:26px; }
 .empty-preview .hc-unit { color:#6f6658; }
-.empty-tiles { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+.empty-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .empty-tiles i { display:block; aspect-ratio:1; border:1px dashed #3d362d; background:repeating-linear-gradient(135deg,#171615 0 6px,#1a1917 6px 12px); }
 .empty-copy { text-align:center; }
 .empty-copy h2 { font-size:15px; }
@@ -287,19 +348,27 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .list-head h3 { margin:0; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
 .list-add { padding:3px 9px; background:#28221a; border:1px solid #79603d; color:#ffbd62; font-size:10px; font-weight:700; cursor:pointer; }
 .list-add:hover,.list-add[aria-expanded=true] { background:#33291c; border-color:#ffb347; }
-.hc-tiles { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+.hc-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .hc-tile { display:flex; flex-direction:column; min-width:0; padding:0; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
 .hc-tile:hover { border-color:#8a6d3d; }
 .hc-tile:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 .hc-art { position:relative; display:block; aspect-ratio:1; background:#0c0b0b; overflow:hidden; }
 .hc-art img,.hc-art .hc-fallback { display:block; width:100%; height:100%; image-rendering:pixelated; object-fit:cover; color:var(--accent); }
-.hc-tag { position:absolute; left:3px; top:3px; padding:0 4px; background:#2b2212e6; color:var(--warn); font-size:9px; line-height:14px; }
+.hc-tag { position:absolute; left:4px; top:4px; padding:0 5px; background:#2b2212e6; color:var(--warn); font-size:10px; line-height:16px; }
+.hc-tag--ask { left:auto; right:4px; }
 .hc-tile.is-listed .hc-art img { opacity:.45; }
-.hc-caption { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:1px 3px; padding:4px 5px 5px; line-height:1.25; white-space:nowrap; }
-.hc-number { color:#e5d8bd; font-size:10px; font-weight:700; overflow:hidden; }
-.hc-weight { font-size:9px; }
-.hc-earn { grid-column:1 / -1; color:var(--gold); font-size:12px; font-weight:700; }
-.hc-earn--listed { color:#6f685f; }
+.hc-caption { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:2px 4px; padding:6px 7px 7px; line-height:1.25; white-space:nowrap; }
+.hc-number { color:#e5d8bd; font-size:11px; font-weight:700; overflow:hidden; }
+.hc-weight { font-size:10px; font-weight:700; }
+.hc-earn { grid-column:1 / -1; height:19px; color:var(--gold); font-size:14px; font-weight:700; line-height:19px; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; }
+.hc-earn--state { color:#a79fc0; font-size:11px; }
+/* The two estimates under the figure: a full week and the rest of the programme, label left, value right. */
+.hc-rates { grid-column:1 / -1; display:flex; flex-direction:column; gap:1px; margin:1px 0 0; padding-top:4px; border-top:1px solid #2a2724; }
+.hc-rates div { display:flex; justify-content:space-between; align-items:baseline; gap:4px; min-width:0; }
+.hc-rates dt { color:#8f877c; font-size:9px; }
+.hc-rates dd { margin:0; color:#d9cfbd; font-size:10px; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; }
+.hc-rates dd.is-none { color:#5f5850; }
+.hc-earn--listed { color:#8f877c; font-size:11px; }
 .hc-tile.is-new { animation:hc-new 1.1s ease-out; }
 @keyframes hc-new { 0% { transform:scale(.85); border-color:#94dcb4; box-shadow:0 0 0 0 #94dcb4; } 40% { transform:scale(1.05); box-shadow:0 0 0 5px #94dcb455; } 100% { transform:none; box-shadow:0 0 0 10px #94dcb400; } }
 @media (prefers-reduced-motion:reduce) { .hc-tile.is-new { animation:none; border-color:#94dcb4; } }
@@ -315,7 +384,6 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 /* Block tab: mode, the block card, the reward schedule and history lookup. */
 .mode-row { display:flex; align-items:center; gap:10px; }
 .mode-row .live-state { flex:1; }
-.view-block .snapshot-card { margin:0; padding:11px 12px; background:var(--card); box-shadow:none; border:1px solid var(--card-line); border-top:2px solid var(--accent); }
 .height-line { display:flex; align-items:center; gap:8px; padding:4px 0 2px; }
 .height-line > span:first-child { display:none; }
 .height-line .source-chip { margin-left:auto; }
@@ -339,6 +407,8 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .schedule-row { display:flex; justify-content:space-between; gap:12px; font-size:10px; }
 .schedule-row dt { color:var(--muted); }
 .schedule-row dd { margin:0; color:var(--text); font-variant-numeric:tabular-nums; text-align:right; }
+.schedule-row dd .schedule-eta { display:block; color:var(--muted); font-size:9px; margin-top:1px; }
+.output-note { margin:7px 0 0; color:var(--muted); font-size:9px; line-height:1.4; }
 
 /* Look up & compare. */
 .lookup-how { margin-top:6px; color:var(--muted); font-size:10px; line-height:1.55; }
@@ -361,6 +431,10 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .compare-gain[data-change=down] { color:var(--red) !important; }
 .compare-gain[data-change=same] { color:var(--muted) !important; }
 .compare-gain[data-change=unknown] { color:#e8c58c !important; }
+/* A compared listing already closing: Selling or Reclaiming, in the market's colours; it shows no gain. */
+.compare-tag { align-self:flex-start; padding:0 4px; border:1px solid #8a6230; background:#2b2012; color:#ffd7a1; font-size:9px; line-height:14px; }
+.compare-tag--cancel { border-color:#5d5296; background:#1f1a33; color:#d9d3ff; }
+.compare-unavailable { color:var(--muted); font-size:11px; }
 .compare-weight { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
 .compare-weight small { color:var(--muted); font-size:9px; }
 .compare-weight .naka-weight__pixels { height:18px; }
@@ -404,7 +478,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .about-tg a { color:var(--accent); }
 
 /* Bottom tab bar: four jobs, one font, pixel icons. */
-.tabbar { flex:none; display:grid; grid-template-columns:repeat(4,1fr); margin:4px -16px -16px; padding:6px 8px 8px; background:#151413; border-top:1px solid #3a332b; }
+.tabbar { flex:none; display:grid; grid-template-columns:repeat(4,1fr); margin:4px -16px 0; padding:6px 8px 8px; background:#151413; border-top:1px solid #3a332b; }
 .tabbar button { position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; padding:5px 0 3px; background:none; border:0; color:#8f877c; font-size:10px; cursor:pointer; }
 .tabbar button:hover { color:var(--text); }
 .tabbar button[aria-current=true] { color:var(--accent); }
@@ -424,29 +498,54 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 #addDialog .btn { padding:8px 14px; }
 /* Block tab: a little more air between and inside its cards (it fits one screen with room to spare). */
 .view-block { gap:12px; }
-.view-block .block-card { padding:11px 12px 12px; }
-.view-block .alloc-stats { gap:11px 12px; }
-.view-block .schedule { gap:5px; }
 .add-hint { margin:6px 0 0; color:#8f877c; font-size:10px; }
 
 /* Fixed Block mode is history-only; the mode switch stays hidden. */
 /* The reward hero carries its own frame. */
 .holdings-hero:has(.naka-reward) { padding:0; background:none; border:0; }
 .hc-figure:has(.naka-reward) { display:block; }
-/* Tile caption: three fixed lines (number and weight, this week's SHNAKAS, status). Hidden values keep their line. */
+/* Tile caption: four fixed lines (number and weight, this week's SHNAKAS, per week, remaining). Hidden values keep their line. */
 .hc-earn.is-blank { visibility:hidden; }
-.hc-sub { grid-column:1 / -1; min-height:11px; color:#8f877c; font-size:8px; line-height:1.35; overflow:hidden; text-overflow:ellipsis; }
-.hc-sub--waiting { color:#c4b5fd; }
-.hc-sub--listed,.hc-sub--paused { color:#c9a36b; }
-.hc-sub--gone,.hc-sub--ended,.hc-sub--unknown { color:#a49e95; }
-.hc-tile[data-status=waiting] .hc-earn { color:#a79fc0; }
+/* Popup is the real 380px target (headless openPopup measured about 395×498). The hero keeps every figure,
+   but the two rates sit beside the history total so the first tile's weekly and remaining lines clear the tab bar. */
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) body { padding:10px 12px 6px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .head { gap:8px; padding-bottom:4px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .sigil-frame,
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .pixel-sigil { width:30px; height:36px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .brand h1 { font-size:15px; line-height:1.2; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .sub { margin-top:1px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-skin-row .naka-skin-toggle { min-height:26px; padding:2px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-reward { gap:8px; padding:11px 12px 9px; }
+html[data-naka-surface=popup] .naka-reward__main { display:contents; }
+html[data-naka-surface=popup] .naka-reward__head { order:0; }
+html[data-naka-surface=popup] .naka-reward__figure { order:1; }
+html[data-naka-surface=popup] .naka-reward__bar { order:2; height:3px; margin-top:-2px; }
+html[data-naka-surface=popup] .naka-reward__stats { order:3; gap:12px; padding-top:2px; }
+html[data-naka-surface=popup] .naka-reward__note { order:4; font-size:10px; }
+html[data-naka-surface=popup] .naka-reward__stat { padding:0; border-left:0; }
+html[data-naka-surface=popup] .naka-reward__stat dt { font-size:10px; }
+html[data-naka-surface=popup] .naka-reward__stat dd { margin-top:3px; font-size:14px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .view { padding-bottom:12px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-reward__figure { height:30px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-reward__past { padding:0; border:0; background:none; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-reward__past b { margin-top:3px; font-size:14px; font-weight:700; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .naka-reward__satellites { margin-top:2px; gap:8px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .status-strip { min-height:22px; padding:2px 8px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .holdings-list { gap:4px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .holdings-hero { padding:0; background:none; border:0; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .hc-id { display:flex; align-items:baseline; justify-content:space-between; gap:4px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .raise-weight { display:flex; align-items:baseline; gap:4px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .raise-weight b { font-size:12px; font-weight:700; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .nl-dialog { max-height:calc(100dvh - 70px); margin-bottom:58px; }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .nl-dialog-body { max-height:calc(100dvh - 160px); }
+html[data-naka-surface=popup]:not([data-naka-skin=mining]) .hc-caption { padding:3px 3px 4px; }
 
 /* Raise weight: the answers in three cards of two rows (best buy, reach 400%, own a trait), compact enough that all three
    show on the popup's first screen, then one line for Simulate; every part opens its place on the extension page. Same
    charcoal cards and pixel titles as the other tabs. */
 .view-raise { gap:8px; }
 .raise-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.raise-head h2 { font-size:12px; }
+.raise-head h2 { font-size:15px; font-weight:750; }
 .raise-basis { margin-top:-4px; color:var(--muted); font-size:10px; }
 /* Which added numbers the answers count as ours: one line, so the cards stay on the first screen however many there are. */
 .raise-scope { margin-top:-4px; color:var(--muted); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -454,18 +553,24 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 /* Cards being recomputed stay readable; a dim appears only if the work takes a noticeable moment. */
 .raise-body[aria-busy=true] > * { opacity:.55; transition:opacity .2s .25s; }
 .raise-card { display:flex; flex-direction:column; gap:5px; padding:7px 10px 8px; background:var(--card); border:1px solid var(--card-line); }
-.raise-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.raise-card-head h3 { margin:0; font-size:11px; }
+.raise-card--buy { min-height:0; }
+.raise-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:22px; }
+.raise-card--buy .raise-card-head h3 { font-size:15px; }
+.raise-card-head h3 { margin:0; font-size:13px; font-weight:750; line-height:1.2; }
 .raise-card-head .list-link { padding:0; }
-.raise-row { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; padding:3px 7px 3px 3px; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; text-decoration:none; cursor:pointer; }
+.raise-row { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; min-height:44px; padding:4px 8px 4px 4px; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; text-decoration:none; cursor:pointer; }
+.raise-row--wait { color:#8f877c; }
 .raise-row:hover { border-color:#8a6d3d; }
 .raise-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-.raise-art { display:block; width:32px; height:32px; background:#0c0b0b; }
-.raise-art img,.raise-art .hc-fallback { display:block; width:32px; height:32px; image-rendering:pixelated; color:var(--accent); }
+.raise-art { display:block; width:40px; height:40px; background:#0c0b0b; }
+.raise-art img,.raise-art .hc-fallback { display:block; width:40px; height:40px; image-rendering:pixelated; color:var(--accent); }
 .raise-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.raise-info strong { display:flex; align-items:baseline; gap:6px; min-width:0; font-size:11px; white-space:nowrap; }
+.raise-info strong { display:flex; align-items:baseline; gap:6px; min-width:0; color:#f4eee4; font-size:13px; white-space:nowrap; }
 .raise-info small { color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.raise-to { color:#9ce0bc; }
+.raise-sub { display:flex; align-items:baseline; gap:6px; }
+.raise-number { color:#e5d8bd; font-weight:700; }
+.raise-to { color:var(--naka-tone,#9ce0bc); font-weight:700; }
+.raise-per { overflow:hidden; text-overflow:ellipsis; }
 .raise-tag { padding:0 3px; border:1px solid #5d5296; color:#cfc6ff; font-size:8px; font-weight:400; line-height:12px; }
 /* Own a trait: the value in full (cut short only when it alone is too long); its type follows on the same line when all
    of it fits, otherwise it wraps out of sight (the row's title names both). */
@@ -473,7 +578,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .raise-value { flex:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .raise-type { color:var(--muted); font-size:9px; font-weight:400; }
 .raise-gain { display:flex; flex-direction:column; align-items:flex-end; gap:1px; white-space:nowrap; }
-.raise-gain b { color:#9ce0bc; font-size:13px; line-height:1.3; }
+.raise-gain b { color:#9ce0bc; font-size:16px; line-height:1.3; }
 .raise-gain small { color:var(--muted); font-size:9px; }
 /* The figure: a weekly gain in mint (above), a loss red, no change muted, a range across zero amber; the pieces a trait
    still lacks gold. */
@@ -504,5 +609,4 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .hc-note-text { flex:1; min-width:0; }
 .hc-note-close { flex:none; display:inline-grid; place-items:center; min-width:24px; min-height:24px; margin:-5px -6px -5px -4px; padding:0; background:none; border:0; color:var(--muted); font:inherit; font-size:12px; line-height:1; cursor:pointer; }
 .hc-note-close:hover { color:var(--text); }
-.hc-sub--confirm { color:var(--warn); }
 

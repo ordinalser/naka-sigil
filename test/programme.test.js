@@ -37,6 +37,14 @@ test('Programme units equal the official K, including not-yet-minted catalog pie
   // Official values at 971553: K 28947, v 913821; a 150% piece (6 units) has perBlock 5,482,926.
   assert.equal(R.unitRate(28947),913821);assert.equal(R.weeklyAllocation({lo:6,hi:6},{lo:28947,hi:28947}).lo,5482926*1008/1e8);
   assert.throws(()=>R.weeklyAllocation({lo:1,hi:1},{lo:0,hi:0}));assert.throws(()=>R.weeklyAllocation({lo:1.5,hi:1.5},K));
+  // 2026-10-18, block 971959: K 26,713 → v 990,243 (26,452,380,952.38 ÷ 26,713 = 990,243.5…: the rate is floored, not rounded).
+  assert.equal(R.unitRate(26713),990243);assert.equal(R.unitRate(16),1653273809);
+});
+test('Programme constants: the on-chain pool and horizon, as the rules inscription states them',()=>{
+  assert.equal(R.RULES.poolPerWeek,266640);assert.equal(R.RULES.poolPerWeekBase,26664000000000);assert.equal(R.RULES.tokenDecimals,8);
+  assert.equal(R.RULES.poolPerWeek*10**R.RULES.tokenDecimals,R.RULES.poolPerWeekBase,'the displayed weekly pool is the base figure at 8 decimals');
+  assert.equal(R.RULES.weeks,78);assert.equal(R.RULES.weekBlocks,1008);assert.equal(R.RULES.startBlock,971700);assert.equal(R.RULES.claimUntil,1102740);assert.equal(R.RULES.catalogPieces,3333);
+  assert.equal(R.RULES.startBlock+R.RULES.weeks*R.RULES.weekBlocks,1050324,'the last rewarded block');
 });
 test('Scenario programme units match a full re-evaluation, with or without a collection-floor change',()=>{
   const model=P.create(snap),floorId=snap.offers.reduce((a,b)=>b[1]<a[1]?b:a)[0];

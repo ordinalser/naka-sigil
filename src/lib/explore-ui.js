@@ -26,7 +26,7 @@
   holdings:'My holdings',holdingsNote:'Saved only on this device. You maintain it, and it can include Nakas held in other accounts.',
   
   holdingsEmpty:'Add your holdings to see your weekly allocation and how a purchase or delisting changes it.',
-  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,gainWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of the weekly pool`,
+  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,gainWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of each block's pool at current weights`,
   listedNoEarn:'Listed · earns nothing while listed',
   allocationBasis:'Official formula basis: 266,640 SHNAKAS a week shared by the weight units of all 3,333 pieces (100% = 4 units). Listed holdings earn nothing; a new holding counts from the next reward week. Not a payout guarantee.',
   boost:'Raise my weight',boostHint:'Listings that raise your weekly allocation if bought',boostEmpty:'Add holdings to use Raise my weight.',
@@ -35,7 +35,7 @@
   addHolding:'＋ My holdings',inHoldings:'✓ My holdings',holdingHint:'Add to My holdings (saved on this device)',holdingRemoveHint:'In My holdings. Select to remove it.',
   addVisible:n=>`＋ Add these ${n} Nakas to My holdings`,addRest:(n,k)=>`＋ Add the other ${n} (${k} already added)`,addedVisible:n=>`✓ All ${n} on this page are in My holdings`,openHoldings:'My holdings ↗',pieces:n=>`${n} ${n===1?'Naka':'Nakas'}`,
   bundledNote:'Historical data demo · example holdings · not live listings',
-  navHome:'Holdings',compareSlotsLeft:n=>`＋ ${n} more can be compared`,numberPromptMulti:'e.g. 379, 1025, 1500',multiHint:'Separate numbers with commas, spaces or line breaks.',skipInvalid:t=>`“${t}” is not a number`,skipMissing:n=>`#${n} is not in this block's data`,skipHeld:n=>`#${n} is already in My holdings`,skipCompared:n=>`#${n} is already in Compare`,skipFull:n=>`#${n}: Compare holds 4 at most`,addedSkipped:(n,list)=>`Added ${n}. Skipped: ${list.join('; ')}`,navBlock:'Block',stripStart:n=>`Week 1 in ${n} block${n==='1'?'':'s'}`,navSections:'Sections',emptyTitle:'Add your first Naka',emptyText:'See how much SHNAKAS it earns each week.',emptyAdd:'＋ Add a number',emptyOr:'Or add a whole page at once',vaultLink:'Vault',walletLink:'Wallet holdings',emptyJumpNote:'Open one, go to Vault or Holdings, then press “＋ Add these Nakas to My holdings” on that page.',tilesTitle:n=>`All holdings (${n})`,allocTitleBlock:'Allocation at this block',perFull:'100% weight / week',perCap:'400% cap / week',unitsK:'All weight units (K)',poolWeek:'Pool / week',allocNote:v=>`One unit earns v = ${v} base units a block, from the official endpoint's formula.`,scheduleWeekN:n=>`Week ${n}`,scheduleEndBlock:'Last rewarded block',scheduleClaim:'Claim deadline',progressLabel:'Weeks completed',weeksDone:(n,t)=>`${n} / ${t}`,listAdd:'＋ Add',scheduleTitle:'Reward schedule',afterDelist:'If delisted',earnListed:'0',
+  navHome:'Holdings',compareSlotsLeft:n=>`＋ ${n} more can be compared`,numberPromptMulti:'e.g. 379, 1025, 1500',multiHint:'Separate numbers with commas, spaces or line breaks.',skipInvalid:t=>`“${t}” is not a number`,skipMissing:n=>`#${n} is not in this block's data`,skipHeld:n=>`#${n} is already in My holdings`,skipCompared:n=>`#${n} is already in Compare`,skipFull:n=>`#${n}: Compare holds 4 at most`,addedSkipped:(n,list)=>`Added ${n}. Skipped: ${list.join('; ')}`,navBlock:'Block',stripStart:n=>`Week 1 in ${n} block${n==='1'?'':'s'}`,navSections:'Sections',emptyTitle:'Add your first Naka',emptyText:'See how much SHNAKAS it earns each week.',emptyAdd:'＋ Add a number',emptyOr:'Or add a whole page at once',vaultLink:'Vault',walletLink:'Wallet holdings',emptyJumpNote:'Open one, go to Vault or Holdings, then press “＋ Add these Nakas to My holdings” on that page.',tilesTitle:n=>`All holdings (${n})`,allocTitleBlock:'Allocation at this block',perFull:'100% weight / week',perCap:'400% cap / week',unitsK:'All weight units (K)',poolWeek:'Pool / week',allocNote:v=>`One unit earns v = ${v} base units a block, from the official endpoint's formula.`,scheduleWeekN:n=>`Week ${n}`,scheduleEndBlock:'Last rewarded block',scheduleClaim:'Claim deadline',progressLabel:'Weeks completed',weeksDone:(n,t)=>`${n} / ${t}`,listAdd:'＋ Add',scheduleTitle:'Reward schedule',outputTitle:'This week’s SHNAKAS',outputProduced:'Issued so far',outputLost:'Nobody can claim',outputLostPct:'Share, if all were eligible',outputProjected:'Nobody can claim, full week',outputPieces:n=>`${n} pieces listed, moved this week or unminted; private transfers not counted: a lower bound`,outputProjectedNote:'at today’s share; more moves only add',outputLoading:'Waiting for this block’s official table…',outputInactive:'No reward week is running',scheduleEta:d=>`≈ ${d}`,scheduleEtaFar:'far ahead: a rough estimate',afterDelist:'If delisted',earnListed:'0',
   aboutCases:'Reward eligibility · every action',casesLead:'Per the official engine: a week pays only the holder whose piece did not move all week. Any move — listing, sale, send, even to yourself — ends that week for the piece, and the new holder starts the week after. The action counts in the week of the block it confirms in, first to last block alike.',casesWhat:'What you do',casesThis:'This week',casesLater:'Later weeks',
   caseGroups:[
    {title:'Public actions · read automatically',rows:[
@@ -63,7 +63,6 @@
     ['After block 1,050,324','Accrual has ended','Claim completed weeks before the deadline','info'],
    ]},
    {title:'Other',rows:[
-    ['Sell into an offer','Like a sale: nothing that week','The seller keeps earlier full weeks; the buyer starts next week','no'],
     ['A Naka minted after launch (6 were still unminted at block 971,787)','Nothing in its mint week','From the week after','info'],
     ['Listed and unminted Nakas','Their units still count in K','Nobody claims those shares and nobody else gets them; where they go is not stated officially','info'],
    ]},
@@ -80,13 +79,13 @@
   raiseBuyNone:'No listing raises your weekly SHNAKAS right now.',raisePlanDone:'Nothing to take to 400%: every piece is there already or being sold.',raisePlanNone:'Current listings cannot take any piece to 400%.',raisePlanAuto:n=>`${n===1?'One piece reaches':`${n} pieces reach`} 400% once listings already closing close: nothing to do.`,
   raisePer:v=>`+${v} per 0.001 BTC`,raiseWeek:'/ week',raiseFree:'Free',raisePlanCost:(c,b)=>b?`${c} BTC · buy ${b}`:'Free: reclaims only',raiseMate:'Mate',
   raiseBuyHint:n=>`Open #${n} on the market`,raisePlanHint:n=>`The steps for #${n} on the extension page`,
-  raiseLockOnce:p=>`once ours ${p}`,raiseLockOurs:(k,n)=>`ours ${k}/${n}`,raiseLockDeal:n=>`${n} by private deal`,raiseLockUnminted:n=>`${n} unminted`,raiseLockNoFloor:'buying leaves no listing to score',raiseLockMissing:'missing',raiseLockKept:'bonus kept',
+  raiseLockOnce:p=>`once ours ${p}`,raiseLockOurs:(k,n)=>`ours ${k}/${n}`,raiseLockDeal:n=>`${n} by private deal`,raiseLockUnminted:n=>`${n} unminted`,raiseLockNoFloor:'buying leaves no listing to score',raiseLockMissing:'missing',raiseLockKept:'bonus kept',raiseLockKeep:n=>`keep #${n} listed`,raiseTotalWeek:'ours · weekly total',
   raiseLockNone:n=>n?`${n===1?'The one trait our pieces carry is':`All ${n} traits our pieces carry are`} already all ours: nothing to do.`:'Our pieces carry no trait to own right now.',raiseLockHint:name=>`How to own ${name}, on the extension page`,
   raiseSimLine:'What a listing, sale or reclaim does to everyone',buyNow:'Buy ↗',buyHint:'Open this listing on the market',
   compareEmptyPopup:'Nothing to compare yet',compareHowPopup:'Tap here to enter numbers (comma- or space-separated), or add from a market inspection.',compareOpen:'Full comparison with traits ↗',
   lookupHow:'Listed Nakas show their after-sale weight; unlisted ones show their holding weight.',blockChip:h=>`Block ${h}`,sharedTrait:n=>`Shared by ${n} held ${n===1?'Naka':'Nakas'}`,showAll:'Show all',zeroSupplement:'Zero-listing supplement',
   addHoldingTitle:'Add a holding',addCompareTitle:'Add to Compare',confirmAdd:'Add',cancel:'Cancel',
-  expandAll:n=>`Show all ${n}`,collapse:'Show less',tileHint:n=>`Check #${n}`,listedShort:'Listed · not earning',
+  expandAll:n=>`Show all ${n}`,collapse:'Show less',networkTitle:'Block tab · network output',networkLines:['Full output: the week’s output if all 3,333 pieces earned — the official per-piece accruals summed, listed and unminted ones included. Its gap to the rule’s 266,640 a week is per-block rounding.','Earnable (≤): full output less forfeited, the most holders can claim.','Forfeited (≥): what listing, moving or not minting left unclaimable; never issued. A private move cannot be matched to a piece, so it is a lower bound; its share of the full output sits under it. The bar is earnable on the left, forfeited on the right.','Claimed: public claim receipts for that week. It shows once the week ends and can still grow; it is neither the claimable maximum nor an unclaimed balance.'],tileHint:n=>`Click to inspect #${n}`,tileWeekly:'Per week',tileRemaining:'Remaining',tileAccrued:'This week',tileOpen:'Click to inspect',noReward:'Not earning',blockLabel:'Block',floorBtc:'Floor · BTC',listingsShort:'Listings',rewardWeekShort:'Reward week',weeksOver:'Over',weeksBefore:'Not started',weekBlocksHint:'Blocks into this week / 1,008 a week',liveChecking:'Checking',livePausedShort:'Paused',weekOf:(w,n)=>`Week ${w} / ${n}`,floorLabel:'Floor',scheduleCard:'Reward schedule',weeksDoneShort:(a,b)=>`${a} / ${b} weeks done`,blocksInto:(a,b)=>`${a} / ${b} blocks`,per100Week:'100% · week',per100Hint:'What 100% weight earns in a full week at the current network weight.',listedShort:'Listed · not earning',
   buyLead:n=>`If you buy #${n}`,
   tabListings:'Listings',aboutTitle:'About',aboutSafe:'Read-only and safe',aboutAlloc:'How the weekly figure is calculated',aboutRules:'Weight rules',aboutData:'Data and privacy',
   
@@ -95,7 +94,7 @@
   
   readOnlyDetail:'Naka Sigil reads public market data, the numbers you add, and — only when you press its sync button on the Wallet page — the eligibility states already shown there. It never connects to a wallet, asks you to log in, requests approval or signs anything. Holdings stay on this device.',
   openSource:'Open source ↗',weekUnit:'SHNAKAS / week',
-  manage:'Manage ↗',listedTag:'Listed',blockBasis:h=>`Block ${h} · official weights basis`,
+  manage:'Holdings ↗',manageHint:'Open My holdings on the full page. Add and remove stay on that page',listedTag:'Listed',blockBasis:h=>`Block ${h} · official weights basis`,
   copyAll:'Copy all numbers',copyAllDone:n=>`Copied ${n} number${n===1?'':'s'}`,copyAllFailed:'Copy failed',copyAllHint:'Numbers only, comma-separated: paste them into Add to import',
   wantPrefix:'Want to buy',wantCopy:'Copy wanted post',wantCopied:n=>`Copied a wanted post for ${n}: paste it in the group`,wantHint:'“Want to buy” and the numbers, comma-separated: post it in the group; pasted into Add, the numbers import',tgWanted:'Post it in the Naka Telegram group ↗',tgJoin:'Join the Telegram group ↗',
   
@@ -104,12 +103,13 @@
   confirmTitle:'A sale Naka Sigil cannot attribute: did you sell or buy?',toConfirm:'Confirm sale',confirmAsk:'Did you sell it or buy it?',leftThisWeek:(list,keeps)=>`Sold this week: ${list.join(', ')}. Moved to Left${keeps?'; the full weeks held before listing stay claimable':''}`,leftItem:(n,h)=>`#${n} (block ${h})`,leftSoldWeek:(list,n)=>`Sold this week: ${list.join(', ')}${n>list.length?` and ${n-list.length} more`:''}. Moved to Left`,leftView:'View ↗',leftDismiss:'Dismiss',confirmSale:(n,l,s)=>`#${n}: listed at block ${l}, sold at block ${s}.`,markSold:'I sold it',markBought:'I bought it',markFailed:'Not saved: the public records of this sale are not loaded yet.',holdingsWaiting:n=>`${n} saved ${n===1?'Naka awaits':'Nakas await'} public data; their IDs are kept`,
   weeksTitle:'Weekly totals',weekCols:{week:'Week',pieces:'Pieces counted',amount:'SHNAKAS'},weekName:n=>`Week ${n}`,weekUnknown:'Not determinable yet',weekReading:'Reading the official table…',
   weeksNote:'Finished weeks only, from the official weekly tables. Each holding counts the weeks of your own run of it: from your purchase (or the mint) through your listings and reclaims, minus listing weeks and weeks the Wallet page showed it moving privately. Claimed parts are included; the official wallet shows what is still claimable. Claims can wait and be made in one go until block 1,102,740.',
-  leftTitle:n=>`Left your vault (${n})`,leftSold:(l,w,s)=>`Listed at block ${l} (${w}), sold at block ${s}`,leftWallet:'Sent away privately (shown on your Wallet page)',leftKeeps:(weeks,v)=>`Keeps weeks ${weeks}${v===null?'':` · ${v} SHNAKAS`}`,leftNone:'No full week before it left: nothing to claim',
+  leftTitle:n=>`Left your vault (${n})`,leftSold:(l,w,s)=>`Listed at block ${l} (${w}), sold at block ${s}`,leftWallet:'Sent away privately (shown on your Wallet page)',leftAbsent:'Not on the Wallet page, marked as left; weeks kept unknown',leftKeeps:(weeks,v)=>`Keeps weeks ${weeks}${v===null?'':` · ${v} SHNAKAS`}`,leftNone:'No full week before it left: nothing to claim',
   leftRestore:'Back to holdings',leftRemove:'Remove',leftNote:'A piece that left keeps your full weeks before it left (before the listing week for a sale); that week and later earn nothing for you. Claim them in the official wallet.',
   thisWeek:'This week',perWeekShort:'/ week',thisWeekUnit:'this week',perWeekLine:v=>`${v} / wk`,idleNote:'Counts from week 1',simulateHint:n=>`#${n}: select to simulate listing it`,simLink:'Simulate listing ↗',simLinkHint:'What listing this holding at a price does to you and to other Nakas',planLink:'Plan to 400% ↗',planLinkHint:'Cheapest purchases or reclaims that bring this Naka to the 400% cap',
   removeHolding:n=>`Remove #${n} from My holdings`,holdingsHow:'Use ＋ to add a number, or add every Naka shown in your Vault or Wallet with one click.',holdingsHowDemo:'Use ＋ to add a number (this demo keeps them in this browser only).',
   syncButton:'Sync displayed eligibility to Naka Sigil',syncTitle:'Reads the earning state of each piece shown here (and the weeks a piece that left kept); stored on this device only. Claims nothing.',syncOk:'✓ Synced on this device',syncMoved:n=>`✓ Synced; ${n} ${n===1?'piece':'pieces'} sent away moved to Left your vault`,
-  syncAhead:'This page is a block ahead of Naka Sigil’s data: try again in about a minute',syncNoLive:'Naka Sigil has no live data yet: keep an Ord Dropz page open for a minute and try again',syncBadReading:'Could not read the week and block progress on this page',syncBoundary:'The page is between two weeks (0 / 1008): sync after the next block',syncFailed:'Not synced: try again',
+  syncAhead:'This page is a block ahead of Naka Sigil’s data: try again in about a minute',syncNoLive:'Naka Sigil has no live data yet: keep an Ord Dropz page open for a minute and try again',syncBadReading:'Could not read the week and block progress on this page',syncBoundary:'The page is between two weeks (0 / 1008): sync after the next block',syncFailed:'Not synced: try again',syncAbsent:n=>`${n} ${n===1?'holding is':'holdings are'} not on this page: confirm in the extension whether ${n===1?'it':'they'} left`,
+  absentTitle:'Not on your Wallet page at the last sync',absentLine:n=>`#${n}: the Wallet page shows no row of it; it may have been sent away privately.`,absentGone:'It left',absentKeep:'Still mine',absentFailed:'Not saved: sync again, then retry.',
   findSearching:n=>`Naka Sigil: finding #${n} on the market…`,findFound:(n,after,gain)=>`Found #${n}: ${after} once you buy it${gain?`, your weekly SHNAKAS ${gain}`:''}`,findFoundHeld:(n,w)=>`Found #${n}: not for sale, weight ${w}`,
   findPending:n=>`#${n} is being bought by someone (spinner on its card): it confirms in the next block, so buying it now fails`,findGone:n=>`#${n} is no longer listed: just bought or reclaimed`,findSearchBtn:'Search by number',
   findNoGrid:n=>`The market grid did not load: search for #${n} yourself`,fxAfter:'After buying',fxGain:v=>`${v} / week`,fxWeight:'Weight',findMissing:n=>`#${n} does not show after the search: it may have just sold (with “Listed only” on, sold pieces are hidden)`,findNoSearch:n=>`The market’s search box was not found: type ${n} into it`,findNotInData:n=>`#${n} is not in Naka Sigil’s data`},
@@ -139,7 +139,7 @@
   holdings:'我的持仓',holdingsNote:'只保存在本机，由你手动维护，可以包含其他账号里的 NFT。',
   
   holdingsEmpty:'添加你的持仓，查看每周分配，以及买入或撤单后的变化。',
-  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,gainWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`占每周奖池 ${v}`,
+  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,gainWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`按当前权重占每块奖池 ${v}`,
   listedNoEarn:'挂单中 · 挂单期间没有奖励',
   allocationBasis:'按官方公式：每周 266,640 SHNAKAS 按全部 3,333 枚的权重单位分配（100% = 4 单位）。挂单中的持仓没有奖励；新买入的持仓从下一个奖励周开始有奖励。不构成发放承诺。',
   boost:'增加我的权重',boostHint:'买入后能增加你每周分配的挂单',boostEmpty:'先加入持仓，才能使用“增加我的权重”。',
@@ -148,7 +148,7 @@
   addHolding:'＋ 我的持仓',inHoldings:'✓ 我的持仓',holdingHint:'添加到我的持仓（只保存在本机）',holdingRemoveHint:'已在我的持仓中，点击移出。',
   addVisible:n=>`＋ 将本页 ${n} 枚添加到我的持仓`,addRest:(n,k)=>`＋ 添加其余 ${n} 枚（已添加 ${k} 枚）`,addedVisible:n=>`✓ 本页 ${n} 枚都在我的持仓`,openHoldings:'我的持仓 ↗',pieces:n=>`${n} 枚`,
   bundledNote:'历史数据演示 · 示例持仓 · 不是当前挂单',
-  navHome:'持仓',compareSlotsLeft:n=>`＋ 还可加入 ${n} 枚`,numberPromptMulti:'如 379, 1025, 1500',multiHint:'可一次输入多个编号，用逗号、顿号、空格或换行分隔（中英文逗号都可以）',skipInvalid:t=>`“${t}”不是有效编号`,skipMissing:n=>`#${n} 不在当前区块数据中`,skipHeld:n=>`#${n} 已在我的持仓`,skipCompared:n=>`#${n} 已在比较中`,skipFull:n=>`#${n} 超出比较上限 4 枚`,addedSkipped:(n,list)=>`已添加 ${n} 枚；跳过：${list.join('；')}`,navBlock:'区块',stripStart:n=>`距第 1 周 ${n} 块`,navSections:'页面导航',emptyTitle:'添加你的第一枚 Naka',emptyText:'看看它每周能分到多少 SHNAKAS。',emptyAdd:'＋ 添加编号',emptyOr:'或一次添加整页',vaultLink:'金库',walletLink:'钱包持仓',emptyJumpNote:'打开后进入“金库”或“持仓”，点页面上的“＋ 将本页 N 枚添加到我的持仓”。',tilesTitle:n=>`全部持仓 (${n})`,allocTitleBlock:'本区块分配',perFull:'100% 权重 / 周',perCap:'400% 封顶 / 周',unitsK:'全目录权重单位 K',poolWeek:'每周奖池',allocNote:v=>`每个权重单位每块得到 v = ${v} 个最小单位，与官方接口算法一致。`,scheduleWeekN:n=>`第 ${n} 周`,scheduleEndBlock:'最后有奖励的区块',scheduleClaim:'领取截止区块',progressLabel:'已完成',weeksDone:(n,t)=>`${n} / ${t} 周`,listAdd:'＋ 添加',scheduleTitle:'奖励时间表',afterDelist:'撤单后',earnListed:'0',
+  navHome:'持仓',compareSlotsLeft:n=>`＋ 还可加入 ${n} 枚`,numberPromptMulti:'如 379, 1025, 1500',multiHint:'可一次输入多个编号，用逗号、顿号、空格或换行分隔（中英文逗号都可以）',skipInvalid:t=>`“${t}”不是有效编号`,skipMissing:n=>`#${n} 不在当前区块数据中`,skipHeld:n=>`#${n} 已在我的持仓`,skipCompared:n=>`#${n} 已在比较中`,skipFull:n=>`#${n} 超出比较上限 4 枚`,addedSkipped:(n,list)=>`已添加 ${n} 枚；跳过：${list.join('；')}`,navBlock:'区块',stripStart:n=>`距第 1 周 ${n} 块`,navSections:'页面导航',emptyTitle:'添加你的第一枚 Naka',emptyText:'看看它每周能分到多少 SHNAKAS。',emptyAdd:'＋ 添加编号',emptyOr:'或一次添加整页',vaultLink:'金库',walletLink:'钱包持仓',emptyJumpNote:'打开后进入“金库”或“持仓”，点页面上的“＋ 将本页 N 枚添加到我的持仓”。',tilesTitle:n=>`全部持仓 (${n})`,allocTitleBlock:'本区块分配',perFull:'100% 权重 / 周',perCap:'400% 封顶 / 周',unitsK:'全目录权重单位 K',poolWeek:'每周奖池',allocNote:v=>`每个权重单位每块得到 v = ${v} 个最小单位，与官方接口算法一致。`,scheduleWeekN:n=>`第 ${n} 周`,scheduleEndBlock:'最后有奖励的区块',scheduleClaim:'领取截止区块',progressLabel:'已完成',weeksDone:(n,t)=>`${n} / ${t} 周`,listAdd:'＋ 添加',scheduleTitle:'奖励时间表',outputTitle:'本周 SHNAKAS',outputProduced:'已产出',outputLost:'没有奖励（下限）',outputLostPct:'占比（假设都有资格）',outputProjected:'预计整周没有奖励',outputPieces:n=>`${n} 枚：挂单中、本周买入或取回、未铸造；私密转账未计，所以是下限`,outputProjectedNote:'按目前占比外推，再有挂单或转出只会更多',outputLoading:'等待这一块的官方累计表…',outputInactive:'现在没有进行中的奖励周',scheduleEta:d=>`约 ${d}`,scheduleEtaFar:'很远，只是粗略估计',afterDelist:'撤单后',earnListed:'0',
   aboutCases:'奖励资格 · 各种操作',casesLead:'按官方引擎：一周的奖励只给这一周里这一枚完全没动过的持有人。挂单、成交、转出，哪怕转给自己，这一周就没有奖励，新的持有人从下一周起有奖励。操作算在它确认的那一块所在的周，一周的第一块和最后一块都一样。',casesWhat:'操作',casesThis:'本周',casesLater:'之后各周',
   caseGroups:[
    {title:'公开操作 · 插件自动识别',rows:[
@@ -176,7 +176,6 @@
     ['区块 1,050,324 之后','奖励已结束','已完成的周在领取截止前领取','info'],
    ]},
    {title:'其它',rows:[
-    ['接受报价（Offers）成交','和卖出一样：这一周没有奖励','卖家保留之前完整周的奖励；买家下一周起有奖励','no'],
     ['启动后才铸造的 Naka（区块 971,787 时还有 6 枚未铸造）','铸造那一周没有奖励','下一周起有奖励','info'],
     ['挂单中和未铸造的 Naka','它们的权重照样算进全网 K','这部分份额没人能领，也不分给别人；去向官方没有说明','info'],
    ]},
@@ -193,13 +192,13 @@
   raiseBuyNone:'现在没有能让你每周增加的挂单。',raisePlanDone:'没有要冲 400% 的：持仓都已到 400%，或正在卖出。',raisePlanNone:'现有挂单不够把任何一枚冲到 400%。',raisePlanAuto:n=>`${n} 枚在已成交或撤单中的挂单关闭后会自动到 400%，无需操作。`,
   raisePer:v=>`每 0.001 BTC +${v}`,raiseWeek:'每周',raiseFree:'免费',raisePlanCost:(c,b)=>b?`${c} BTC · 买 ${b} 单`:'免费：只需撤单',raiseMate:'队友',
   raiseBuyHint:n=>`在市场打开 #${n} 这张卡`,raisePlanHint:n=>`在独立页查看 #${n} 冲 400% 的步骤`,
-  raiseLockOnce:p=>`垄断后 ${p}`,raiseLockOurs:(k,n)=>`我们 ${k}/${n}`,raiseLockDeal:n=>`私下收购 ${n} 枚`,raiseLockUnminted:n=>`未铸造 ${n} 枚`,raiseLockNoFloor:'买下后无挂单可算',raiseLockMissing:'还差',raiseLockKept:'加成不变',
+  raiseLockOnce:p=>`垄断后 ${p}`,raiseLockOurs:(k,n)=>`我们 ${k}/${n}`,raiseLockDeal:n=>`私下收购 ${n} 枚`,raiseLockUnminted:n=>`未铸造 ${n} 枚`,raiseLockNoFloor:'买下后无挂单可算',raiseLockMissing:'还差',raiseLockKept:'加成不变',raiseLockKeep:n=>`按线挂 #${n}`,raiseTotalWeek:'我们每周合计',
   raiseLockNone:n=>n?`持仓带的 ${n} 个特征都已全在我们手里，没有要做的。`:'持仓里现在没有可垄断的特征。',raiseLockHint:name=>`在独立页查看如何垄断 ${name}`,
   raiseSimLine:'挂单、成交或撤单对你和全网的影响',buyNow:'去购买 ↗',buyHint:'在市场打开这枚挂单',
   compareEmptyPopup:'还没有选择比较的 Naka',compareHowPopup:'点这里输入编号（多个用逗号或空格分隔），也可以在市场悬浮明细中加入。',compareOpen:'查看完整比较（含特征）↗',
   lookupHow:'已挂单显示成交后权重，未挂单显示持有权重。',blockChip:h=>`区块 ${h}`,sharedTrait:n=>`持仓中 ${n} 枚共享此特征`,showAll:'显示全部',zeroSupplement:'零挂单补充规则',
   addHoldingTitle:'添加持仓',addCompareTitle:'加入比较',confirmAdd:'添加',cancel:'取消',
-  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',tileHint:n=>`查看 #${n} 的权重`,listedShort:'挂单中 · 没有奖励',
+  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',networkTitle:'区块页 · 网络产出',networkLines:['满额产出：3,333 枚都有资格时这一周的产出，即官方逐枚累计之和（含挂单和未铸造的）；它和规则每周 266,640 的差额来自逐块取整。','可产出（≤）：满额产出减去流失，是持有人最多能领到的部分。','流失（≥）：因挂单、转移或未铸造而没人能领的部分，不会发行；私密转移认不出是哪一件，所以是下限，右边写它占满额产出的比例。色条左段是可产出，右段是流失。','已领取：公开领取回执里属于这一周的数量，周结束后才显示，之后还会增加；它不是可领取的上限，也不是未领取余额。'],tileHint:n=>`点击查看 #${n}`,tileWeekly:'每周',tileRemaining:'剩余',tileAccrued:'本周已产出',tileOpen:'点击查看',noReward:'没有奖励',blockLabel:'区块',floorBtc:'地板 · BTC',listingsShort:'挂单',rewardWeekShort:'奖励周',weeksOver:'已结束',weeksBefore:'未开始',weekBlocksHint:'本周已过的区块 / 每周 1,008 块',liveChecking:'检查中',livePausedShort:'已暂停',weekOf:(w,n)=>`第 ${w} / ${n} 周`,floorLabel:'集合地板',scheduleCard:'奖励时间表',weeksDoneShort:(a,b)=>`已完成 ${a} / ${b} 周`,blocksInto:(a,b)=>`${a} / ${b} 块`,per100Week:'100% 每周',per100Hint:'按当前全网权重，100% 权重一整周能分到的 SHNAKAS。',listedShort:'挂单中 · 没有奖励',
   buyLead:n=>`如果买入 #${n}`,
   tabListings:'挂单',aboutTitle:'说明',aboutSafe:'只读与安全',aboutAlloc:'每周分配怎么算',aboutRules:'权重规则',aboutData:'数据与隐私',
   
@@ -208,7 +207,7 @@
   
   readOnlyDetail:'Naka Sigil 只读取公开市场数据、你自己添加的编号，以及你在钱包页点同步按钮时页面上已显示的资格状态；从不连接钱包，不要求登录、授权或签名。持仓只保存在本机。',
   openSource:'开源代码 ↗',weekUnit:'SHNAKAS / 周',
-  manage:'管理 ↗',listedTag:'挂单中',blockBasis:h=>`区块 ${h} · 官方权重口径`,
+  manage:'持仓页 ↗',manageHint:'打开独立页的我的持仓。添加和移出都在这一页',listedTag:'挂单中',blockBasis:h=>`区块 ${h} · 官方权重口径`,
   copyAll:'复制全部编号',copyAllDone:n=>`已复制 ${n} 个编号`,copyAllFailed:'复制失败',copyAllHint:'纯数字、逗号分隔；对方在“添加”里粘贴即可导入',
   wantPrefix:'求购',wantCopy:'复制求购信息',wantCopied:n=>`已复制 ${n} 个编号的求购信息，进群粘贴即可`,wantHint:'“求购”加逗号分隔的编号：发到群里求购；粘贴进“添加”也能直接导入这些编号',tgWanted:'进入 Naka Telegram 群求购 ↗',tgJoin:'进入 Telegram 交流群 ↗',
   
@@ -217,12 +216,13 @@
   confirmTitle:'插件分不清这笔成交是你卖出还是你买入，请选一下',toConfirm:'待确认',confirmAsk:'是你卖出还是买入？',leftThisWeek:(list,keeps)=>`本周卖出 ${list.join('、')}，已移到已离手${keeps?'；挂单前完整持有的周仍可领取':''}`,leftItem:(n,h)=>`#${n}（区块 ${h}）`,leftSoldWeek:(list,n)=>`本周卖出 ${list.join('、')}${n>list.length?` 等 ${n} 枚`:''}，已移到已离手`,leftView:'查看 ↗',leftDismiss:'关闭',confirmSale:(n,l,s)=>`#${n}：区块 ${l} 挂单，区块 ${s} 成交。`,markSold:'是我卖出的',markBought:'是我买入的',markFailed:'没保存：还没读到这笔成交的公开记录。',holdingsWaiting:n=>`${n} 枚已保存持仓正在等待公开数据，编号不会移除`,
   weeksTitle:'每周收益',weekCols:{week:'周',pieces:'有奖励的枚数',amount:'SHNAKAS'},weekName:n=>`第 ${n} 周`,weekUnknown:'暂时无法确定',weekReading:'正在读取官方周累计表…',
   weeksNote:'只列已结束的周，金额来自官方周累计表。每一枚按你自己持有的那一段算：从你买入（或铸造）起，经过你的挂单和撤单，扣掉挂单那几周和钱包页显示私下转移的那几周。含已领取部分，可领取余额以官方钱包为准。没领的周会一直累积，可以一次领完，截止区块 1,102,740。',
-  leftTitle:n=>`已离手（${n}）`,leftSold:(l,w,s)=>`区块 ${l} 挂单（${w}），区块 ${s} 售出`,leftWallet:'私下转出（钱包页显示）',leftKeeps:(weeks,v)=>`保留第 ${weeks} 周${v===null?'':` · ${v} SHNAKAS`}`,leftNone:'离手前没有完整的周，没有可领取的',
+  leftTitle:n=>`已离手（${n}）`,leftSold:(l,w,s)=>`区块 ${l} 挂单（${w}），区块 ${s} 售出`,leftWallet:'私下转出（钱包页显示）',leftAbsent:'钱包页没有显示它，已标为离手；保留的周数未知',leftKeeps:(weeks,v)=>`保留第 ${weeks} 周${v===null?'':` · ${v} SHNAKAS`}`,leftNone:'离手前没有完整的周，没有可领取的',
   leftRestore:'放回持仓',leftRemove:'移除',leftNote:'离手的 Naka 保留你离手前完整的周（卖出的算到挂单那一周之前）；那一周及以后都不再归你。请在官方钱包领取。',
-  thisWeek:'本周',perWeekShort:'每周',thisWeekUnit:'本周',perWeekLine:v=>`每周 ${v}`,idleNote:'第 1 周起有奖励',simulateHint:n=>`#${n}：点击模拟挂单的影响`,simLink:'挂单模拟 ↗',simLinkHint:'按某个价格挂出这一枚，对你和其它 Naka 有什么影响',planLink:'冲 400% 方案 ↗',planLinkHint:'把这一枚推到 400% 封顶的最省钱买单或撤单组合',
+  thisWeek:'本周已产出',perWeekShort:'每周',thisWeekUnit:'本周已产出',perWeekLine:v=>`每周 ${v}`,idleNote:'第 1 周起有奖励',simulateHint:n=>`#${n}：点击模拟挂单的影响`,simLink:'挂单模拟 ↗',simLinkHint:'按某个价格挂出这一枚，对你和其它 Naka 有什么影响',planLink:'冲 400% 方案 ↗',planLinkHint:'把这一枚推到 400% 封顶的最省钱买单或撤单组合',
   removeHolding:n=>`从我的持仓移除 #${n}`,holdingsHow:'点击“＋ 添加持仓”输入编号，或在金库、钱包页一键添加页面上显示的全部 Naka。',holdingsHowDemo:'点击“＋ 添加持仓”输入编号（演示页只保存在这个浏览器里）。',
   syncButton:'将当前奖励资格同步到插件',syncTitle:'读取本页显示的每枚奖励状态（以及已离手藏品保留到第几周），只保存在本机，不做任何领取操作。',syncOk:'✓ 已同步到本机',syncMoved:n=>`✓ 已同步；${n} 枚私下转出的移到了“已离手”`,
-  syncAhead:'本页比插件的数据新一个区块：约一分钟后再点',syncNoLive:'插件还没有实时数据：保持一个 Ord Dropz 页面打开一分钟后再点',syncBadReading:'没读懂本页的周次和区块进度',syncBoundary:'本页正处在两周交界（0 / 1008 块）：下一块出来后再同步',syncFailed:'没同步成功，请重试',
+  syncAhead:'本页比插件的数据新一个区块：约一分钟后再点',syncNoLive:'插件还没有实时数据：保持一个 Ord Dropz 页面打开一分钟后再点',syncBadReading:'没读懂本页的周次和区块进度',syncBoundary:'本页正处在两周交界（0 / 1008 块）：下一块出来后再同步',syncFailed:'没同步成功，请重试',syncAbsent:n=>`${n} 枚持仓没有出现在本页，请到插件里确认是否已离手`,
+  absentTitle:'钱包页同步时没有看到这些 Naka',absentLine:n=>`#${n}：钱包页没有它的任何一行，可能已私下转出。`,absentGone:'已离手',absentKeep:'仍持有',absentFailed:'没保存：请重新同步后再试。',
   findSearching:n=>`Naka Sigil：正在市场里找 #${n}…`,findFound:(n,after,gain)=>`找到 #${n}：买入后 ${after}${gain?`，我每周 ${gain}`:''}`,findFoundHeld:(n,w)=>`找到 #${n}：未挂单，权重 ${w}`,
   findPending:n=>`#${n} 正在被别人购买（卡片右上角在转圈）：等下一块确认，现在买会失败`,findGone:n=>`#${n} 已不在挂单里：刚被买走或撤单`,findSearchBtn:'按编号搜索',
   findNoGrid:n=>`市场网格没有加载出来：请自己搜索 #${n}`,fxAfter:'买入后',fxGain:v=>`每周 ${v}`,fxWeight:'权重',findMissing:n=>`搜索后没有显示 #${n}：可能刚被买走（勾选了“仅看在售”时，已售出的不显示）`,findNoSearch:n=>`没找到市场的搜索框：请在搜索框输入 ${n}`,findNotInData:n=>`插件数据里没有 #${n}`}};
@@ -230,11 +230,11 @@
  const GITHUB='https://github.com/ordinalser/naka-sigil';
  /** The Naka community group on Telegram: where wanted posts go, and the popup's About links to it. */
  const TELEGRAM='https://t.me/+fRT4yVcxZ6VlNTBl';
- /** Piece artwork from the public art endpoint the official site uses, then its Ordinals inscription, then the sigil. */
+ /** Official snapshot artwork, then legacy public art and the inscription. Failures are bounded per image. */
  function art(snap,id,fallbackClass){
   const img=document.createElement('img'),asset=snap.items[id][0]-snap.collection.numberStart;
-  img.src=`https://shielded-api.ord-dropz.xyz/api/shielded/art/${asset}?c=${encodeURIComponent(snap.collection.cid)}`;img.alt=`Shielded #${snap.items[id][0]}`;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
-  let ordinals=false;img.addEventListener('error',()=>{if(!ordinals){ordinals=true;img.src=`https://ordinals.com/content/${id}`;}else img.replaceWith(globalThis.NakaPixel.sigil(fallbackClass));});
+  const sources=[`https://assets.ord-dropz.xyz/snapshots/${id}.webp`,`https://shielded-api.ord-dropz.xyz/api/shielded/art/${asset}?c=${encodeURIComponent(snap.collection.cid)}`,`https://ordinals.com/content/${id}`];let source=0;img.src=sources[source];img.alt=`Shielded #${snap.items[id][0]}`;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
+  img.addEventListener('error',()=>{if(++source<sources.length)img.src=sources[source];else img.replaceWith(globalThis.NakaPixel.sigil(fallbackClass));});
   return img;
  }
  /** A per-page artwork store: one element per place and NFT, reused by every render. Re-appending the same element keeps
@@ -261,23 +261,27 @@
   else throw new Error(`Unknown comparison state: ${state}`);
   button.title=state==='selected'?c.removeHint:state==='full'?c.full:c.addHint;
  }
- /** SHNAKAS amounts at two decimals (the official per-block rate is exact to 8); a range keeps both ends. */
+ /** SHNAKAS amounts at two decimals (the official per-block rate is exact to 8); a range keeps both ends. The sign and the
+  * direction (trend) follow the rounded figure, so a change that shows as 0.00 is unsigned and neutral, never "-0.00". */
  const amount=x=>x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
- function shn(range,sign=false){const f=x=>(sign&&x>=0.005?'+':'')+amount(x);const lo=f(range.lo),hi=f(range.hi);return lo===hi?lo:`${lo}–${hi}`;}
+ /** The number as it is shown: rounded as `amount` rounds it, -0 made 0. */
+ const shown=x=>{const v=Number(amount(x).replace(/,/g,''));return v===0?0:v;};
+ function shn(range,sign=false){const f=x=>{const v=shown(x);return (sign&&v>0?'+':'')+amount(v);};const lo=f(range.lo),hi=f(range.hi);return lo===hi?lo:`${lo}–${hi}`;}
+ /** Which way a change {lo, hi} goes as shown: both ends above zero 'up', both below 'down', both zero 'same', else 'unknown'. */
+ const trend=d=>{const lo=shown(d.lo),hi=shown(d.hi);return lo>0?'up':hi<0?'down':lo===0&&hi===0?'same':'unknown';};
  function percent(range){const f=x=>(x*100).toFixed(3)+'%';const lo=f(range.lo),hi=f(range.hi);return lo===hi?lo:`${lo}–${hi}`;}
  /** What a purchase or delisting does to my weekly SHNAKAS: the piece itself (with its weight), my other holdings
   * (shared traits and the programme total can move them), and the total before → after in pixel figures. */
  function holdingsLine(x,c){
   const node=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
-  const change=d=>d.lo>0?'up':d.hi<0?'down':d.lo===0&&d.hi===0?'same':'unknown';
   const a=x.allocation,box=node('div','naka-holdings'),rows=node('dl','naka-holdings__rows');
-  const row=(label,value,cls,d)=>{const r=node('div',cls);const dd=node('dd');dd.append(value);if(d)dd.dataset.change=change(d);r.append(node('dt','',label),dd);rows.append(r);};
+  const row=(label,value,cls,d)=>{const r=node('div',cls);const dd=node('dd');dd.append(value);if(d)dd.dataset.change=trend(d);r.append(node('dt','',label),dd);rows.append(r);};
   const weight=globalThis.ShnakasRules.formatWeight(x.scenario.result);
   row(x.action==='sale'?c.pieceRow(weight):c.pieceRowCancel(weight),`+${shn(a.piece)}`,'',a.piece);
   row(c.othersRow,a.others.delta.lo===0&&a.others.delta.hi===0?c.unchanged:shn(a.others.delta,true),'',a.others.delta);
   const total=node('span','naka-holdings__total'),after=shn(a.after.weekly),delta=shn(a.delta,true);
   const pixels=text=>{const s=node('span','naka-holdings__pixels');s.append(node('span','naka-sr',text),globalThis.NakaPixel.digits(text.replace(/[^0-9.,+\-–]/g,''),''));return s;};
-  const deltaNode=pixels(delta);deltaNode.dataset.change=change(a.delta);
+  const deltaNode=pixels(delta);deltaNode.dataset.change=trend(a.delta);
   total.append(node('span','naka-holdings__before',`${shn(a.before.weekly)} →`),pixels(after),deltaNode);
   row(c.totalRow,total,'naka-holdings__sum');
   box.append(node('p','naka-holdings__title',`${c.forMe} · ${c.weekUnit}`),rows);box.title=c.allocationBasis;return box;
@@ -303,7 +307,7 @@
   return {
    cases:[node('p','',c.casesLead),head,...groups],
    safe:[list(c.safeList,'naka-about__checks'),links],
-   alloc:[formula,list(c.allocLines,'naka-about__list')],
+   alloc:[formula,list(c.allocLines,'naka-about__list'),node('p','naka-about__label',c.networkTitle),list(c.networkLines,'naka-about__list')],
    rules:[node('p','naka-about__lead',c.rulesFormula),node('p','naka-about__label',c.traitTitle),tiles([...W.traitTiers].reverse().map(t=>[`+${t.pct}%`,`≥${t.num/t.den}×`])),
     node('p','naka-about__label',c.numberTitle),tiles(W.numberTiers.map(t=>[`+${t.pct}%`,`< ${int(t.below)}`])),node('p','',c.zeroRule),node('p','',c.scheduleRule(int(W.startBlock+1),int(W.weekBlocks),W.weeks)),ruleLinks],
    data:[node('p','',c.dataDetail)],
@@ -346,5 +350,5 @@
   * fails for a piece just bought).
   */
  function marketFind(snap,id){return `https://ord-dropz.xyz/secondary/collections/${snap.collection.slug}#naka-find=${snap.items[id][0]}`;}
- root.NakaExploreUI={pick,paintCompare,shn,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM};
+ root.NakaExploreUI={pick,paintCompare,shn,trend,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM};
 })(globalThis);

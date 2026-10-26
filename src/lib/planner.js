@@ -11,9 +11,10 @@
  * purchase.js; official rare-trait values are kept only while every input of that trait is unchanged.
  *
  * Listings the market already marks as closing (snap.closing: bought and confirming, or being reclaimed) close at the
- * next block whatever we do: a plan that needs one gone takes it at no cost and nobody can buy it. That holds for ours
- * too: one someone is buying can no longer be reclaimed, it sells and leaves our holdings at that block. Closing listings
- * a plan does not need still count in its floors, as they do at this block.
+ * next block whatever we do, so every scenario is the next block's world: all of them are gone from its floors and K
+ * (a bought one as that trait's newest sale), none can be bought, and one a plan needs is a free step. That holds for
+ * ours too: one someone is buying can no longer be reclaimed, it sells and leaves our holdings at that block. Changes
+ * are measured from this block, so a scenario's weight and weekly changes include what the closings themselves do.
  */
 (function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./rules.js'):root.ShnakasRules);if(typeof module==='object'&&module.exports)module.exports=api;else root.NakaPlanner=api;})(typeof globalThis!=='undefined'?globalThis:this,function(R){
  'use strict';
@@ -28,6 +29,7 @@
   if(indexes.has(snap))return indexes.get(snap);
   const rows=[...Object.entries(snap.items),...(snap.pending??[]).map((row,i)=>['pending:'+i,row])];
   const byTrait=new Map(),offersByTrait=new Map(),offers=new Map(snap.offers),closing=new Map(snap.closing??[]);
+  for(const [id,kind] of closing)if(!offers.has(id)||!['sale','cancel'].includes(kind))throw new Error(`Closing listing is not an open listing: ${id}`);
   for(const [key,row] of rows)for(const idx of row.slice(1)){if(!byTrait.has(idx))byTrait.set(idx,[]);byTrait.get(idx).push(key);}
   for(const [id,price] of snap.offers)for(const idx of snap.items[id].slice(1)){if(!offersByTrait.has(idx))offersByTrait.set(idx,[]);offersByTrait.get(idx).push([id,price]);}
   for(const list of offersByTrait.values())list.sort((a,b)=>a[1]-b[1]||a[0].localeCompare(b[0]));
@@ -46,15 +48,18 @@
  /**
   * changes: {remove:[[id,'sale'|'cancel'],…], add:[[id,price],…], reprice:[[id,price],…]}. Removed ids must be listed;
   * added ids must be unlisted catalog pieces; repriced ids are open listings that stay listed at a new ask (the wallet's
-  * Edit price: no delist; a listing already closing cannot be edited). Prices are positive integers in sats. Buys are new
-  * sales one block after the snapshot, all in that same block: when their order changes a small trait's last-three-sales
-  * window, the rules engine keeps both bounds.
+  * Edit price: no delist; a listing already closing cannot be edited). Prices are positive integers in sats. Every
+  * listing already closing is removed as well, as it closes (a sale or a reclaim): naming one in `remove` with the other
+  * action is an error. The returned `remove` is that whole set. Buys and closing sales are new sales one block after the
+  * snapshot, all in that same block: when their order changes a small trait's last-three-sales window, the rules engine
+  * keeps both bounds.
   */
  function scenario(snap,changes={}){
   const I=index(snap),H=snap.snapshot.height,F=snap.snapshot.collectionFloor;
-  const remove=new Map(changes.remove??[]),add=new Map(changes.add??[]),reprice=new Map(changes.reprice??[]);
+  const asked=new Map(changes.remove??[]),add=new Map(changes.add??[]),reprice=new Map(changes.reprice??[]);
   const ask=p=>{if(!Number.isSafeInteger(p)||p<=0)throw new Error('Listing price must be a positive integer in sats');};
-  for(const [id,action] of remove){if(!I.offers.has(id))throw new Error(`Not listed: ${id}`);if(!['sale','cancel'].includes(action))throw new Error('Unknown removal');}
+  for(const [id,action] of asked){if(!I.offers.has(id))throw new Error(`Not listed: ${id}`);if(!['sale','cancel'].includes(action))throw new Error('Unknown removal');if(I.closing.has(id)&&I.closing.get(id)!==action)throw new Error(`Cannot remove ${id}: closing as ${I.closing.get(id)}`);}
+  const remove=new Map([...I.closing,...asked]);
   for(const [id,price] of add){if(!Object.hasOwn(snap.items,id)||I.offers.has(id)||remove.has(id))throw new Error(`Cannot list: ${id}`);ask(price);}
   for(const [id,price] of reprice){if(!I.offers.has(id)||remove.has(id)||I.closing.has(id))throw new Error(`Cannot edit the price: ${id}`);ask(price);}
   const offers=[...snap.offers.filter(([id])=>!remove.has(id)).map(([id,p])=>[id,reprice.has(id)?reprice.get(id):p]),...add];
@@ -102,14 +107,18 @@
  /** Pieces listed after a scenario (listed now and not removed, plus the ones it lists; a repriced one stays listed). */
  const listedAfter=(snap,s)=>new Set([...snap.offers.map(o=>o[0]).filter(id=>!s?.remove?.has(id)),...(s?.add?.keys()??[])]);
  /** Which of my pieces earn: at the snapshot (s null) the unlisted ones; after a scenario the ones neither listed then nor
-  * sold in it (`ids` are ours, so a sale among them is someone buying our listing: the piece leaves us). */
- function earning(snap,s){const listed=listedAfter(snap,s);return s===null?id=>!listed.has(id):id=>!listed.has(id)&&s.remove.get(id)!=='sale';}
+  * sold in it (`ids` are ours, so a sale among them is someone buying our listing: the piece leaves us). One that earns
+  * nothing now and would start (a listing of ours reclaimed) gets its note at the next block, so it earns only when a
+  * reward week follows (laterWeek); in the last week it adds nothing, like a piece bought. */
+ function earning(snap,s){const listed=listedAfter(snap,s);if(s===null)return id=>!listed.has(id);const now=earning(snap,null),later=laterWeek(snap);return id=>!listed.has(id)&&s.remove.get(id)!=='sale'&&(now(id)||later);}
  /** Units that earn among `ids`, at the snapshot (s null) or after a scenario. */
  function earningUnits(snap,ids,s){const earns=earning(snap,s);return ids.filter(earns).reduce((u,id)=>sum(u,R.units(s?s.evaluate(id):R.evaluateSnapshot(snap,id))),{lo:0,hi:0});}
  /**
   * Weekly SHNAKAS of `ids` (pieces of ours) before and after a scenario, and the change in one world: a holding that earns
   * on both sides adds its own one-world weight change, one that starts or stops earning (listed, reclaimed, or sold away)
-  * adds or drops all its units, and K moves by the scenario's one-world unit change (rules.weeklyChangeBounds).
+  * adds or drops all its units, and K moves by the scenario's one-world unit change (rules.weeklyChangeBounds). A piece
+  * that starts earning counts only when a reward week follows (earning): in the last week a reclaim adds 0, as a purchase
+  * does in boughtWeekly / targetPlans.
   */
  function weeklyChange(snap,ids,s){
   const K0=R.programmeUnits(snap),before=R.weeklyAllocation(earningUnits(snap,ids,null),K0),after=R.weeklyAllocation(earningUnits(snap,ids,s),s.programmeUnits());
@@ -145,12 +154,14 @@
  /** How a listing leaves in a plan: one already closing as it closes, whoever's it is (a listing of ours someone is buying
   * can no longer be reclaimed: it sells and leaves us), any other of ours reclaimed, any other bought. */
  const removal=(snap,id,own)=>{const c=index(snap).closing;return c.has(id)?c.get(id):own.has(id)?'cancel':'sale';};
- /** Grow a removal set until every chosen trait clears its line at the collection floor that the set itself leaves. */
+ /** Grow a removal set until every chosen trait clears its line at the collection floor that the set itself leaves, in
+  * the next block's world: the listings already closing are gone from that floor too (scenario removes them all), and
+  * only the ones under a chosen line are part of the set, so a plan's steps name what it needs. */
  function settle(snap,choice,own){
-  const remove=new Map();let F=snap.snapshot.collectionFloor;
+  const closing=index(snap).closing,remove=new Map();let F=snap.snapshot.collectionFloor;
   for(let round=0;round<=snap.offers.length;round++){
    for(const o of choice)for(const id of o.pct===null?o.ids:below(snap,o.idx,threshold(tierOf(o.pct),F)))if(!remove.has(id))remove.set(id,removal(snap,id,own));
-   const rest=snap.offers.filter(([id])=>!remove.has(id));if(!rest.length)return {remove,F:null};
+   const rest=snap.offers.filter(([id])=>!remove.has(id)&&!closing.has(id));if(!rest.length)return {remove,F:null};
    const next=Math.min(...rest.map(o=>o[1]));if(next===F)return {remove,F};F=next;
   }
   throw new Error('Removal set did not settle');
@@ -223,23 +234,26 @@
  /**
   * One market change and what it does: an unlisted piece listed at a price, or a listing closing by a sale or a reclaim.
   * Effects: programme units K, every other minted piece whose weight moves, and my holdings piece by piece (weight and
-  * weekly SHNAKAS before → after). A piece I list stops earning; a listing of mine that sells leaves my holdings; one I
-  * reclaim earns again from the next week (shown at the steady weekly rate).
+  * weekly SHNAKAS before → after, from this block to the next block's world, so the listings already closing count too).
+  * A piece I list stops earning; a listing of mine that sells leaves my holdings; one I reclaim earns again from the
+  * next week (shown at the steady weekly rate; nothing in the last reward week). A listing already closing only closes
+  * the way it is closing: the other action returns {state:'closing', closing:'sale'|'cancel'}.
   */
  function simulate(snap,change,mine=[]){
   const I=index(snap),ids=[...new Set(mine)].filter(id=>Object.hasOwn(snap.items,id));
   if(!change||!Object.hasOwn(snap.items,change.id))return {state:'missing'};
   let s;
   if(change.kind==='list'){if(I.offers.has(change.id))return {state:'listed'};if(!Number.isSafeInteger(change.price)||change.price<=0)return {state:'invalid'};s=scenario(snap,{add:[[change.id,change.price]]});}
-  else if(change.kind==='sale'||change.kind==='cancel'){if(!I.offers.has(change.id))return {state:'unlisted'};s=scenario(snap,{remove:[[change.id,change.kind]]});}
+  else if(change.kind==='sale'||change.kind==='cancel'){if(!I.offers.has(change.id))return {state:'unlisted'};const closing=I.closing.get(change.id);if(closing!==undefined&&closing!==change.kind)return {state:'closing',closing};s=scenario(snap,{remove:[[change.id,change.kind]]});}
   else throw new Error('Unknown market change');
   if(s.state!=='ready')return {state:s.state};
   // Not-yet-minted catalog rows move K too, but nobody holds them: the up / down lists name minted pieces only.
   const others=s.changed().filter(x=>x.key!==change.id&&!x.key.startsWith('pending:')),K0=R.programmeUnits(snap),K1=s.programmeUnits();
-  const listedNow=new Set(I.offers.keys()),after=listedAfter(snap,s);
-  const keeps=id=>!(change.kind==='sale'&&id===change.id);
+  const listedNow=new Set(I.offers.keys()),earns=earning(snap,s);
+  // A listing of ours that sells (this change, or one already being bought) leaves us: no result after.
+  const keeps=id=>s.remove.get(id)!=='sale';
   const rows=ids.map(id=>{const b=R.evaluateSnapshot(snap,id),a=keeps(id)?s.evaluate(id):null;
-   return {id,before:b,after:a,weeklyBefore:listedNow.has(id)?zero:R.weeklyAllocation(R.units(b),K0),weeklyAfter:a===null||after.has(id)?zero:R.weeklyAllocation(R.units(a),K1)};});
+   return {id,before:b,after:a,weeklyBefore:listedNow.has(id)?zero:R.weeklyAllocation(R.units(b),K0),weeklyAfter:earns(id)?R.weeklyAllocation(R.units(a),K1):zero};});
   const total=list=>list.reduce((x,y)=>sum(x,y),zero);
   // A sold piece of mine was listed, so it earned nothing before and leaves: the change is the rest's one-world change.
   const delta=weeklyChange(snap,ids.filter(keeps),s).delta;
@@ -248,17 +262,22 @@
    mine:{rows,before:total(rows.map(r=>r.weeklyBefore)),after:total(rows.map(r=>r.weeklyAfter)),delta},safe:change.kind==='list'?safeAsk(snap,change.id):null,scenario:s};
  }
  /**
-  * Asks at which listing `id` moves no other piece's weight, exactly: within the collection floor F (a lower ask moves
-  * the collection floor and every ratio). Between consecutive breakpoints — F, the four tier lines and the floors of this
-  * piece's traits above F — every trait keeps the same tier, so one ask per interval decides it. Returns {state:'range'}
-  * when a trait of the piece is itself a range, {state:'none'} when no ask is safe (two traits ask for different tiers),
-  * or {state:'ready', runs:[{min, below|null}]} (min ≤ ask < below; below null: no upper end).
+  * Asks at which listing `id` moves no other piece's weight, exactly, in the next block's world (the listings already
+  * closing gone; its floor F, trait floors and bonuses): within F (a lower ask moves the collection floor and every
+  * ratio). Between consecutive breakpoints — F, the four tier lines and the floors of this piece's traits above F — every
+  * trait keeps the same tier, so one ask per interval decides it. Returns {state:'range'} when a trait of the piece is
+  * itself a range, {state:'none'} when no ask is safe (two traits ask for different tiers), {state:'no-floor'} when every
+  * listing is closing (nothing to price against), or {state:'ready', runs:[{min, below|null}]} (min ≤ ask < below; below
+  * null: no upper end).
   */
  function safeAsk(snap,id){
-  const F=snap.snapshot.collectionFloor,traits=snap.items[id].slice(1);
-  for(const idx of traits){const b=pctOf(traitBonus(snap,idx));if(b.lo!==b.hi)return {state:'range'};}
-  const cuts=[...new Set([F,...TIERS.map(t=>threshold(t,F)),...traits.map(idx=>snap.traits[idx][2]).filter(f=>f!==null&&f>F)])].sort((a,b)=>a-b);
-  const moves=p=>scenario(snap,{add:[[id,p]]}).changed().some(x=>x.key!==id),runs=[];
+  const base=scenario(snap,{});if(base.state!=='ready')return {state:base.state};
+  const F=base.floor,traits=snap.items[id].slice(1);
+  for(const idx of traits){const b=pctOf(base.trait(idx));if(b.lo!==b.hi)return {state:'range'};}
+  const cuts=[...new Set([F,...TIERS.map(t=>threshold(t,F)),...traits.filter(idx=>base.floors.has(idx)).map(idx=>base.floors.get(idx).floor).filter(f=>f>F)])].sort((a,b)=>a-b);
+  // Moved: a weight that differs between the ask's world and the base world; rows equal to the snapshot in both are equal.
+  const moves=p=>{const s=scenario(snap,{add:[[id,p]]}),keys=new Set([...s.changed(),...base.changed()].map(x=>x.key));
+   return [...keys].some(key=>{if(key===id)return false;const a=base.evaluate(key),b=s.evaluate(key);return a.lo.weight!==b.lo.weight||a.hi.weight!==b.hi.weight;});},runs=[];
   cuts.forEach((p,i)=>{if(moves(p))return;const to=cuts[i+1]??null,last=runs.at(-1);if(last&&last.below===p)last.below=to;else runs.push({min:p,below:to});});
   return runs.length?{state:'ready',runs}:{state:'none'};
  }
@@ -304,27 +323,33 @@
   * they close; pieces held elsewhere come by private deal and unminted ones stay unlisted, which adds no public sale):
   * {state:'ready', floor (collection floor then), after (its bonus), stable (20+ pieces, no listing: +100% whatever the
   * floors do), holds (floorRange: the collection floors at which a smaller trait keeps `after`, its sales fixed)}, or
-  * {state:'no-floor'} when no listing would be left on the market. Purchases are new sales at the next block; closing
-  * listings of other traits still count in `floor`.
+  * {state:'no-floor'} when no listing would be left on the market. It is the next block's world: purchases are new sales
+  * at that block and every listing already closing, of any trait, is gone from `floor`.
   *
   * monopoly.state: 'possible' (nobody else holds one, none unminted), 'held-elsewhere', 'unminted' or 'no-floor'. Possible:
   * buy (the others' listings), reclaim (our open listings: free steps), reclaiming (ours already being reclaimed: no
-  * step), cost (sats), after (= owned.after) and, when a listing goes, change (weeklyChange of our pieces), bought (what the
-  * pieces bought earn from the next week; zero when no reward week follows) and total (change.delta + bought). A smaller
-  * trait under +100% once ours gets keepListed when one of ours can stay listed at the +100% line: {id, number, price (the
-  * line: the lowest ask at +100% for `floor`), floor (the collection floor it is computed for: if the floor rises the line
-  * rises), multiple ({num, den}: line = ⌈floor × num ÷ den⌉), listed (its ask when already listed: kept, raised to the line
-  * when under it; null: newly listed), after, change, without (the change with none kept listed), bought, total}. That
-  * piece earns nothing while listed and anyone can buy it, which ends the monopoly; the pick leaves our weekly total highest.
+  * step), cost (sats), after (= owned.after) and, when a listing of the trait goes, change (weeklyChange of our pieces),
+  * bought (what the pieces bought earn from the next week; zero when no reward week follows) and total (change.delta +
+  * bought). A smaller trait under +100% once ours gets keepListed when one of ours kept listed at the +100% line leaves
+  * our weekly total (low bound) above the total without it and above zero — a line that only loses is no advice: {id,
+  * number, price (the line: the lowest ask at +100% for `floor`), floor (the collection floor it is computed for: if the
+  * floor rises the line rises), multiple ({num, den}: line = ⌈floor × num ÷ den⌉), listed (its ask when already listed:
+  * kept, raised to the line when under it; null: newly listed), after, change, without (the change with none kept
+  * listed), bought, total}. That piece earns nothing while listed and anyone can buy it, which ends the monopoly; among
+  * the pieces that could hold the line the pick leaves our weekly total highest (better).
   */
- function lockTraits(snap,ours){
-  const I=index(snap),F=snap.snapshot.collectionFloor,own=new Set(ours.filter(id=>Object.hasOwn(snap.items,id))),later=laterWeek(snap),top=TIERS.at(-1);
+ function lockTraits(snap,ours,only=null){
+  const I=index(snap),own=new Set(ours.filter(id=>Object.hasOwn(snap.items,id))),later=laterWeek(snap),top=TIERS.at(-1);
+  // The next block's world with nothing of ours changed: what a trait with no listing is scored in, and the total a kept
+  // listing is measured against when there is no listing of the trait to remove.
+  const base=scenario(snap,{});
   const leaves=id=>own.has(id)&&sold(snap,id),count=new Map();
   for(const id of own)if(!leaves(id))for(const idx of snap.items[id].slice(1))count.set(idx,(count.get(idx)??0)+1);
   const step=(id,action)=>({id,number:numberOf(snap,id),price:I.offers.get(id),action,closing:I.closing.has(id)});
   // What the pieces bought earn for us from the week after the purchase, at the scenario's weights and K.
   const boughtWeekly=(s,ids)=>later?R.weeklyAllocation(ids.reduce((u,id)=>sum(u,R.units(s.evaluate(id))),zero),s.programmeUnits()):zero;
-  return [...count].map(([idx,held])=>{
+  const selected=only===null?null:new Set(only);
+  return [...count].filter(([idx])=>selected===null||selected.has(idx)).map(([idx,held])=>{
    const keys=I.byTrait.get(idx),supply=keys.length,pending=keys.filter(k=>k.startsWith('pending:')).length,listings=I.offersByTrait.get(idx)??[];
    const others=listings.filter(([id])=>!own.has(id)),open=others.filter(([id])=>!I.closing.has(id)),leaving=listings.filter(([id])=>leaves(id));
    const ownOpen=listings.filter(([id])=>own.has(id)&&!I.closing.has(id)),reclaiming=listings.filter(([id])=>own.has(id)&&I.closing.get(id)==='cancel');
@@ -333,10 +358,11 @@
    const wanted=[...keys.filter(k=>!k.startsWith('pending:')&&!own.has(k)&&!I.offers.has(k)).map(id=>({id,number:numberOf(snap,id),closing:false,own:false})),
     ...[...others,...leaving].filter(([id])=>I.closing.has(id)).map(([id])=>({id,number:numberOf(snap,id),closing:true,own:own.has(id)}))].sort((a,b)=>a.number-b.number);
    const unminted=keys.filter(k=>k.startsWith('pending:')).map(k=>snap.pending[Number(k.slice(8))][0]).sort((a,b)=>a-b);
-   const remove=listings.map(([id])=>[id,removal(snap,id,own)]),sc=remove.length?scenario(snap,{remove}):null;
+   // sc: the world once every listing of the trait is gone; a trait with no listing is already there (base).
+   const remove=listings.map(([id])=>[id,removal(snap,id,own)]),sc=remove.length?scenario(snap,{remove}):null,world=sc??base;
    let owned;
-   if(sc!==null&&sc.state!=='ready')owned={state:sc.state};
-   else{const r=sc===null?traitBonus(snap,idx):sc.trait(idx),floor=sc===null?F:sc.floor;owned={state:'ready',floor,after:pctOf(r),stable:r.traits[0].method==='held',holds:floorRange(r,floor)};}
+   if(world.state!=='ready')owned={state:world.state};
+   else{const r=world.trait(idx);owned={state:'ready',floor:world.floor,after:pctOf(r),stable:r.traits[0].method==='held',holds:floorRange(r,world.floor)};}
    const state=pending?'unminted':wanted.length?'held-elsewhere':owned.state==='ready'?'possible':owned.state;
    let monopoly={state};
    if(state==='possible'){
@@ -344,7 +370,8 @@
     monopoly={state,buy:buyable,reclaim:ownOpen.map(([id])=>step(id,'cancel')),reclaiming:reclaiming.map(([id])=>step(id,'cancel')),cost:open.reduce((a,[,p])=>a+p,0),after:owned.after};
     if(sc!==null){const change=weeklyChange(snap,[...own],sc),bought=boughtWeekly(sc,buys);Object.assign(monopoly,{change,bought,total:sum(change.delta,bought)});}
     if(owned.after.lo<R.MAX_TRAIT_PCT&&!owned.stable){
-     const line=threshold(top,owned.floor),without=sc===null?weeklyChange(snap,[...own],scenario(snap,{})):monopoly.change;let best=null;
+     // without: our weekly change with none kept listed — the trait's listings gone, or (none to remove) the base world.
+     const line=threshold(top,owned.floor),without=sc===null?weeklyChange(snap,[...own],base):monopoly.change,plain=sc===null?without.delta.lo:monopoly.total.lo;let best=null;
      for(const id of [...own].filter(x=>!I.closing.has(x)&&snap.items[x].slice(1).includes(idx))){
       const ask=I.offers.has(id)?I.offers.get(id):null;
       const sk=scenario(snap,ask===null?{remove,add:[[id,line]]}:{remove:remove.filter(([x])=>x!==id),reprice:ask<line?[[id,line]]:[]});
@@ -352,24 +379,27 @@
       const k={id,number:numberOf(snap,id),price:line,floor:owned.floor,multiple:{num:top.num,den:top.den},listed:ask,after:pctOf(sk.trait(idx)),change,without,bought,total:sum(change.delta,bought)};
       if(best===null||better(k,best))best=k;
      }
-     if(best!==null)monopoly.keepListed=best;
+     // Advice only when holding the line beats not holding it and earns us something: a kept listing earns nothing itself.
+     if(best!==null&&best.total.lo>Math.max(plain,0))monopoly.keepListed=best;
     }
    }
    return {idx,type:snap.traits[idx][0],value:snap.traits[idx][1],supply,pending,held,ownListed:ownOpen.length+reclaiming.length,others:others.length,othersHeld,closingAway,bonus,maxNow:bonus.lo===R.MAX_TRAIT_PCT,buyable,wanted,unminted,owned,monopoly};
-  }).sort((a,b)=>(a.monopoly.state==='possible'?0:1)-(b.monopoly.state==='possible'?0:1)||a.othersHeld-b.othersHeld||b.held-a.held||a.bonus.lo-b.bonus.lo||a.idx-b.idx);
+  }).sort(lockTraitOrder);
  }
  /**
-  * lockTraits rows in three groups. `can`: ours once the others' listings are bought and ours reclaimed (or one of ours is
-  * kept listed at the line), by weekly gain per sat — the better of the two ways, the pieces bought included (with no
-  * listing to remove nothing changes) — so a free one that gains leads and a free one that loses comes last; equal value:
-  * the cheaper, the larger gain, the trait index. `have`: all ours, nothing to do (a reclaim of ours already confirming
-  * included: owned.after is its bonus from the next block). `far`: someone else holds one (unlisted, or a listing closing
-  * into their hands), one is unminted, or buying leaves no listing to score; `missing` = pieces a private deal must bring
-  * plus unminted ones, the fewest first.
+  * lockTraits rows in three groups. `can`: ours once the others' listings are bought and ours reclaimed (there is a
+  * listing to buy or to reclaim), by weekly gain per sat — gain is the plain total or, when keepListed is advised, its
+  * total (lockTraits advises it only when it is higher and positive), the pieces bought included — so a free one that gains
+  * leads and a free one that loses comes last; equal value: the cheaper, the larger gain, the trait index. `have`: all
+  * ours, nothing to buy or reclaim (a reclaim of ours already confirming included: owned.after is its bonus from the next
+  * block); a keepListed advice may come with it. `far`: someone else holds one (unlisted, or a listing closing into their
+  * hands), one is unminted, or buying leaves no listing to score; `missing` = pieces a private deal must bring plus
+  * unminted ones, the fewest first.
   */
+ const lockTraitOrder=(a,b)=>(a.monopoly.state==='possible'?0:1)-(b.monopoly.state==='possible'?0:1)||a.othersHeld-b.othersHeld||b.held-a.held||a.bonus.lo-b.bonus.lo||a.idx-b.idx;
  function lockGroups(rows){
   const can=[],have=[],far=[];
-  for(const t of rows){const m=t.monopoly;if(m.state!=='possible')far.push(t);else if(m.buy.length||m.reclaim.length||m.keepListed)can.push(t);else have.push(t);}
+  for(const t of rows){const m=t.monopoly;if(m.state!=='possible')far.push(t);else if(m.buy.length||m.reclaim.length)can.push(t);else have.push(t);}
   const gain=t=>{const m=t.monopoly,plain=m.total?m.total.lo:0;return m.keepListed?Math.max(plain,m.keepListed.total.lo):plain;};
   const value=t=>{const g=gain(t),c=t.monopoly.cost;return c>0?g/c:g>0?Infinity:g<0?-Infinity:0;},missing=t=>t.wanted.length+t.unminted.length;
   can.sort((a,b)=>{const x=value(a),y=value(b);return x!==y?y-x:a.monopoly.cost-b.monopoly.cost||gain(b)-gain(a)||a.idx-b.idx;});
@@ -380,11 +410,16 @@
  // ---------------------------------------------------------------- One plan for several targets.
  /**
   * One plan toward `targets` (pieces of ours below the goal): `mine` are my holdings, `mates` the numbers added beside
-  * them (teammates' or any others). Targets are taken from the cheapest: each of its candidate plans is settled together
-  * with the trait tiers of the targets already taken, and the cheapest whose joint result keeps every taken target at the
-  * goal is kept; a target no plan of which fits is left out (conflict), so every purchase serves a target that reaches
-  * the goal. Our listings are reclaimed (free); one of ours someone is already buying leaves us at the next block, so it is
-  * no target and its sale is no step of ours. Each step says which targets' traits it serves and whose listing it is.
+  * them (teammates' or any others). Targets are tried from the cheapest, in rounds: each of a target's candidate plans is
+  * settled together with the trait tiers of the targets already taken, and the cheapest whose joint result keeps every
+  * taken target at the goal is kept; a round tries every target not yet taken, and the rounds end when one takes none
+  * (a target refused beside an earlier set of picks can fit beside a later one). A target left out is a conflict with
+  * `reason`, judged against the final picks: 'others' when a candidate of its own would reach the goal but every such
+  * candidate pulls a taken target under it, 'self' when no candidate gets it to the goal beside them, 'no-floor' when
+  * every candidate leaves no listing to price against; `reason` is null otherwise. So every purchase serves a target
+  * that reaches the goal. Our listings are reclaimed (free); one of ours someone is already buying leaves us at the next
+  * block, so it is no target and its sale is no step of ours. Each step says which targets' traits it serves and whose
+  * listing it is.
   */
  function jointPlan(snap,{mine=[],mates=[],targets=null,goal=GOAL}={}){
   const has=id=>Object.hasOwn(snap.items,id),me=[...new Set(mine)].filter(has),them=[...new Set(mates)].filter(id=>has(id)&&!me.includes(id)),own=new Set([...me,...them]);
@@ -392,13 +427,21 @@
   const plans=new Map(wanted.map(id=>[id,plan(snap,id,{own,goal,limit:5})]));
   const open=wanted.filter(id=>plans.get(id).state==='reachable').sort((a,b)=>plans.get(a).plans[0].cost-plans.get(b).plans[0].cost);
   let picks=[],accepted=[],current=new Map(),floor=snap.snapshot.collectionFloor;
-  for(const id of open){let best=null;
-   for(const x of plans.get(id).plans){const choice=[...picks,...x.picked.map(o=>({...o,target:id}))],{remove,F}=settle(snap,choice,own);if(F===null)continue;const sc=scenario(snap,{remove:[...remove]});if(sc.state!=='ready')continue;
-    if(![...accepted,id].every(t=>sc.evaluate(t).lo.weight>=goal))continue;const c=costOf(snap,remove).cost;if(!best||c<best.c)best={c,choice,remove,F};}
-   if(best){picks=best.choice;accepted.push(id);current=best.remove;floor=best.F;}
+  /** One candidate of `id` beside the current picks: its settled set and floor, and whether it and every taken target reach the goal. */
+  const joint=(id,x)=>{const choice=[...picks,...x.picked.map(o=>({...o,target:id}))],{remove,F}=settle(snap,choice,own);if(F===null)return {state:'no-floor'};
+   const sc=scenario(snap,{remove:[...remove]});if(sc.state!=='ready')return {state:sc.state};
+   return {state:'ready',choice,remove,F,c:costOf(snap,remove).cost,self:sc.evaluate(id).lo.weight>=goal,others:accepted.every(t=>sc.evaluate(t).lo.weight>=goal)};};
+  for(let taken=true;taken;){taken=false;
+   for(const id of open){if(accepted.includes(id))continue;let best=null;
+    for(const x of plans.get(id).plans){const j=joint(id,x);if(j.state==='ready'&&j.self&&j.others&&(!best||j.c<best.c))best=j;}
+    if(best){picks=best.choice;accepted.push(id);current=best.remove;floor=best.F;taken=true;}
+   }
   }
+  // Why a reachable target is left out, beside the final picks (the last round tried it there and took nothing).
+  const reason=id=>{const tries=plans.get(id).plans.map(x=>joint(id,x));if(tries.some(j=>j.state==='ready'&&j.self))return 'others';return tries.every(j=>j.state==='no-floor')?'no-floor':'self';};
   const side=id=>me.includes(id)?'me':'mates';
-  const result=wanted.map(id=>{const p=plans.get(id);return {id,number:numberOf(snap,id),side:side(id),before:R.evaluateSnapshot(snap,id),state:accepted.includes(id)?'reached':p.state==='reachable'?'conflict':p.state,best:p.best??null,why:p.why??[]};});
+  const result=wanted.map(id=>{const p=plans.get(id),state=accepted.includes(id)?'reached':p.state==='reachable'?'conflict':p.state;
+   return {id,number:numberOf(snap,id),side:side(id),before:R.evaluateSnapshot(snap,id),state,reason:state==='conflict'?reason(id):null,best:p.best??null,why:p.why??[]};});
   if(!current.size)return {state:accepted.length?'ready':'none',targets:result,steps:[],cost:0,goal};
   const s=scenario(snap,{remove:[...current]});if(s.state!=='ready')return {state:s.state,targets:result,steps:[],cost:0,goal};
   for(const t of result)t.after=s.evaluate(t.id);
@@ -444,7 +487,9 @@
    const bought=later?R.weeklyAllocation(x.bought.reduce((u,b)=>sum(u,R.units(b.result)),zero),x.K):zero,total=sum(change,bought);
    return {...base,auto:x.buys===0&&x.cancels===0,piece:{before:piece.before,after:piece.after},change,bought,total,value:x.cost>0?total.lo/x.cost*1e5:null};
   });
-  const order=(a,b)=>{
+  return rows.sort(targetPlanOrder);
+ }
+ function targetPlanOrder(a,b){
    if(a.state!==b.state)return a.state==='reachable'?-1:1;
    if(a.state!=='reachable')return b.best-a.best||a.number-b.number;
    if(a.auto!==b.auto)return a.auto?1:-1;
@@ -452,8 +497,6 @@
    if((a.value===null)!==(b.value===null))return a.value===null?-1:1;
    if(a.value===null)return b.total.lo-a.total.lo||a.number-b.number;
    return b.value-a.value||a.plan.cost-b.plan.cost||a.number-b.number;
-  };
-  return rows.sort(order);
  }
- return {GOAL,threshold,index,scenario,weeklyChange,traitOptions,plan,simulate,safeAsk,lockTraits,lockGroups,jointPlan,targetPlans};
+ return {GOAL,threshold,index,scenario,weeklyChange,traitOptions,plan,simulate,safeAsk,lockTraits,lockGroups,jointPlan,targetPlans,targetPlanOrder,lockTraitOrder};
 });

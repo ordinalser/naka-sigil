@@ -7,8 +7,11 @@
  * （官方右上角转圈，或我们读到的成交确认中）会直接说明“现在买会失败”（单独打开藏品页看不到这个状态，点购买才失败）。
  * 内容脚本自身不发网络请求；页面可见时给后台发心跳（实时同步只在有页面在看时才检查新区块）。
  *
- * 落点（2026-10-08 实测 DOM）：
- *   - 网格卡片：图片框 .aspect-square 是卡片根 .group 的第一个子元素 → 徽章放图片框右下角
+ * 落点（2026-10-25 实测 DOM，集合页 63 张在售卡）：
+ *   - 网格卡片结构仍是：图片框 .aspect-square 是卡片根 .group 的第一个子元素 → 徽章放图片框右下角
+ *   - 图片地址已从 ordinals.com/content 改成官方快照 https://assets.ord-dropz.xyz/snapshots/<铭文ID>.webp
+ *     （可选 ?v= 与 _thumb.webp）。地址认不出就没有徽章；结构对不上同样没有。
+ * 2026-10-08 的其余落点：
  *     （左上稀有度、右上溢价/成交中、左下扫货按钮，右下是唯一空位）
  *   - 列表行：.group[grid-cols-…] 的名称格 = 缩略图(.flex-shrink-0) + .min-w-0 > p[title] → 徽章追加在名称格末尾
  *     列表是虚拟滚动，行节点可能被复用给别的藏品，所以每次扫描都按图片 src 校验徽章归属
@@ -37,13 +40,14 @@
   const SRC = globalThis.ShnakasSource;
   if (!BUNDLED || !R || !I || !TIER || !SRC) throw new Error('SHNAKAS：快照、规则、文案、分级或数据来源模块未加载（检查 manifest 的脚本顺序）');
   const K = SRC.KEYS, EXP=globalThis.NakaExplore;
-  const HOLD=globalThis.NakaPortfolio;let holdings=[], boostOnly=false;const impactCache=new Map();
+  const HOLD=globalThis.NakaPortfolio;let minerWeek,minerObserved,minerEvents;let holdings=[], boostOnly=false;const impactCache=new Map();
   function portfolioImpact(id,action='sale'){const key=action+id;if(!impactCache.has(key))impactCache.set(key,HOLD.impact(SNAP,holdings,id,action,action==='cancel'?CANCELLATION:PURCHASE));return impactCache.get(key);}
-  let comparisonIds=[], minimum=0, exploreLang='en';
+  let comparisonIds=[], minimum=0, exploreLang='en', debugPinned=false;
   const exploreCopy=()=>globalThis.NakaExploreUI.pick(exploreLang);
 
   const DISPLAY_METRIC = 'total-holding-weight';
   const CONTENT_PREFIX = 'https://ordinals.com/content/';
+  const SNAPSHOT_ORIGIN = 'https://assets.ord-dropz.xyz';
   const ID_RE = /^[0-9a-f]{64}i\d+$/;
   const COLLECTION_PATH = /^\/secondary\/collections\/([^/]+)\/?$/;
   const WALLET_PATH = /^\/wallet\/?$/;
@@ -120,14 +124,14 @@
     const activity=bar.dataset.shnActivity==='true';
     const launch=globalThis.NakaPurchase.renderLaunch(snapshot,T,I);
     const detail=[I.measureNote(T,snapshot.height,snapshot),I.blockTimeTitle(T,snapshot),activity?T.activityNote:bar.dataset.shnOwner==='true'?T.cancelScopeNote:Array.isArray(SNAP.offers)?T.buyBadgeNote:T.weightMeaning,...[...launch.children].map(n=>n.textContent)].join('\n');
-    if(bar.title!==detail)bar.title=detail;
+    bar.title=exploreLang==='zh'?'按所示区块测算，挂单和算力变化后会更新。':'Estimated at the shown block; updates with listings and power.';
     const note=bar.querySelector('.shn-scope__detail');
     if(note.textContent!==detail)note.textContent=detail;
   }
   function refreshBlockClock() {
     for(const n of document.querySelectorAll('.naka-purchase__basis')) {
-      const basis=T.snapBlock(I.blockBasis(T,SNAP.snapshot));
-      if(n.textContent!==basis)n.textContent=basis;
+      const age=n.querySelector('.naka-hero__age'),text=I.blockAgeShort(T,SNAP.snapshot);
+      if(!age)globalThis.NakaPurchase.paintBasis(n,SNAP.snapshot,T,I);else if(age.textContent!==text)age.textContent=text;
       n.title=I.blockTimeTitle(T,SNAP.snapshot);
     }
     for(const bar of document.querySelectorAll('.shn-scope[data-shn-layout=compact-v1]')) refreshScopeClock(bar);
@@ -140,9 +144,11 @@
     const r=resultFor(id);if(!r)return el('p','shn-pop__missing',T.notInSnapshot);
     const scenario=activity?null:model.get(id);
     const closing=CLOSING.has(id)?CLOSING.get(id):null;
-    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I,{explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,action),closing});if(holdings.length){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
+    // What buying (or my reclaim) does to my holdings — not for a listing already bought: nobody can buy it, and one of mine
+    // sells at the next block. My own reclaim under way is what happens, so it stays.
+    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I,{explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,action),closing,snap:SNAP,id});if(holdings.length&&closing!=='sale'){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
     const notice=scenario?.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
-    return globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,closing,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id)});
+    const panel=globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,closing,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id),snap:SNAP,id});return panel;
   }
   function inspectionHead(id,cls) {
     const head=el('div',cls),brand=el('span','shn-inspect-brand');brand.append(lockIcon('shn-badge__icon'),el('span','shn-eyebrow',T.title));
@@ -215,10 +221,13 @@
   function idFromSrc(src) {
     if (!src) return null;
     if(src.startsWith(CONTENT_PREFIX)){const id=src.slice(CONTENT_PREFIX.length).split(/[?#]/)[0];return ID_RE.test(id)?id:null;}
+    let url;try{url=new URL(src,location.origin);}catch{return null;}
+    if(url.username||url.password)return null;
+    // Collection cards now paint the official poster, not the ordinals content URL.
+    if(url.origin===SNAPSHOT_ORIGIN){const shot=/^\/snapshots\/([0-9a-f]{64}i\d+)(?:_thumb)?\.webp$/.exec(url.pathname);return shot?shot[1]:null;}
     // The standalone wallet loads its own API art first, with Ordinals only as fallback.
     if(!WALLET_PATH.test(location.pathname)&&COLLECTION_PATH.exec(location.pathname)?.[1]!==SLUG)return null;
-    let url;try{url=new URL(src,location.origin);}catch{return null;}
-    if(url.username||url.password||!['https://shielded-api.ord-dropz.xyz','https://shielded-mint-server-production.up.railway.app'].includes(url.origin))return null;
+    if(!['https://shielded-api.ord-dropz.xyz','https://shielded-mint-server-production.up.railway.app'].includes(url.origin))return null;
     const match=/^\/api\/shielded\/art\/(0|[1-9]\d*)$/.exec(url.pathname);
     if(!match||url.searchParams.getAll('c').length!==1||url.searchParams.get('c')!==SNAP.collection.cid)return null;
     const asset=Number(match[1]);if(!Number.isSafeInteger(asset))return null;
@@ -295,7 +304,7 @@
   function scanImages(onCollection, keepBadges, keepPanels) {
     const slots = new Set();
     const images=new Set(document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"]`));
-    if(onCollection)for(const img of document.querySelectorAll('img[src*="/api/shielded/art/"]'))images.add(img);
+    if(onCollection)for(const img of document.querySelectorAll('img[src*="/api/shielded/art/"],img[src^="https://assets.ord-dropz.xyz/snapshots/"]'))images.add(img);
     if(WALLET_PATH.test(location.pathname))for(const img of document.querySelectorAll('.sv-shell .sv-piece-grid button.sv-tile > .aspect-square > img,.ps-wrap[role="dialog"] .ps-art > img'))images.add(img);
     for (const img of images) {
       const id = idFromSrc(img.getAttribute('src'));
@@ -415,7 +424,9 @@
     bar.setAttribute('aria-label', `${T.title} · ${T.popupSnapshot}`);
     bar.setAttribute('aria-describedby','shn-scope-details');
     const line = el('div', 'shn-scope__head');
-    line.append(lockIcon('shn-badge__icon'),el('span','shn-scope__brand',T.title),el('b','shn-scope__block',T.snapBlock(I.int(SNAP.snapshot.height))),el('span','shn-scope__age'),el('span','shn-scope__source',T.scopeSource[SOURCE]));
+    const source=el('span','shn-scope__source',T.scopeSource[SOURCE]);
+    source.addEventListener('dblclick',ev=>{ev.preventDefault();ev.stopPropagation();debugPinned=!debugPinned;paintDebug(true);});
+    line.append(lockIcon('shn-badge__icon'),el('span','shn-scope__brand',T.title),el('b','shn-scope__block',T.snapBlock(I.int(SNAP.snapshot.height))),el('span','shn-scope__age'),source);
     const detail=el('span','shn-sr-only shn-scope__detail');detail.id='shn-scope-details';
     bar.append(line,el('p','shn-scope__note',onActivity?T.scopeActivity:T.scopeNote),detail);
     refreshScopeClock(bar);
@@ -530,7 +541,8 @@
       if(numbers[0]===0){note.textContent=c.syncBoundary;return;}
       button.disabled=true;note.textContent='';
       try{const out=await chrome.runtime.sendMessage({type:'shn-import-eligibility',height:ShnakasRules.RULES.startBlock+(week-1)*1008+numbers[0],week:week-1,rows:readRows()});
-        note.textContent=out?.ok?(out.moved?c.syncMoved(out.moved):c.syncOk):({ahead:c.syncAhead,'no-live':c.syncNoLive,'bad-reading':c.syncBadReading}[out?.error]??c.syncFailed);}
+        // Holdings the page showed no row of (out.absent): the extension asks whether they left.
+        note.textContent=out?.ok?[out.moved?c.syncMoved(out.moved):c.syncOk,...(out.absent>0?[c.syncAbsent(out.absent)]:[])].join(' · '):({ahead:c.syncAhead,'no-live':c.syncNoLive,'bad-reading':c.syncBadReading}[out?.error]??c.syncFailed);}
       catch{note.textContent=c.syncFailed;}finally{button.disabled=false;}});
     bar.append(button,note);progress.closest('.st-hero')?.after(bar);
   }
@@ -559,7 +571,7 @@
   let finding=null,fx=null,findTimer=0;
   /** Rendered grid cards in page order: artwork, slot and card element with the inscription ID. */
   function gridCards(){
-    const out=[];for(const img of document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"],img[src*="/api/shielded/art/"]`)){const slot=gridSlot(img);if(slot)out.push({slot,card:slot.parentElement,id:idFromSrc(img.getAttribute('src'))});}
+    const out=[];for(const img of document.querySelectorAll(`img[src^="${CONTENT_PREFIX}"],img[src*="/api/shielded/art/"],img[src^="https://assets.ord-dropz.xyz/snapshots/"]`)){const slot=gridSlot(img);const id=slot?idFromSrc(img.getAttribute('src')):null;if(slot&&id)out.push({slot,card:slot.parentElement,id});}
     return out;
   }
   /** Drop #naka-find from the address once read (the page's router may write it back while it starts, so this runs again
@@ -641,7 +653,41 @@
     if(action){const b=el('button','shn-find-action',action.label);b.type='button';b.addEventListener('click',()=>{actions.replaceChildren();action.run();});actions.append(b);}
     clearTimeout(findTimer);if(fade)findTimer=setTimeout(()=>note.remove(),12000);
   }
-  addEventListener('hashchange',readFind);
+  addEventListener('hashchange',()=>{readFind();paintDebug(Boolean(COLLECTION_PATH.exec(location.pathname))&&COLLECTION_PATH.exec(location.pathname)[1]===SLUG);});
+
+  // Why this page did or did not receive badges. Nothing is painted unless the address
+  // asks for it (?shn-debug=1 or #shn-debug). The same object is on globalThis.__shnRecognize.
+  function auditMarket(onCollection){
+    const report={page:location.pathname,images:0,known:0,slotted:0,structure:0,unknown:0,samples:[]};
+    if(!onCollection){globalThis.__shnRecognize=report;return report;}
+    const note=(src,reason)=>{if(report.samples.length<3)report.samples.push({reason,src:String(src||'').slice(0,160)});};
+    for(const img of document.querySelectorAll('main img')){
+      report.images++;
+      const src=img.getAttribute('src')||'';
+      const id=idFromSrc(src);
+      const slotted=gridSlot(img)||listSlot(img)||walletSlot(img)||vaultSlot(img)||listedSlot(img);
+      if(!id){if(slotted){report.unknown++;note(src,exploreLang==='zh'?'卡片在，图片地址不是铭文内容、官方快照或官方 art':'The card is here; the image URL is not inscription content, an official snapshot, or official art');}continue;}
+      report.known++;
+      if(slotted)report.slotted++;
+      else{report.structure++;note(src,exploreLang==='zh'?'认得出铭文，卡片结构对不上网格、列表、金库或钱包':'Inscription recognized; the card is not a grid, list, vault or wallet slot');}
+    }
+    globalThis.__shnRecognize=report;return report;
+  }
+  function debugWanted(){if(new URLSearchParams(location.search).get('shn-debug')==='1'||location.hash.includes('shn-debug'))debugPinned=true;return debugPinned;}
+  function paintDebug(onCollection){
+    const boxId='shn-recognize';let box=document.getElementById(boxId);
+    if(!onCollection||!debugWanted()){if(box)box.remove();return;}
+    const r=globalThis.__shnRecognize||auditMarket(true),zh=exploreLang==='zh';
+    const lines=[zh?'标签识别':'Badge match', zh?`图 ${r.images} · 认得出 ${r.known} · 能挂上 ${r.slotted} · 结构不符 ${r.structure} · 地址不符 ${r.unknown}`:`Images ${r.images} · recognized ${r.known} · slotted ${r.slotted} · structure ${r.structure} · address ${r.unknown}`, ...r.samples.map(s=>`${s.reason} · ${s.src}`)];
+    if(!r.samples.length)lines.push(zh?(r.known?'认得出的铭文图都能挂上徽章。':'这一页没有认得出的铭文图。'):(r.known?'Every recognized inscription image can take a badge.':'No recognized inscription image on this page.'));
+    const text=lines.join('\n');
+    // A scan caused by our own write must not write again, or the observer never settles.
+    if(box?.dataset.shnText===text)return;
+    if(!box){box=el('aside','shn-recognize');box.id=boxId;document.body.append(box);}
+    box.dataset.shnText=text;
+    box.replaceChildren(el('strong','',lines[0]),el('p','',lines[1]));
+    for(const line of lines.slice(2))box.append(el('small','',line));
+  }
 
   function scan() {
     const path = location.pathname;
@@ -661,6 +707,7 @@
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
     scanTools(onCollection,onActivity);scanRewardEligibility();scanHoldings();
     if(onCollection)placeFx();else clearFx();
+    auditMarket(onCollection);paintDebug(onCollection);
     popover.validate();
   }
 
@@ -670,8 +717,8 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY]).then((got) => {
-    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);
+  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS]).then((got) => {
+    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);minerWeek=got[NakaRewards.KEY];minerObserved=got[NakaRewards.OBSERVED];minerEvents=got[HOLD.EVENTS];
     useLang(got[I.STORAGE_KEY]);
     stored.live = got[K.live];
     stored.closing = got[K.closing];
@@ -688,7 +735,8 @@
     const dataChanged = has(K.live) || has(K.closing);
     if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
     if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();}
-    if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)) return;
+    const mineChanged=has(NakaRewards.KEY)||has(NakaRewards.OBSERVED)||has(HOLD.EVENTS);if(has(NakaRewards.KEY))minerWeek=changes[NakaRewards.KEY].newValue;if(has(NakaRewards.OBSERVED))minerObserved=changes[NakaRewards.OBSERVED].newValue;if(has(HOLD.EVENTS))minerEvents=changes[HOLD.EVENTS].newValue;if(mineChanged)refresh();
+    if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)&&!mineChanged) return;
     if (has(I.STORAGE_KEY)) useLang(changes[I.STORAGE_KEY].newValue);
     if (has(K.live)) stored.live = changes[K.live].newValue;
     if (has(K.closing)) stored.closing = changes[K.closing].newValue;
@@ -699,6 +747,7 @@
 
   // 心跳：页面可见时告诉后台「有人在看」，实时同步据此决定要不要检查新区块。
   // 扩展被重新加载后，旧页面里的这份脚本与扩展失联（chrome.runtime.id 变为 undefined），此时停掉心跳，不再报错。
+  addEventListener('naka-skin-change',()=>{useLang(exploreLang);popover.hide();scan();});
   let beatTimer = null;
   function beat() {
     if (chrome.runtime.id === undefined) { clearInterval(beatTimer); return; }

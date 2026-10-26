@@ -13,7 +13,11 @@ test('Trait sale history keeps the three newest confirmed sales, ties with the t
   const ls=[sold('a',1,100,10),sold('b',2,200,20),sold('c',1,300,30),sold('d',2,400,40),sold('future',1,999,90),listing('withdraw',1,900,1,{state:'CLAIMED',claimTxid:'claim',claimHeight:21})];
   assert.deepEqual(C.saleHistoryAt(ls,50,traits).get('Hair\0Rare'),[[400,40],[300,30],[200,20]]);
   assert.deepEqual(C.saleHistoryAt(ls,50,traits).get('Body\0Ape'),[[400,40],[200,20]]);
+  assert.deepEqual(C.saleHistoryAt(ls,40,traits).get('Hair\0Rare'),[[400,40],[300,30],[200,20]],'a sale confirmed in block H is part of H');
+  assert.deepEqual(C.saleHistoryAt(ls,39,traits).get('Hair\0Rare'),[[300,30],[200,20],[100,10]]);
   assert.deepEqual(C.saleHistoryAt(ls,25,traits).get('Hair\0Rare'),[[200,20],[100,10]]);
+  assert.deepEqual(C.saleHistoryAt([...ls,sold('tie10',1,150,10)],35,traits).get('Hair\0Rare'),[[300,30],[200,20],[100,10],[150,10]],'a fourth sale in the third sale\'s block stays: the window is ambiguous');
+  assert.equal(C.HELD_SUPPLY,require('../src/lib/rules.js').RULES.heldSupply);assert.equal(C.RULES_RECENT_SALES,require('../src/lib/rules.js').RULES.recentSales);
   assert.equal(C.saleHistoryAt(ls,9,traits).size,0);
   assert.deepEqual(C.saleHistoryAt([...ls,sold('tie',1,250,20)],35,traits).get('Hair\0Rare'),[[300,30],[200,20],[250,20]],'a same-block tie at the third sale stays');
   assert.throws(()=>C.saleHistoryAt([listing('x',1,100,5,{state:'SOLD',soldTxid:'x',soldHeight:4})],50,traits));
@@ -302,10 +306,17 @@ test('Block time lookup validates height, hash and seconds; API failure remains 
 test('Official current reward basis reconciles trait units, canonical supply and every piece at the same block',()=>{
   const C=require('../src/lib/snapshot-core.js'),R=require('../src/lib/rules.js');
   const s={...BASE_REAL,collection:{...BASE_REAL.collection,numberStart:1000},snapshot:{height:100,collectionFloor:1000},traits:[['Body','Pepe',1000,1],['Body','Ape',null,0]],items:{[ID('a')]:[1000,0],[ID('b')]:[1001,1]}};
-  // Programme totals as the endpoint reports them: K = 4 + 6 units, v per unit and block, perBlock = weight × v.
-  const v=R.unitRate(10),data={height:100,F:'1000',K:10,v:String(v),basePerBlock:String(4*v),values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:3},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:4}],pieces:[{p:0,pct:100,weight:4,perBlock:String(4*v)},{p:1,pct:150,weight:6,perBlock:String(6*v)}]};
+  // Programme totals as the endpoint reports them: K = 4 + 6 units, v = floor(26,664,000,000,000 ÷ 1008 ÷ 10) = 2,645,238,095
+  // base units per unit and block, perBlock = weight × v; each trait has exactly one catalog piece here.
+  const v=2645238095,data={height:100,F:'1000',K:10,v:'2645238095',basePerBlock:'10580952380',values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:1},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:1}],pieces:[{p:0,pct:100,weight:4,perBlock:'10580952380'},{p:1,pct:150,weight:6,perBlock:'15871428570'}]};
   const verified=C.attachRewardBasis(s,data);
-  for(const mutate of [x=>x.K=11,x=>x.v=String(v-1),x=>x.basePerBlock='1',x=>x.pieces[1].perBlock='1',x=>x.pieces.pop()]){const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad),'programme totals and per-block rates are checked');}
+  for(const mutate of [x=>x.K=11,x=>x.v=String(v-1),x=>x.v='2645238096',x=>x.basePerBlock='1',x=>x.pieces[1].perBlock='1',x=>x.pieces.pop()]){const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad),'programme totals and per-block rates are checked');}
+  // The official piece count must be the catalog's exactly: more pieces than we know is as wrong as fewer.
+  for(const pieces of [0,2,3,20]){const bad=structuredClone(data);bad.values[0].pieces=pieces;assert.throws(()=>C.attachRewardBasis(s,bad),/catalog differs|Invalid official trait basis/,String(pieces));}
+  // A pending catalog row counts: #1002 (Ape) unminted makes Ape two pieces, K = 4 + 6 + 6 = 16, v = 1,653,273,809.
+  const sp={...s,pending:[[1002,1]]},dp={height:100,F:'1000',K:16,v:'1653273809',basePerBlock:'6613095236',values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:1},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:2}],pieces:[{p:0,pct:100,weight:4,perBlock:'6613095236'},{p:1,pct:150,weight:6,perBlock:'9919642854'},{p:2,pct:150,weight:6,perBlock:'9919642854'}]};
+  assert.equal(C.attachRewardBasis(sp,dp).rewardBasis.traits[1][3],2);
+  for(const pieces of [1,3]){const bad=structuredClone(dp);bad.values[1].pieces=pieces;assert.throws(()=>C.attachRewardBasis(sp,bad),/catalog differs/,String(pieces));}
   assert.equal(R.evaluateSnapshot(verified,ID('b')).lo.weight,150);assert.equal(R.evaluateSnapshot(verified,ID('b')).traits[0].method,'official-sales');
   assert.equal(s.rewardBasis,undefined,'does not mutate an accepted snapshot');
   const carried=structuredClone(data);carried.values[1].source='lastBlock';
@@ -315,7 +326,23 @@ test('Official current reward basis reconciles trait units, canonical supply and
   for(const mutate of [x=>x.height++,x=>x.F='999',x=>x.values[0].pct=25,x=>x.values[1].source='ask',x=>x.values[1].pieces=0,x=>x.pieces[1].pct=200,x=>x.pieces[1].weight='6',x=>x.pieces.push(x.pieces[0])]){
     const bad=structuredClone(data);mutate(bad);assert.throws(()=>C.attachRewardBasis(s,bad));
   }
-  const v8=R.unitRate(8),none=structuredClone(data);none.values[1]={...none.values[1],source:'none',pct:0};none.K=8;none.v=String(v8);none.basePerBlock=String(4*v8);none.pieces=[{p:0,weight:4,pct:100,perBlock:String(4*v8)},{p:1,weight:4,pct:100,perBlock:String(4*v8)}];assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,none),ID('b')).exact,true);
+  // K = 8 → v = floor(26,452,380,952.38 ÷ 8) = 3,306,547,619; a 100% piece pays 13,226,190,476 a block.
+  const none=structuredClone(data);none.values[1]={...none.values[1],source:'none',pct:0};none.K=8;none.v='3306547619';none.basePerBlock='13226190476';none.pieces=[{p:0,weight:4,pct:100,perBlock:'13226190476'},{p:1,weight:4,pct:100,perBlock:'13226190476'}];assert.equal(R.evaluateSnapshot(C.attachRewardBasis(s,none),ID('b')).exact,true);
+});
+test('The official basis is read for the live block on its own: attached when served for that block, left absent for another block or a failed read',async()=>{
+  const C=require('../src/lib/snapshot-core.js');
+  const s={...BASE_REAL,collection:{...BASE_REAL.collection,numberStart:1000},snapshot:{height:100,collectionFloor:1000},traits:[['Body','Pepe',1000,1],['Body','Ape',null,0]],items:{[ID('a')]:[1000,0],[ID('b')]:[1001,1]}};
+  const data={height:100,F:'1000',K:10,v:'2645238095',basePerBlock:'10580952380',values:[{type:'Body',value:'Pepe',floor:'1000',pct:0,source:'ask',pieces:1},{type:'Body',value:'Ape',floor:null,pct:50,source:'sales',pieces:1}],pieces:[{p:0,pct:100,weight:4,perBlock:'10580952380'},{p:1,pct:150,weight:6,perBlock:'15871428570'}]};
+  const same=await withFetch(liveFetch({weights:data}).fetch,()=>C.withRewardBasis(s));
+  assert.deepEqual(same.rewardBasis,{height:100,traits:[[0,0,'ask',1],[1,50,'sales',1]]});assert.equal(s.rewardBasis,undefined);
+  assert.equal(await withFetch(liveFetch({weights:{...data,height:101}}).fetch,()=>C.withRewardBasis(s)),s,'another block: nothing about this one');
+  assert.equal(await withFetch(liveFetch({}).fetch,()=>C.withRewardBasis(s)),s,'unavailable: left absent');
+  await assert.rejects(withFetch(liveFetch({weights:{...data,K:11}}).fetch,()=>C.withRewardBasis(s)),/units or rate differ/,'a same-block answer that does not add up is an error');
+  // The server's own refusal text travels with a failed read (the weights endpoint: "No sums for that week yet").
+  const refused=await withFetch(async()=>({ok:false,status:400,headers:{get:()=>null},json:async()=>({error:'No sums for that week yet'})}),()=>C.fetchJson('https://x/api/shielded/rewards/weights/3',1).catch(e=>e));
+  assert.equal(refused.status,400);assert.match(refused.message,/HTTP 400: No sums for that week yet$/);assert.equal(refused.isFetch,true);
+  const html=await withFetch(async()=>({ok:false,status:502,headers:{get:()=>null},json:async()=>{throw new SyntaxError('html');}}),()=>C.fetchJson('https://x/api/shielded/pulse',1).catch(e=>e));
+  assert.match(html.message,/HTTP 502$/);assert.equal(html.isFetch,true);
 });
 
 test('Listing credits are optional output metadata: known zero survives while unavailable values are omitted',()=>{
@@ -333,6 +360,9 @@ test('Public reward exits retain only known IDs, closed heights and kinds at the
   assert.deepEqual(C.rewardEventsAt(ls,notes,15,ids),[[a,10,'sale',1]]);
   assert.deepEqual(C.rewardEventsAt(ls,notes,20,ids),[[a,20,'cancel',2]]);
   assert.deepEqual(C.rewardEventsAt(ls,notes,8,ids),[]);
+  // A sale and a reclaim of the same piece closing in one block: 'exit', with the later listing height, whatever the record order.
+  const twice=[listing('s',1,100,1,{state:'SOLD',soldTxid:'buy'}),listing('c',1,200,2,{state:'CLAIMED',claimTxid:'ret'})],same=[note('buy',10),note('ret',10)];
+  assert.deepEqual(C.rewardEventsAt(twice,same,15,ids),[[a,10,'exit',2]]);assert.deepEqual(C.rewardEventsAt([...twice].reverse(),same,15,ids),[[a,10,'exit',2]]);
 });
 
 test('Live reward events come from listing records alone and keep only exits inside the current reward week',()=>{
@@ -348,6 +378,9 @@ test('Live reward events come from listing records alone and keep only exits ins
   assert.deepEqual(C.rewardEventsFromRecords(ls,S+40,ids).find(e=>e[0]===ids.get(1002)),[ids.get(1002),S+40,'sale',S+30]);
   // Minimal records for the worker: listing height, close height (null while open at H) and kind.
   assert.deepEqual(C.listingRecords(ls,S+25),[[1001,S-5,S+10,'sale'],[1001,S-9,S-2,'cancel'],[1002,S+1,S+20,'cancel'],[1003,S+2,null,'active']]);
+  assert.deepEqual(C.listingRecords(ls,S+10),[[1001,S-5,S+10,'sale'],[1001,S-9,S-2,'cancel'],[1002,S+1,null,'active'],[1003,S+2,null,'active']],'closed in block H: closed at H; closed later: still open at H');
+  const both=[{nf:'s',assetId:1001,state:'SOLD',height:S+1,soldHeight:S+10},{nf:'c',assetId:1001,state:'CLAIMED',height:S+2,claimHeight:S+10}];
+  assert.deepEqual(C.rewardEventsFromRecords(both,S+25,ids),[[ids.get(1001),S+10,'exit',S+2]]);assert.deepEqual(C.rewardEventsFromRecords([...both].reverse(),S+25,ids),[[ids.get(1001),S+10,'exit',S+2]]);
   assert.throws(()=>C.rewardEventsFromRecords([{nf:'x',assetId:1001,state:'SOLD',height:S}],S+1,ids),/关闭高度/);
   assert.throws(()=>C.rewardEventsFromRecords([{nf:'x',assetId:1001,state:'BURNED',height:S}],S+1,ids),/未知/);
   const events=[['a',S+5,'sale'],['b',S+1008,'cancel'],['c',S+1009,'sale']];
@@ -361,7 +394,9 @@ test('Closing rows from a /listings read between blocks: the same active listing
   const id=n=>String(n).padStart(64,'0')+'i0',snap={snapshot:{height:100},offers:[[id(1),10],[id(2),20]]};
   const l=(n,o={})=>({nf:'n'+n,inscriptionId:id(n),assetId:n,price:'10',listedAt:90,pending:false,cancelling:false,...o});
   assert.deepEqual(closingRows([l(2,{cancelling:true}),l(1,{pending:true})],snap),[[id(1),'sale'],[id(2),'cancel']]);
+  assert.throws(()=>closingRows([l(1,{pending:true,cancelling:true}),l(2)],snap),/同时标记正在购买和撤单中/);
   assert.deepEqual(closingRows([l(1),l(2),l(3,{listedAt:101})],snap),[],'a listing confirmed after the block is not part of it');
+  assert.deepEqual(closingRows([l(1),l(2,{listedAt:100,pending:true})],snap),[[id(2),'sale']],'confirmed in the block itself: part of it');
   assert.equal(closingRows([l(1)],snap),null,'a listing gone without a new block: left to the rebuild');
   assert.equal(closingRows([l(1),l(3)],snap),null);
   for(const bad of [[l(1,{pending:'yes'}),l(2)],[l(1,{listedAt:null}),l(2)],[l(1,{inscriptionId:'x'}),l(2)],[l(1),l(1),l(2)]])assert.throws(()=>closingRows(bad,snap));

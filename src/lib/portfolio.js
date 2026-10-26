@@ -40,22 +40,25 @@
   const sameFloor=scenario.afterFloor===snap.snapshot.collectionFloor;
   const rows=own.ids.map(other=>{const before=R.evaluateSnapshot(snap,other),after=scenario.evaluate(other);return {id:other,before,after,delta:R.weightChange(before,after,sameFloor)};});
   const existing=sum(rows.map(x=>x.after)),delta=rows.reduce((d,x)=>({lo:d.lo+x.delta.lo,hi:d.hi+x.delta.hi}),{lo:0,hi:0});
-  const added=action==='sale'?{lo:scenario.result.lo.weight,hi:scenario.result.hi.weight}:{lo:0,hi:0};
+  const purchases=action==='sale'?[...new Set([...(model.priorSales??[]),id])].filter(x=>!own.ids.includes(x)&&Object.hasOwn(snap.items,x)):[id];
+  const added=action==='sale'?sum(purchases.map(x=>scenario.evaluate(x))):{lo:0,hi:0};
   // A note created after this block earns from startWeek(height + 1); past the last week the piece earns nothing.
   const pieceCounts=R.startWeek(snap.snapshot.height+1)<R.RULES.weeks;
   // After the action the selected NFT is held and unlisted; other holdings keep their listing status.
-  const listedAfter=new Set(own.ids.filter(other=>other!==id&&P.listingStatus(snap,other)==='listed'));
-  const others=earning(snap,own.ids.filter(other=>other!==id),other=>scenario.evaluate(other),other=>!listedAfter.has(other));
-  const piece=pieceCounts?R.units(scenario.result):{lo:0,hi:0},all=scenario.programmeUnits(),before=own.allocation,after=allocationOf(addUnits(others,piece),all);
+  const closing=new Map(model.closing??snap.closing??[]),listedAfter=new Set(own.ids.filter(other=>other!==id&&P.listingStatus(snap,other)==='listed'&&!closing.has(other)));
+  const earnsAfter=other=>!listedAfter.has(other)&&closing.get(other)!=='sale'&&(P.listingStatus(snap,other)!=='listed'||pieceCounts);
+  const others=earning(snap,own.ids.filter(other=>other!==id),other=>scenario.evaluate(other),earnsAfter);
+  const piece=pieceCounts?purchases.reduce((u,x)=>addUnits(u,R.units(scenario.evaluate(x))),{lo:0,hi:0}):{lo:0,hi:0},all=scenario.programmeUnits(),before=own.allocation,after=allocationOf(addUnits(others,piece),all);
   // One-world change of the units of other earning holdings (the delisted piece itself earned nothing before).
-  const dOthers=rows.filter(x=>x.id!==id&&!listedAfter.has(x.id)).reduce((d,x)=>({lo:d.lo+x.delta.lo/R.RULES.unitPct,hi:d.hi+x.delta.hi/R.RULES.unitPct}),{lo:0,hi:0});
+  const dOthers=rows.filter(x=>x.id!==id).reduce((d,x)=>{const before=P.listingStatus(snap,x.id)!=='listed',after=earnsAfter(x.id);let change={lo:0,hi:0};if(before&&after)change={lo:x.delta.lo/R.RULES.unitPct,hi:x.delta.hi/R.RULES.unitPct};else if(after)change=R.units(x.after);else if(before){const u=R.units(x.before);change={lo:-u.hi,hi:-u.lo};}return addUnits(d,change);},{lo:0,hi:0});
   const K0=R.programmeUnits(snap),dK=scenario.unitChange();
   const allocation={before,after,delta:R.weeklyChangeBounds(before.units,addUnits(dOthers,piece),K0,dK),piece:R.weeklyAllocation(piece,all),pieceCounts,
    others:{after:R.weeklyAllocation(others,all),delta:R.weeklyChangeBounds(before.units,dOthers,K0,dK)}};
   return {state:'ready',action,before:own.total,existing,delta,added,after:{lo:existing.lo+added.lo,hi:existing.hi+added.hi},net:{lo:delta.lo+added.lo,hi:delta.hi+added.hi},allocation,rows,scenario,missing:own.missing};
  }
  /** Listings ranked by how much buying each raises my weekly allocation (conservative lower bound), then by ask. */
- function rank(snap,raw){const model=P.create(snap);return (snap.offers??[]).map(([id,price])=>({id,price,impact:impact(snap,raw,id,'sale',model)})).filter(x=>x.impact.state==='ready').sort((a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo||a.price-b.price);}
+ const rankOrder=(a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo||a.price-b.price;
+ function rank(snap,raw,entries=snap.offers??[]){const model=P.create(snap);return entries.map(([id,price])=>({id,price,impact:impact(snap,raw,id,'sale',model)})).filter(x=>x.impact.state==='ready').sort(rankOrder);}
 
  // ---------------------------------------------------------------- Which public notes are mine (local only).
  // META {id: anchor}: {added: ms[, seller]} until the worker anchors it to the first chain height read after it was
@@ -65,7 +68,17 @@
  // LEFT {id: {number, runs: [{listedAt, soldAt, weeks: [[first, last]…] | null, source}]}}: my runs of a piece that left.
  // EVENTS {height, rows: {id: [[asset, listing, close, kind]…]}}: public listing records of my holdings and of left pieces.
  // LEFT_SEEN ["<id>@<sale block>"…]: this week's sales the owner already opened or dismissed in the popup's note.
- const META='nakaHoldingsMeta',LEFT='nakaLeft',EVENTS='nakaHoldingEvents',LEFT_SEEN='nakaLeftSeen';
+ // ABSENT {height, week, ids, dismissed}: at the last Wallet page sync (a page with rows), the anchored holdings the page
+ // showed no row for although their public records say held and they are not listed: candidates for a private move the
+ // records cannot show. dismissed: the ones the owner marked as still theirs (asked once, not again while still absent).
+ const META='nakaHoldingsMeta',LEFT='nakaLeft',EVENTS='nakaHoldingEvents',LEFT_SEEN='nakaLeftSeen',ABSENT='nakaWalletAbsent';
+ /** The stored wallet-absence record, or null for anything that is not one (missing, another version's shape, damage). */
+ function absentOf(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+  const ids=list=>Array.isArray(list)&&list.every(x=>typeof x==='string'&&ID.test(x));
+  if(!Number.isSafeInteger(raw.height)||raw.height<0||!Number.isInteger(raw.week)||raw.week<0||raw.week>=R.RULES.weeks||!ids(raw.ids)||!ids(raw.dismissed))return null;
+  return {height:raw.height,week:raw.week,ids:[...raw.ids],dismissed:[...raw.dismissed]};
+ }
  const lateMint=(snap,id)=>R.RULES.lateMintNumbers.includes(snap.items[id][0]);
  const weekList=raw=>Array.isArray(raw)?[...new Set(raw.filter(w=>Number.isInteger(w)&&w>=0&&w<R.RULES.weeks))].sort((a,b)=>a-b):[];
  /** The anchor stored for a holding: {state:'anchored', anchor}, {state:'pending'} or {state:'legacy-unanchored'}. */
@@ -155,5 +168,5 @@
   const notes=own.notes.map((n,i)=>i===own.notes.length-1?{...n,lastWeek:through}:n);
   return {listedAt:null,soldAt:null,weeks:runWeeks(notes,own.gaps),source:'wallet'};
  }
- return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,TEAM,normalize,mates,update,current,impact,rank,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList};
+ return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,ABSENT,TEAM,normalize,mates,update,current,impact,rank,rankOrder,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList,absentOf};
 });

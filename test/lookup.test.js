@@ -16,7 +16,7 @@ test('Any catalog number resolves by snapshot number, not title or array order',
   }
 });
 test('Missing is snapshot absence; invalid does not coerce into number zero',()=>{
-  assert.equal(query(snap,'999999').state,'missing');assert.equal(query(snap,'').state,'invalid');assert.equal(query(snap,'#0').state,'found');
+  assert.equal(query(snap,'999999').state,'missing');assert.equal(query(snap,'999999').outOfRange,true,'beyond the last number');assert.equal(query(snap,'3332').outOfRange??false,false);assert.equal(query(snap,'').state,'invalid');assert.equal(query(snap,'#0').state,'found');
 });
 test('Lookup exposes listed/unlisted at the selected block, with an explicit unknown for legacy snapshots',()=>{
   const offers=new Set(snap.offers.map(([id])=>id));

@@ -13,7 +13,7 @@
   const PIXEL = globalThis.NakaPixel;
   const LOOKUP = globalThis.ShnakasLookup;
   const TIER = globalThis.ShnakasTier;
-  const A=globalThis.NakaRewards;let rewardWeek, rewardStatus, officialReadings, rewardWeeks, leftPieces, leftSeen, holdingEvents, holdingsMeta;
+  const A=globalThis.NakaRewards;let rewardWeek, rewardStatus, officialReadings, rewardWeeks, leftPieces, leftSeen, holdingEvents, holdingsMeta, walletAbsent;
   const K = SRC.KEYS, EXP=globalThis.NakaExplore, HOLD=globalThis.NakaPortfolio, PL=globalThis.NakaPlanner;
   let holdings=[],team=[];
   const VERSION = chrome.runtime.getManifest().version;
@@ -40,9 +40,9 @@
     return n;
   };
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-  /** A change's direction from its bounds: both above zero up, both below down, exactly zero same, otherwise unknown. */
-  const trend = (d) => d.lo > 0 ? 'up' : d.hi < 0 ? 'down' : d.lo === 0 && d.hi === 0 ? 'same' : 'unknown';
-  /** Estimated times in the viewer's local time with its UTC offset, to the minute (header time + 10 minutes a block). */
+  /** A change's direction as its figure is shown (NakaExploreUI.trend): up, down, same or unknown. */
+  const trend = (d) => globalThis.NakaExploreUI.trend(d);
+  /** Estimated browser-local times, to the minute (header time + 10 minutes a block). */
   const localTime = (ms) => I.localTime(ms);
 
   // 当前状态：语言、本地同步的快照、同步状态；任一变化都整体重画（弹窗内容很少，重画开销可以忽略）
@@ -50,7 +50,7 @@
     lang: I.DEFAULT_LANG, status: undefined, localError: null,
     // sheet: the Look up layer over the tab — null (closed), 'search' or 'result'. resultFrom: where a result was opened,
     // 'search' (Back returns there) or null (a holdings tile: Back closes). opener: that tile's ID, null for the magnifier.
-    view: 'home', sheet: null, resultFrom: null, opener: null, holdingsOpen: false, addKind: null, fresh: null,
+    view: new URLSearchParams(location.search).get('view')==='block'?'block':'home', sheet: null, resultFrom: null, opener: null, holdingsOpen: false, addKind: null, fresh: null,
     lookupRaw: null, lookupSnapshot:null, lookupHistorical:false, historyPending:false, pendingLookup:null,rewardClock:null, live: undefined, liveStatus: undefined, visibleAt: undefined,
     // Whether the worker runs this code (SRC.BUILD): null until it answers.
     workerCurrent: null,
@@ -67,7 +67,7 @@
     // over the tab and closes with Back.
     for (const b of $('tabbar').querySelectorAll('button[data-view]')) {
       b.querySelector('.tab-label').textContent = cc[{ home: 'navHome', raise: 'navRaise', block: 'navBlock', about: 'navAbout' }[b.dataset.view]];
-      if (!b.querySelector('.tab-icon svg')) b.querySelector('.tab-icon').append(icon(b.dataset.view));
+      b.querySelector('.tab-icon').replaceChildren(icon(b.dataset.view));
       b.setAttribute('aria-current', String(b.dataset.view === state.view));
     }
     if (!$('searchOpen').firstChild) $('searchOpen').append(icon('search'));
@@ -122,61 +122,37 @@
     $('open').href = `https://ord-dropz.xyz/secondary/collections/${BUNDLED.collection.slug}`;
   }
 
-  /** 与内容脚本同一规则（SRC.choose）：显示的是页面此刻正在用的那份数据。 */
+  /** 与内容脚本同一规则（SRC.choose）：显示的是页面此刻正在用的那份数据。 Block tab hero: the block, how fresh it is, this
+   * week's progress and three figures that appear nowhere else (floor, listings, reward week). */
   function renderSnapshot(T) {
     const { snap, source } = SRC.choose({ live: state.live, closing: state.closing }, BUNDLED);
-    const s = snap.snapshot;
-    const sourceText = { live: T.srcLive, bundled: T.srcBundled }[source];
-    $('heightLabel').textContent = T.popupHeight;
+    const s = snap.snapshot, cc = globalThis.NakaExploreUI.pick(state.lang), W = R.RULES;
+    $('heightLabel').textContent = cc.blockLabel;
     $('currentHeight').replaceChildren(el('span', 'sr-only', I.int(s.height)), PIXEL.digits(I.int(s.height), 'pixel-height'));
     $('currentHeight').setAttribute('aria-label', I.int(s.height));
-    $('snapSource').textContent = sourceText; $('snapSource').hidden = source !== 'bundled'; // Live is the normal case; only bundled data adds information.
+    $('snapSource').textContent = T.srcBundled; $('snapSource').hidden = source !== 'bundled'; // Live is the normal case; only bundled data adds information.
+    $('blockAge').textContent = I.blockAgeShort(T, s); $('blockAge').title = I.blockTimeTitle(T, s);
     // The chain clock (a newer /pulse height) refines the countdown only while it is in the same reward phase and week as the
-    // data shown; otherwise every figure follows the data's own block, so the strip never contradicts the hero.
+    // data shown; otherwise every figure follows the data's own block, so the hero never contradicts itself.
     const own=R.rewardPhase(s),ahead=state.rewardClock?.height>s.height?R.rewardPhase(state.rewardClock):null,same=ahead!==null&&ahead.state===own.state&&ahead.index===own.index;
     const clock=same?state.rewardClock:s,phase=same?ahead:own;
-    const date=phase.eta===null?T.launchUnknown:T.launchDate(localTime(phase.eta));
-    const cycle=phase.state==='before'?{label:source==='live'?T.launchStat:T.launchStatAtBlock,value:I.int(phase.remaining),pixels:true,unit:T.blocksUnit,sub:date}
-      :phase.state==='boundary'?{label:source==='live'?T.firstRewardBlock:T.firstRewardAtBlock,value:'1',pixels:true,unit:T.blocksUnit,sub:T.nextBoundary(I.int(phase.next))}
-      :phase.state==='active'?{label:phase.index+1>=R.RULES.weeks?(source==='live'?T.accrualRemaining:T.accrualRemainingAtBlock):source==='live'?T.weekRemaining:T.weekRemainingAtBlock,value:I.int(phase.remaining),pixels:true,unit:T.blocksUnit,sub:T.rewardWeek(phase.week,R.RULES.weeks)}
-      :{label:phase.state==='closed'?T.rewardClosed:T.completedWeeks,value:phase.state==='closed'?'—':I.int(R.RULES.weeks),pixels:phase.state!=='closed',unit:phase.state==='closed'?null:T.weeksUnit,sub:T.claimLimit(I.int(phase.claimUntil))};
-    const stats=[{label:T.popupFloor,value:I.btc(s.collectionFloor),pixels:true,unit:'BTC',sub:null},{label:T.popupListings,value:I.int(s.listings),pixels:true,unit:null,sub:null},cycle];
-    const rows = stats.map(({ label, value, pixels, unit, sub }) => {
-      const row = el('div', 'row'), dd = el('dd');
-      if (pixels) dd.append(el('span', 'sr-only', value), PIXEL.digits(value, 'stat-pixels'));
-      else dd.textContent = value;
-      if (unit !== null) dd.append(el('span', 'stat-unit', unit));
-      row.append(el('dt', '', label), dd);
-      if (sub !== null) row.append(el('dd', 'stat-sub', sub));
-      return row;
-    });
-    rows[2].title = [...globalThis.NakaPurchase.renderLaunch(clock,T,I).children].map(n=>n.textContent).join('\n');
-    $('snap').replaceChildren(...rows);
+    const active = phase.state === 'active', ended = ['ended', 'closed'].includes(phase.state), into = active ? clock.height - phase.first + 1 : ended ? W.weekBlocks : 0;
+    $('weekBar').firstElementChild.style.width = `${Math.min(1, into / W.weekBlocks) * 100}%`;
+    // Right of the height: the reward week and how far into it this block is (the bar under both shows the same).
+    $('weekNow').textContent = active ? cc.weekOf(phase.week, W.weeks) : ended ? cc.weeksOver : cc.weeksBefore;
+    $('weekNow').parentElement.title = [...globalThis.NakaPurchase.renderLaunch(clock, T, I).children].map((n) => n.textContent).join('\n');
+    $('weekBlocks').textContent = active || ended ? cc.blocksInto(I.int(into), I.int(W.weekBlocks)) : '';
+    $('weekBlocks').title = cc.weekBlocksHint;
+    // Three figures of this block: the floor, the listings, and what a 100% weight earns in a week now (the unit every
+    // listing's "+38.78 / week" is measured against).
+    const K = R.programmeUnits(snap), per100 = globalThis.NakaExploreUI.shn(R.weeklyAllocation({ lo: 4, hi: 4 }, K));
+    const stats = [[cc.floorLabel, I.btc(s.collectionFloor), 'BTC', null], [cc.listingsShort, I.int(s.listings), null, null], [cc.per100Week, per100, null, cc.per100Hint]];
+    $('snap').replaceChildren(...stats.map(([label, value, unit, hint]) => { const row = el('div', 'bh-stat'), dd = el('dd'); dd.append(el('span', 'sr-only', value), PIXEL.digits(value, 'stat-pixels')); if (unit) dd.append(el('span', 'stat-unit', unit)); row.append(el('dt', '', label), dd); if (hint) row.title = hint; return row; }));
     $('snap').dataset.source = source;
-    $('blockAge').textContent = I.blockAge(T,s);
-    $('blockAge').title = I.blockTimeTitle(T,s);
     const note = I.measureNote(T, s.height);
     $('measureNote').textContent = T.inspectProvisional;
-    $('measureNote').title = note ?? ''; 
+    $('measureNote').title = note ?? '';
     $('measureNote').hidden = note === null;
-    // Block tab, below the block card: what one unit of weight is worth at this block, and where the reward period
-    // stands. Neither repeats the countdown above.
-    const cc = globalThis.NakaExploreUI.pick(state.lang), U = globalThis.NakaExploreUI, W = R.RULES, K = R.programmeUnits(snap);
-    $('allocTitleBlock').textContent = cc.allocTitleBlock;
-    const stat = (label, value, unit, cls) => { const row = el('div', cls ? `row ${cls}` : 'row'), dd = el('dd'); dd.append(el('span', 'sr-only', value), PIXEL.digits(value, 'stat-pixels')); if (unit) dd.append(el('span', 'stat-unit', unit)); row.append(el('dt', '', label), dd); return row; };
-    const kText = K.lo === K.hi ? I.int(K.lo) : `${I.int(K.lo)}–${I.int(K.hi)}`;
-    $('allocStats').replaceChildren(stat(cc.perFull, U.shn(R.weeklyAllocation({ lo: 4, hi: 4 }, K)), 'SHNAKAS', 'is-key'), stat(cc.perCap, U.shn(R.weeklyAllocation({ lo: 16, hi: 16 }, K)), 'SHNAKAS'),
-      stat(cc.unitsK, kText), stat(cc.poolWeek, I.int(W.poolPerWeek), 'SHNAKAS'));
-    const rate = K.lo === K.hi ? I.int(R.unitRate(K.lo)) : `${I.int(R.unitRate(K.hi))}–${I.int(R.unitRate(K.lo))}`;
-    $('allocNote').textContent = `v = ${rate}`; $('allocNote').title = cc.allocNote(rate);
-    $('scheduleTitle').textContent = cc.scheduleTitle;
-    const done = phase.state === 'active' ? phase.week - 1 : ['ended', 'closed'].includes(phase.state) ? W.weeks : 0;
-    $('weekBar').firstElementChild.style.width = `${(phase.state === 'active' ? (clock.height - W.startBlock) / (W.weeks * W.weekBlocks) : done / W.weeks) * 100}%`;
-    const range = (a, b) => `${I.int(a)} – ${I.int(b)}`;
-    const current = phase.state === 'active' ? [cc.scheduleWeekN(`${phase.week}/${W.weeks}`), range(phase.first, phase.last)] : [cc.scheduleWeekN(1), range(W.startBlock + 1, W.startBlock + W.weekBlocks)];
-    $('weeksDone').textContent = `${cc.progressLabel} ${cc.weeksDone(done, W.weeks)}`;
-    $('schedule').replaceChildren(...[current, [cc.scheduleEndBlock, I.int(phase.end)], [cc.scheduleClaim, I.int(phase.claimUntil)]]
-      .map(([k, v]) => { const row = el('div', 'schedule-row'); row.append(el('dt', '', k), el('dd', '', v)); return row; }));
     const now = phase.state === 'active' ? T.rewardWeek(phase.week, W.weeks) : phase.state === 'boundary' ? T.firstRewardAtBlock : phase.state === 'closed' ? T.rewardClosed : T.completedWeeks;
     // Home: one quiet line says which block the figures use and how fresh it is; it opens the Block tab.
     const kind = $('liveState').className.match(/live-state--(\w+)/)?.[1] ?? 'muted', strip = $('statusStrip');
@@ -184,12 +160,13 @@
     const lead = el('span', 'strip-lead'); lead.append(el('i', `strip-dot strip-dot--${kind}`), el('b', '', source === 'live' ? T.modeLive : T.srcBundled), el('span', '', cc.blockChip(I.int(s.height))), el('span', 'strip-age', age));
     strip.replaceChildren(lead, el('span', 'strip-next', `${phase.state === 'before' ? cc.stripStart(I.int(phase.remaining)) : now} ›`));
     strip.title = $('liveState').title;
+    state.blockClock = clock;
     return snap;
   }
 
   /** 实时同步：开关状态、最近一次检查结果；失败时说明原因、多久后重试、页面正在用哪份数据，并给出技术细节。 */
   function renderLive(T) {
-    const st = SRC.statusOf(state.liveStatus, 'live');
+    const st = SRC.statusOf(state.liveStatus, 'live'), cc = globalThis.NakaExploreUI.pick(state.lang);
     const now = Date.now();
     const live = SRC.compatibleSnapshot(state.live, BUNDLED) ? state.live : undefined;
     const dataLine = live === undefined ? null : T.liveOk(I.int(live.snapshot.height), I.blockAge(T,live.snapshot,now));
@@ -198,12 +175,19 @@
     let kind, label, tip;
     if (st !== undefined && st.state === 'error') {
       kind = 'error';
-      label = T.liveFail(T.failReason[st.kind] + (st.status === null ? '' : T.httpCode(st.status)), st.waitMin);
-      tip = [label, live === undefined ? T.liveKeepNone : T.liveKeep(I.int(live.snapshot.height)), st.message].join('\n');
-    } else if (dataLine === null) { kind = 'muted'; label = visible ? T.liveWaiting : T.livePaused; tip = label; }
-    else { kind = visible ? 'ok' : 'muted'; label = T.liveWatching; tip = visible ? dataLine : `${T.livePaused} · ${dataLine}`; }
+      const named = st.kind === 'syncing' || st.kind === 'rate-limit' || st.kind === 'network' || st.kind === 'data' || typeof st.apiError !== 'string';
+      label = T.liveFail((named ? T.failReason[st.kind] : st.apiError) + (st.status === null ? '' : T.httpCode(st.status)), st.waitMin);
+      tip = st.kind === 'syncing' ? T.liveSyncingTip : T.liveErrorTip;
+    } else if (dataLine === null) { kind = 'muted'; label = visible ? cc.liveChecking : cc.livePausedShort; tip = visible ? T.liveWaiting : T.livePaused; }
+    // The block hero has room for one word: the full sentence is its tooltip.
+    else { kind = visible ? 'ok' : 'muted'; label = visible ? T.modeLive : cc.livePausedShort; tip = visible ? `${T.liveWatching} · ${dataLine}` : `${T.livePaused} · ${dataLine}`; }
     const box = $('liveState');
-    box.textContent = label;
+    box.replaceChildren(document.createTextNode(label));
+    if (st !== undefined && st.state === 'error') {
+      const retry = el('button', 'live-retry', T.retryNow); retry.type = 'button';
+      retry.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'shn-retry' }));
+      box.append(retry);
+    }
     box.title = tip;
     box.className = `live-state live-state--${kind}`;
     box.dataset.state = st === undefined ? 'none' : st.state;
@@ -237,8 +221,7 @@
   function timedBasis(T,snap) { const n=el('p','lookup-basis lookup-basis--time',T.lookupBasis(I.blockBasis(T,snap.snapshot))); n.title=I.blockTimeTitle(T,snap.snapshot); return n; }
   function renderLookupContext(T,snap) {
     for(const basis of $('lookupResult').querySelectorAll('.naka-purchase__basis')) {
-      basis.replaceChildren(el('span','lookup-height',T.snapBlock(I.int(snap.snapshot.height))),el('span','lookup-time',I.blockAge(T,snap.snapshot)));
-      basis.title=I.blockTimeTitle(T,snap.snapshot);
+      globalThis.NakaPurchase.paintBasis(basis,snap.snapshot,T,I);
     }
     for(const chip of $('lookupResult').querySelectorAll('.lookup-mode')) {
       chip.textContent=state.lookupHistorical?T.historyTitle:T.modeLive;
@@ -250,15 +233,16 @@
   let lookupKey = '';
   function renderLookup(T, snap) {
     const found = state.lookupRaw === null ? null : LOOKUP.query(snap, state.lookupRaw);
-    // Rebuilt only when its own inputs change: the block, the number, language, mode, my holdings and this piece's own
-    // closing row. Another listing closing within the block leaves the card (and the focus in it) as it is.
-    const key = found === null ? '' : `${snap.snapshot.height}|${snap.snapshot.generatedAt}|${state.lookupRaw}|${state.lang}|${state.lookupHistorical}|${holdings.join()}|${found.state === 'found' ? JSON.stringify((snap.closing ?? []).filter(([id]) => id === found.id)) : ''}`;
+    // Rebuilt only when its inputs change: the block, the number, language, mode, my holdings and the listings already
+    // closing (the single-sale model computes in the next block's world, without them).
+    const key = found === null ? '' : `${snap.snapshot.height}|${snap.snapshot.generatedAt}|${state.lookupRaw}|${state.lang}|${state.lookupHistorical}|${rewardWeek?.height}|${JSON.stringify(officialReadings)}|${holdings.join()}|${JSON.stringify(snap.closing ?? [])}`;
     if (key === lookupKey) {
       for(const n of $('lookupResult').querySelectorAll('.lookup-basis--time')) { n.textContent=T.lookupBasis(I.blockBasis(T,snap.snapshot)); n.title=I.blockTimeTitle(T,snap.snapshot); }
       return;
     }
     lookupKey = key;
     const box = $('lookupResult');
+    const previousNumber=box.querySelector('.lookup-card')?.dataset.number,opened=[...box.querySelectorAll('details[open]')].map(d=>d.className);
     box.replaceChildren(); box.hidden = found === null;
     $('lookupActions').hidden = true; // shown again only for a found NFT
     $('lookupNumber').removeAttribute('aria-invalid');
@@ -270,6 +254,7 @@
       box.append(el('p','lookup-message lookup-message--error',T.lookupInvalid)); return;
     }
     if (found.state === 'missing') {
+      if (found.outOfRange) { box.append(el('p','lookup-message',T.lookupRange(found.first,found.last))); return; }
       box.append(el('p','lookup-message',T.lookupMissing(found.number)),timedBasis(T,snap)); return;
     }
     const r=found.result, card=el('article','lookup-card');
@@ -284,23 +269,28 @@
     const rank=globalThis.NakaPurchase.numberBadge(found.number,T);if(rank)head.insertBefore(rank,link);
     // My own listing shows what reclaiming it does; anyone else's what buying it does.
     const held=holdings.includes(found.id),action=found.listing==='listed'&&held?'cancel':'sale';
+    // A listing already closing (bought and confirming, or being reclaimed) is said on the card before any figure.
+    const closing=(snap.closing??[]).find(([id])=>id===found.id)?.[1]??null;
     const model=globalThis.NakaPurchase.create(snap,{action}),scenario=model.get(found.id);
     card.dataset.listing=found.listing;card.dataset.queryPurpose=state.lookupHistorical?'block':'purchase';
     const notice=scenario.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
-    card.append(head,!state.lookupHistorical&&scenario.state==='ready'?globalThis.NakaPurchase.render(model,found.id,T,I,{explain:A.explainFor(snap,found.id,state.lang,action)}):globalThis.NakaPurchase.renderCurrent(r,snap.snapshot,T,I,{notice:state.lookupHistorical?null:notice,explain:A.explainFor(snap,found.id,state.lang),listing:found.listing,credits:globalThis.NakaPurchase.relayCredits(snap,found.id)}));
-    const purchase=card.querySelector('.naka-purchase'),context=el('div','lookup-context');
+    card.append(head,!state.lookupHistorical&&scenario.state==='ready'?globalThis.NakaPurchase.render(model,found.id,T,I,{explain:A.explainFor(snap,found.id,state.lang,action),closing,snap,id:found.id,sales:!state.lookupHistorical}):globalThis.NakaPurchase.renderCurrent(r,snap.snapshot,T,I,{notice:state.lookupHistorical?null:notice,explain:A.explainFor(snap,found.id,state.lang),listing:found.listing,closing,credits:globalThis.NakaPurchase.relayCredits(snap,found.id),snap,id:found.id,status:held?A.portfolio(snap,[found.id],rewardWeek,officialReadings,holdingEvents).rows[0]??null:null,sales:!state.lookupHistorical}));
+    const purchase=card.querySelector('.naka-purchase');
     const mode=el('button','lookup-mode');mode.type='button';mode.addEventListener('click',openHistoryDialog);
-    context.append(purchase.querySelector('.naka-purchase__basis'),mode);
-    purchase.prepend(context);
-    // My holdings: a listed NFT shows what buying it does; one of my listed holdings shows what delisting does.
-    if(!state.lookupHistorical&&holdings.length&&found.listing==='listed'){const x=HOLD.impact(snap,holdings,found.id,action,model);if(x.state==='ready')card.append(globalThis.NakaExploreUI.holdingsLine(x,globalThis.NakaExploreUI.pick(state.lang)));}
-    box.append(card);
+    // The mode chip (live, or a historical block) sits beside the listing state at the top of the hero's right column.
+    purchase.querySelector('.naka-hero .naka-listing').append(mode);
+    // My holdings: a listed NFT shows what buying it does; one of my listed holdings shows what delisting does. Not for a
+    // listing already closing — nobody can buy it, and one of mine being bought sells at the next block — except my own
+    // reclaim under way, which is what happens.
+    const effect=closing===null||closing==='cancel'&&action==='cancel';
+    if(!state.lookupHistorical&&holdings.length&&found.listing==='listed'&&effect){const x=HOLD.impact(snap,holdings,found.id,action,model);if(x.state==='ready')card.append(globalThis.NakaExploreUI.holdingsLine(x,globalThis.NakaExploreUI.pick(state.lang)));}
+    box.append(card);if(previousNumber===String(found.number))for(const d of box.querySelectorAll('details'))if(opened.includes(d.className))d.open=true;
   }
 
   /** Home: the weekly SHNAKAS figure is the one hero number; every holding follows as a tile with its number, weight
    * (as the official endpoint reports it) and weekly SHNAKAS (0 while listed). Without holdings, a centred first-run
    * prompt takes the whole view. Adding a number uses a small dialog. */
-  const TILE_COLUMNS = 4, TILE_ROWS = 3;
+  const TILE_COLUMNS = 3, TILE_ROWS = 3;
   // One artwork element per NFT, reused by every render: moving it keeps the decoded image, so a data refresh never flashes.
   const artFor = globalThis.NakaExploreUI.artStore();
   let holdingsKey = '';
@@ -311,26 +301,29 @@
     // records and anchors (the same block can carry new records for a holding just added), language, data, my listings
     // already closing (their status says so) and layout.
     const mineRows = own.ids.map(id => JSON.stringify([holdingEvents?.rows?.[id] ?? null, holdingsMeta?.[id] ?? null])).join(';');
-    const key = `${rewardWeek?.height}|${rewardStatus?.state}|${JSON.stringify(officialReadings)}|${Object.keys(rewardWeeks?.weeks??{}).join()}|${JSON.stringify(leftPieces)}|${JSON.stringify(leftSeen)}|${holdingEvents?.height}|${mineRows}|${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify((snap.closing ?? []).filter(([id]) => own.ids.includes(id)))}|${own.ids.join()}|${state.holdingsOpen}|${state.fresh ? [...state.fresh].join() : ''}|${JSON.stringify([...confirmErrors])}`;
+    const key = `${rewardWeek?.height}|${rewardStatus?.state}|${rewardStatus?.reason}|${JSON.stringify(officialReadings)}|${JSON.stringify(rewardWeeks?.weeks??{})}|${JSON.stringify(leftPieces)}|${JSON.stringify(leftSeen)}|${holdingEvents?.height}|${mineRows}|${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing ?? [])}|${own.ids.join()}|${state.holdingsOpen}|${state.fresh ? [...state.fresh].join() : ''}|${JSON.stringify([...confirmErrors])}|${JSON.stringify(walletAbsent)}|${[...absentErrors].join()}`;
     if (key === holdingsKey) return;
     holdingsKey = key;
-    const empty = !own.ids.length, phase = R.rewardPhase(snap.snapshot);
+    const empty = !holdings.length, phase = R.rewardPhase(snap.snapshot);
     document.querySelector('.holdings-hero').hidden = empty; $('holdingsList').hidden = empty; $('holdingsEmpty').hidden = !empty;
     const history = A.history(snap, own.ids, leftPieces, holdingEvents, A.weeks(rewardWeeks), phase, holdingsMeta);
-    // First run previews the result: the weekly figure at zero and four empty tiles, then the ways to fill them. When the
+    // First run previews the result: the weekly figure at zero and one row of three empty tiles, then the ways to fill them. When the
     // last holding sold, the line about this week's sales stays, above that card.
     if (empty) { const zero = el('span', 'hc-value'); zero.append(PIXEL.digits('0.00', 'hc-pixels'), el('span', 'hc-unit', c.weekUnit)); $('emptyFigure').replaceChildren(zero); paintNotes(c, [], history, phase, true); return; }
     $('holdingsTitle').textContent = c.holdings; $('tilesTitle').textContent = c.tilesTitle(own.ids.length);
-    $('holdingsManage').textContent = c.manage; $('holdingsManage').title = c.openHoldings;
+    $('holdingsManage').textContent = c.manage; $('holdingsManage').title = c.manageHint;
     const a = own.allocation;
-    const rewards = A.render(snap, own.ids, rewardWeek, officialReadings, state.lang, { share: a.share, status: rewardStatus, history, events: holdingEvents });
+    const ledgerStore={[A.KEY]:rewardWeek,[A.WEEKS]:rewardWeeks,[HOLD.EVENTS]:holdingEvents,[HOLD.META]:holdingsMeta,[HOLD.LEFT]:leftPieces,[NakaLedger.KEY]:state.ledger};
+    const rewards = A.render(snap, own.ids, rewardWeek, officialReadings, state.lang, { share: a.share, status: rewardStatus, history, events: holdingEvents, savedIds:holdings, ledger:state.ledger, completed:NakaLedgerUI.completedReport(snap,holdings,ledgerStore) });
     $('holdingsFigure').replaceChildren(rewards.element);
     // A sale only the owner can attribute stays among the holdings, asked about above the tiles; any other sale of a holding
     // moved it to Left already (the worker reads it from the public records), said there while that week lasts.
     const asks = new Map(own.ids.map((id) => [id, HOLD.saleToConfirm(snap, id, holdingEvents?.rows?.[id], holdingsMeta?.[id], A.tile(rewards.data, id, state.lang).row.reason)]).filter(([, x]) => x !== null));
-    paintNotes(c, [...asks].map(([id, x]) => confirmNote(c, snap.items[id][0], id, x)), history, phase, false);
-    const cancel = globalThis.NakaPurchase.create(snap, { action: 'cancel' }), limit = TILE_ROWS * TILE_COLUMNS, folded = !state.holdingsOpen && own.ids.length > limit;
-    $('holdingsTiles').replaceChildren(...(folded ? own.ids.slice(0, limit) : own.ids).map((id) => {
+    // Holdings the Wallet page showed no row of at the last sync (maybe sent away privately) are asked about the same way.
+    const absent = HOLD.absentOf(walletAbsent), absentIds = absent === null ? [] : absent.ids.filter((id) => own.ids.includes(id) && !absent.dismissed.includes(id));
+    paintNotes(c, [...[...asks].map(([id, x]) => confirmNote(c, snap.items[id][0], id, x)), ...absentIds.map((id) => absentNote(c, snap.items[id][0], id))], history, phase, false);
+    const cancel = globalThis.NakaPurchase.create(snap, { action: 'cancel' }), limit = TILE_ROWS*TILE_COLUMNS, visible=own.ids, folded = !state.holdingsOpen && visible.length > limit;
+    $('holdingsTiles').replaceChildren(...(folded ? visible.slice(0, limit) : visible).map((id) => {
       const number = snap.items[id][0], listed = globalThis.NakaPurchase.listingStatus(snap, id) === 'listed', r = R.evaluateSnapshot(snap, id);
       const weekly = listed ? null : R.weeklyAllocation(R.units(r), a.all), view = A.tile(rewards.data, id, state.lang), status = view.row.status;
       let delist = '';
@@ -339,24 +332,33 @@
       if (listed) tile.classList.add('is-listed'); if (state.fresh?.has(id)) tile.classList.add('is-new');
       const earnsNone = ['paused', 'gone', 'ended', 'unknown'].includes(status);
       const ask = asks.get(id) ?? null, askLine = ask === null ? '' : `\n${c.confirmSale(number, I.int(ask.listedAt), I.int(ask.soldAt))} ${c.confirmAsk}`;
-      tile.title = `#${number} · ${R.formatWeight(r)} · ${listed ? c.listedNoEarn : earnsNone ? view.label : c.perWeek(U.shn(weekly))}${askLine}\n${view.explain.full}${view.amount ? `\n${c.thisWeek} ${A.format(view.amount)} SHNAKAS` : ''}${delist}\n${c.tileHint(number)}`;
       const art = el('span', 'hc-art'); art.append(artFor(snap, id, 'hc-fallback', 'tile'));
       if (listed) art.append(el('span', 'hc-tag', c.listedTag));
-      // Three fixed caption lines: number and weight, this week's SHNAKAS (the weekly rate before rewards start), status.
-      // A figure that is still loading keeps its line and is hidden, so tiles never change height.
-      const idle = status === 'idle', amount = listed ? 0 : idle ? null : view.amount, earn = el('b', listed ? 'hc-earn hc-earn--listed' : 'hc-earn', listed ? c.earnListed : idle ? U.shn(weekly) : amount === null ? '0.0000' : A.format(amount));
-      if (!idle && amount === null) earn.classList.add('is-blank');
+      // Caption: number and weight, this week's SHNAKAS (or what the week is for this piece), then the two estimates: a full
+      // week and the rest of the programme at this block's conditions. Every line is always there, so tiles never change
+      // height while figures load.
+      const idle = status === 'idle', amount = listed ? 0 : idle ? null : view.amount, earning = !listed && !idle && !earnsNone && status !== 'waiting';
+      const earn = el('b', 'hc-earn', listed ? c.noReward : idle ? U.shn(weekly) : earning ? (amount === null ? '0.0000' : A.format(amount)) : view.label || '—');
+      if (listed) earn.classList.add('hc-earn--listed'); else if (!earning && !idle) earn.classList.add('hc-earn--state');
+      if (earning && amount === null) earn.classList.add('is-blank');
       const caption = el('span', 'hc-caption');
-      // A sale awaiting the owner's answer is not yet a purchase that "starts next week": it says so instead.
-      caption.append(el('span', 'hc-number', `#${number}`), el('span', `hc-weight naka-tone-${TIER.tierOf(r)}`, R.formatWeight(r)), earn, ask !== null ? el('small', 'hc-sub hc-sub--confirm', c.toConfirm) : el('small', `hc-sub hc-sub--${status}`, idle ? c.perWeekShort : view.label));
+      const forecast = listed || earnsNone ? null : globalThis.NakaMining.forecast(snap, id, { action: 'hold', status: view.row }), ready = forecast?.state === 'ready';
+      const perWeek = ready ? U.shn(forecast.weekly) : '—', rest = ready && forecast.remaining !== null ? U.shn(forecast.remaining) : '—';
+      const idRow = el('span', 'hc-id'); idRow.append(el('span', 'hc-number', `#${number}`), el('span', `hc-weight naka-tone-${TIER.tierOf(r)}`, R.formatWeight(r)));
+      const rates = el('dl', 'hc-rates'), rate = (label, value) => { const d = el('div'); d.append(el('dt', '', label), el('dd', value === '—' ? 'is-none' : '', value)); rates.append(d); };
+      rate(c.tileWeekly, perWeek); rate(c.tileRemaining, rest);
+      if (ask !== null) art.append(el('span', 'hc-tag hc-tag--ask', c.toConfirm));
+      const lines = [`#${number} · ${R.formatWeight(r)}`, earning ? `${c.tileAccrued} ${earn.textContent} SHNAKAS` : listed ? c.noReward : view.label, `${c.tileWeekly} ${perWeek}`, `${c.tileRemaining} ${rest}`].filter(Boolean);
+      tile.title = lines.join('\n') + delist + askLine + `\n${c.tileOpen}`;
+      caption.append(idRow, earn, rates);
       tile.append(art, caption);
       // The second click of a double click is not a choice: a line above that closed on the first one moved this tile under
       // the pointer.
       tile.addEventListener('click', (ev) => { if (ev.detail > 1) return; state.opener = id; $('lookupNumber').value = String(number); showLookup(String(number)); $('lookupBack').focus(); });
       return tile;
     }));
-    $('holdingsMore').hidden = own.ids.length <= limit;
-    $('holdingsMore').textContent = state.holdingsOpen ? c.collapse : c.expandAll(own.ids.length);
+    $('holdingsMore').hidden = visible.length <= limit;
+    $('holdingsMore').textContent = state.holdingsOpen ? c.collapse : c.expandAll(visible.length);
     $('holdingsMore').setAttribute('aria-expanded', String(state.holdingsOpen));
   }
   /** A sale the owner must attribute, answered in place: "I sold it" moves the piece to Left with the weeks it kept, "I
@@ -371,6 +373,20 @@
       answers.append(b);
     }
     note.append(answers); if (confirmErrors.has(id)) note.append(el('small', 'inline-error', c[confirmErrors.get(id)]));
+    return note;
+  }
+  /** A holding the Wallet page showed no row of at the last sync: "It left" moves it to Left (the weeks it kept unknown),
+   * "Still mine" keeps it and closes the question (shn-left, as on the extension page). A failed answer says so on its line. */
+  const absentErrors = new Set();
+  function absentNote(c, number, id) {
+    const note = el('div', 'hc-note hc-note--ask'), answers = el('span', 'hc-note-actions');
+    note.append(el('span', '', c.absentLine(number)));
+    for (const [action, label] of [['gone', c.absentGone], ['keep', c.absentKeep]]) {
+      const b = el('button', 'hc-note-btn', label); b.type = 'button'; b.dataset.focus = `${action}-${id}`;
+      b.addEventListener('click', async () => { absentErrors.delete(id); let res = null; try { res = await chrome.runtime.sendMessage({ type: 'shn-left', action, id }); } catch { res = null; } if (!res?.ok) absentErrors.add(id); render(); });
+      answers.append(b);
+    }
+    note.append(answers); if (absentErrors.has(id)) note.append(el('small', 'inline-error', c.absentFailed));
     return note;
   }
   /** The lines above the tiles, or above the first-run card when no holding is left: questions first, then this week's
@@ -408,18 +424,26 @@
    * Four slots stay visible so an empty or partial selection still reads as a complete layout. */
   let compareKey = '';
   function renderCompareList(snap) {
-    const key = `${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${comparisonIds.join()}|${holdings.join()}`;
+    const key = `${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${comparisonIds.join()}|${holdings.join()}|${JSON.stringify(snap.closing ?? [])}`;
     if (key === compareKey) return; compareKey = key;
-    const c = globalThis.NakaExploreUI.pick(state.lang), U = globalThis.NakaExploreUI, model = globalThis.NakaPurchase.create(snap), list = $('compareList');
+    const c = globalThis.NakaExploreUI.pick(state.lang), U = globalThis.NakaExploreUI, T = I.pick(state.lang), model = globalThis.NakaPurchase.create(snap), list = $('compareList');
     const rows = comparisonIds.map((id) => {
-      const e = EXP.entry(snap, model, id), row = el('div', 'compare-row');
+      const action='sale',e = EXP.entry(snap, model, id), row = el('div', 'compare-row');
       if (!e) { row.append(el('span', 'compare-missing', c.missing)); return row; }
       const open = el('button', 'compare-main'); open.type = 'button'; open.title = c.tileHint(e.number);
       open.addEventListener('click', () => { $('lookupNumber').value = String(e.number); showLookup(String(e.number)); });
       const info = el('span', 'compare-info');
       info.append(el('strong', '', `#${e.number}`), el('small', '', e.listing === 'listed' ? `${c.ask.split(' · ')[0]} ${I.btc(e.sale.price)} BTC` : c[e.listing]));
-      if (holdings.length && e.listing === 'listed' && !holdings.includes(id)) { const x = HOLD.impact(snap, holdings, id, 'sale', model); if (x.state === 'ready') { const d = x.allocation.delta, g = el('small', 'compare-gain', c.forMeShort(U.shn(d, true))); g.dataset.change = trend(d); info.append(g); } }
-      const weight = el('span', 'compare-weight'); weight.append(el('small', '', e.listing === 'listed' ? c.after : c.holding)); const value = el('span'); globalThis.NakaPurchase.decorateWeight(value, e.result, true); weight.append(value);
+      // A listing already closing (bought, or being reclaimed) is marked as the market marks it and is nobody's to buy: no gain.
+      if (e.closing !== null) { const tag = el('span', `compare-tag compare-tag--${e.closing}`, e.closing === 'sale' ? T.closingSaleTag : T.closingCancelTag); tag.title = e.closing === 'sale' ? T.closingSale : T.closingCancel; info.append(tag); }
+      if (holdings.length && e.listing === 'listed' && e.closing === null && !holdings.includes(id)) { const x = HOLD.impact(snap, holdings, id, 'sale', model); if (x.state === 'ready') { const d = x.allocation.delta, g = el('small', 'compare-gain', c.forMeShort(U.shn(d, true))); g.dataset.change = trend(d); info.append(g); } }
+      const f=NakaMining.forecast(snap,id,{action,scenario:e.sale,status:A.portfolio(snap,[id],null).rows[0]});
+      // The piece's own weekly output once bought, and the week it starts: labelled, as the line above is.
+      if(f.state==='ready'){const weekly=f.plan?.state==='ended'?'0.00':U.shn(f.weekly),zh=state.lang==='zh';info.append(el('small','compare-output',f.plan?.index===null?(zh?`这一枚每周 ${weekly}`:`This piece ${weekly} / wk`):zh?`这一枚每周 ${weekly} · 第 ${f.plan.index+1} 周起`:`This piece ${weekly} / wk · from week ${f.plan.index+1}`));}
+      // After the sale of the market's last listing no collection floor is left: no weight to draw.
+      const weight = el('span', 'compare-weight'); weight.append(el('small', '', e.listing === 'listed' ? c.after : c.holding)); const value = el('span');
+      if (e.sale.state === 'no-floor') { value.className = 'compare-unavailable'; value.textContent = c.unavailable; value.title = c.noFloor; } else globalThis.NakaPurchase.decorateWeight(value, e.result, true);
+      weight.append(value);
       const art = el('span', 'compare-art'); art.append(artFor(snap, id, 'hc-fallback', 'compare'));
       open.append(art, info, weight);
       const remove = el('button', 'compare-remove', '×'); remove.type = 'button'; remove.setAttribute('aria-label', `${c.remove} #${e.number}`); remove.title = c.remove;
@@ -446,6 +470,8 @@
   const RAISE_ROWS = 2;
   const rankCache = { key: null, rows: null }, planCache = { key: null, plans: null, lock: null };
   let raiseShown = { kind: null }, raiseJob = null;
+  const raiseBases=new WeakMap();
+  const raiseBasis=snap=>{if(!raiseBases.has(snap))raiseBases.set(snap,JSON.stringify(snap));return raiseBases.get(snap);};
   const openPage = (section) => chrome.runtime.sendMessage({ type: 'shn-open-compare', section });
   /** Numbers added beside my holdings (a teammate's or any) as IDs of this block, my own holdings left out. */
   function extraIds(snap, own) {
@@ -471,18 +497,61 @@
       if (note === 'ended') { box.replaceChildren(el('p', 'raise-note', c.raiseEnded)); return; }
       const empty = el('div', 'raise-empty'), add = el('button', 'btn', c.emptyAdd); add.type = 'button'; add.addEventListener('click', () => openAdd('holding')); empty.append(el('p', '', c.raiseEmpty), add); box.replaceChildren(empty); return;
     }
-    const ours = new Set([...own, ...extra]), traits = new Set([...ours].flatMap((id) => snap.items[id].slice(1)));
-    const rankKey = `${s.height}|${s.generatedAt}|${own.join()}`, planKey = `${rankKey}|${extra.join()}|${JSON.stringify((snap.closing ?? []).filter(([id]) => ours.has(id) || snap.items[id].slice(1).some((idx) => traits.has(idx))))}`;
+    // Every result is computed in the next block's world, without the listings already closing: any of them moves floors or K.
+    const ours = new Set([...own, ...extra]), rankKey = `${raiseBasis(snap)}|${own.join()}`, planKey = `${rankKey}|${extra.join()}`;
     if (rankCache.key === rankKey && planCache.key === planKey) { raiseJob = null; showRaise(c, snap, ours); return; }
     const job = `${rankKey}#${planKey}`; if (raiseJob === job) return; raiseJob = job;
     if (raiseShown.kind === 'cards') box.setAttribute('aria-busy', 'true');
-    else { box.replaceChildren(el('p', 'raise-note', c.raiseRunning)); raiseShown = { kind: 'running' }; }
-    setTimeout(() => {
+    else { const wait=(title,section,n)=>{const card=raiseCard(title,null,section);for(let i=0;i<n;i++){const row=el('div','raise-row raise-row--wait');row.append(el('span','raise-art'),el('span','raise-info',c.raiseRunning),el('span','raise-gain','…'));card.append(row);}return card;}; box.replaceChildren(wait(c.raiseBuyTitle,'planner-buy',2),wait(c.raisePlanTitle,'planner-plan',2),wait(c.raiseLockTitle,'planner-lock',2)); raiseShown = { kind: 'running' }; }
+    setTimeout(async () => {
       if (raiseJob !== job) return;
-      raiseJob = null; if (state.view !== 'raise' || state.sheet !== null) return; // left meanwhile: computed when shown again
-      if (rankCache.key !== rankKey) Object.assign(rankCache, { key: rankKey, rows: HOLD.rank(snap, own) });
-      if (planCache.key !== planKey) Object.assign(planCache, { key: planKey, plans: PL.targetPlans(snap, { mine: own, mates: extra }), lock: PL.lockGroups(PL.lockTraits(snap, [...own, ...extra])) });
+      if (state.view !== 'raise' || state.sheet !== null){raiseJob=null;return;}
+      try{
+      // One disposable derived entry survives popup closure. Hash every snapshot input (including same-height corrections).
+      // Neither holdings nor their eligibility records are written or migrated by this cache.
+      let cacheKey=null,cached=null;
+      try{const bytes=new TextEncoder().encode(JSON.stringify(snap)),hash=await crypto.subtle.digest('SHA-256',bytes);cacheKey='v2|'+Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('')+'|'+own.join()+'|'+extra.join();cached=(await chrome.storage.session.get('nakaExpansionView')).nakaExpansionView;}catch{/* Cache failure falls back to calculation. */}
+      if(raiseJob!==job)return;
+      if(cached?.format===2&&cached.key===cacheKey&&Array.isArray(cached.rows)&&Array.isArray(cached.plans)&&Array.isArray(cached.lock?.can)&&Array.isArray(cached.lock?.have)&&Array.isArray(cached.lock?.far)){
+        Object.assign(rankCache,{key:rankKey,rows:cached.rows});Object.assign(planCache,{key:planKey,plans:cached.plans,lock:{...cached.lock,missing:t=>t.wanted.length+t.unminted.length}});
+      }else{
+        if(rankCache.key!==rankKey){
+          const rows=[],offers=snap.offers??[];let progress=box.querySelector('.raise-note,.raise-progress');if(!progress){progress=el('p','raise-progress');box.prepend(progress);}progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
+          for(let i=0;i<offers.length;i+=8){
+            if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
+            progress.textContent=state.lang==='zh'?`正在比较挂单 ${i}/${offers.length}…`:`Comparing listings ${i}/${offers.length}…`;await new Promise(resolve=>setTimeout(resolve,0));rows.push(...HOLD.rank(snap,own,offers.slice(i,i+8)));
+          }
+          if(raiseJob!==job)return;Object.assign(rankCache,{key:rankKey,rows:rows.sort(HOLD.rankOrder)});
+          {const c=globalThis.NakaExploreUI.pick(state.lang),closing=new Set((snap.closing??[]).map(r=>r[0])),buys=rankCache.rows.filter(x=>!closing.has(x.id)&&x.impact.allocation.delta.lo>0).sort((a,b)=>(b.impact.allocation.delta.lo/b.price)-(a.impact.allocation.delta.lo/a.price));const plan=raiseCard(c.raisePlanTitle,null,'planner-plan'),lock=raiseCard(c.raiseLockTitle,null,'planner-lock'),progress=el('p','raise-progress',state.lang==='zh'?'买哪单已经排好，正在计算冲 400% 和特征…':'Best buys are ready. Planning 400% and traits…');plan.append(progress);lock.append(el('p','raise-note',c.raiseRunning));box.replaceChildren(buyCard(c,snap,buys),plan,lock);}
+        }
+        if (planCache.key !== planKey){
+          const targets=[...own,...extra],plans=[],pause=()=>new Promise(resolve=>setTimeout(resolve,0));
+          let progress=box.querySelector('.raise-note,.raise-progress');if(!progress){progress=el('p','raise-progress');box.prepend(progress);}progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
+          for(let i=0;i<targets.length;i+=4){
+            if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
+            progress.textContent=state.lang==='zh'?`正在计算方案 ${i}/${targets.length}…`:`Planning ${i}/${targets.length}…`;
+            await pause();plans.push(...PL.targetPlans(snap,{mine:own,mates:extra,targets:targets.slice(i,i+4)}));
+          }
+          progress.textContent=state.lang==='zh'?`方案 ${targets.length}/${targets.length} · 检查特征…`:`Plans ${targets.length}/${targets.length} · checking traits…`;await pause();
+          if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
+          const traits=[...new Set(targets.flatMap(id=>snap.items[id].slice(1)))],locks=[];
+          for(let i=0;i<traits.length;i+=4){
+            if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
+            progress.textContent=state.lang==='zh'?`正在检查特征 ${i}/${traits.length}…`:`Checking traits ${i}/${traits.length}…`;await pause();
+            locks.push(...PL.lockTraits(snap,targets,traits.slice(i,i+4)));
+          }
+          if(raiseJob!==job)return;
+          Object.assign(planCache,{key:planKey,plans:plans.sort(PL.targetPlanOrder),lock:PL.lockGroups(locks.sort(PL.lockTraitOrder))});
+        }
+        if(cacheKey){
+          const rows=rankCache.rows.map(x=>({id:x.id,price:x.price,impact:{allocation:x.impact.allocation}})),plans=planCache.plans.map(r=>({id:r.id,number:r.number,side:r.side,state:r.state,before:r.before,auto:r.auto,value:r.value,total:r.total,plan:r.plan?{cost:r.plan.cost,buys:r.plan.buys}:null}));
+          const slim=t=>({idx:t.idx,type:t.type,value:t.value,held:t.held,supply:t.supply,wanted:Array(t.wanted.length).fill(0),unminted:Array(t.unminted.length).fill(0),owned:{state:t.owned.state,after:t.owned.after},monopoly:{state:t.monopoly.state,cost:t.monopoly.cost,buy:Array(t.monopoly.buy?.length??0).fill(0),reclaim:Array(t.monopoly.reclaim?.length??0).fill(0),total:t.monopoly.total,keepListed:t.monopoly.keepListed?{number:t.monopoly.keepListed.number,after:t.monopoly.keepListed.after,total:t.monopoly.keepListed.total}:null}}),lock=Object.fromEntries(['can','have','far'].map(k=>[k,planCache.lock[k].map(slim)]));
+          try{await chrome.storage.session.set({nakaExpansionView:JSON.parse(JSON.stringify({format:2,key:cacheKey,rows,plans,lock}))});}catch{/* A full optional cache cannot affect user holdings or results. */}
+        }
+      }
+      if(raiseJob!==job)return;raiseJob=null;
       renderRaise(SRC.choose({ live: state.live, closing: state.closing }, BUNDLED).snap);
+      }catch{if(raiseJob!==job&&raiseJob!==null)return;raiseJob=null;rankCache.key=null;planCache.key=null;box.removeAttribute('aria-busy');const retry=el('button','btn',state.lang==='zh'?'计算暂不可用 · 重试':'Calculation unavailable · Retry');retry.type='button';retry.addEventListener('click',()=>renderRaise(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap));box.replaceChildren(retry);raiseShown={kind:'error'};}
     }, 30);
   }
   /** The cards from the kept answers (`ours`: my holdings, then the numbers added). Best buy leaves out listings already
@@ -491,7 +560,7 @@
     const box = $('raiseBody'), closing = new Set((snap.closing ?? []).map((r) => r[0])), value = (x) => x.impact.allocation.delta.lo / x.price;
     const buys = rankCache.rows.filter((x) => !closing.has(x.id) && x.impact.allocation.delta.lo > 0).sort((a, b) => value(b) - value(a));
     const top = `${state.lang}|${rankCache.key}|${buys.slice(0, RAISE_ROWS).map((x) => x.id).join()}`, plan = `${state.lang}|${planCache.key}`;
-    box.removeAttribute('aria-busy');
+    box.removeAttribute('aria-busy');box.querySelector('.raise-progress')?.remove();
     const was = raiseShown.kind === 'cards' ? raiseShown : null, keepBuy = was !== null && was.top === top, keepPlan = was !== null && was.plan === plan;
     // With the same top rows only the number of buyable listings can differ: it changes in place.
     if (keepBuy && was.count !== buys.length) was.nodes[0].querySelector('.raise-card-head .list-link').textContent = c.raiseAllBuys(buys.length);
@@ -500,7 +569,7 @@
     raiseShown = { kind: 'cards', top, count: buys.length, plan, nodes };
   }
   function raiseCard(title, more, section) {
-    const box = el('section', 'raise-card'), head = el('div', 'raise-card-head'); head.append(el('h3', 'px-title', title));
+    const box = el('section', 'raise-card'+(section==='planner-buy'?' raise-card--buy':'')), head = el('div', 'raise-card-head'); head.append(el('h3', 'px-title', title));
     if (more !== null) { const b = el('button', 'list-link', more); b.type = 'button'; b.addEventListener('click', () => openPage(section)); head.append(b); }
     box.append(head); return box;
   }
@@ -509,16 +578,26 @@
    * (trend), or 'missing' for the pieces a trait still lacks. */
   function raiseRow(snap, place, tag, id, top, sub, gain, gainSub, tone) {
     const r = el(tag, 'raise-row'), art = el('span', 'raise-art'), info = el('span', 'raise-info'), right = el('span', 'raise-gain');
-    art.append(artFor(snap, id, 'hc-fallback', place)); info.append(top, el('small', '', sub)); right.append(el('b', '', gain), el('small', '', gainSub)); right.dataset.tone = tone;
+    art.append(artFor(snap, id, 'hc-fallback', place)); info.append(top, typeof sub === 'string' ? el('small', '', sub) : sub); right.append(el('b', '', gain), el('small', '', gainSub)); right.dataset.tone = tone;
     r.append(art, info, right); return r;
+  }
+  /** The second line of a Best buy or Reach 400% row: the number, the weight it reaches (coloured by tier), a mate tag and
+   * what each 0.001 BTC brings. */
+  function raiseSub(number, weight, mate, per) {
+    const line = el('small', 'raise-sub'); line.append(el('b', 'raise-number', number));
+    if (weight) line.append(el('span', `raise-to naka-tone-${weight[1]}`, weight[0]));
+    if (mate) line.append(el('span', 'raise-tag', mate));
+    if (per) line.append(el('span', 'raise-per', per));
+    return line;
   }
   /** Best buy: the page's ranking (weekly gain per sat), the top rows. */
   function buyCard(c, snap, buys) {
     const U = globalThis.NakaExploreUI, buy = raiseCard(c.raiseBuyTitle, buys.length ? c.raiseAllBuys(buys.length) : null, 'planner-buy');
     if (!buys.length) buy.append(el('p', 'raise-note', c.raiseBuyNone));
     for (const x of buys.slice(0, RAISE_ROWS)) {
-      const number = snap.items[x.id][0], per = x.impact.allocation.delta.lo / x.price * 1e5;
-      const a = raiseRow(snap, 'raise-buy', 'a', x.id, el('strong', '', `#${number} · ${I.btc(x.price)} BTC`), c.raisePer(U.shn({ lo: per, hi: per })), U.shn(x.impact.allocation.delta, true), c.raiseWeek, trend(x.impact.allocation.delta));
+      const number = snap.items[x.id][0], per = x.impact.allocation.delta.lo / x.price * 1e5, ready = x.impact.scenario?.state === 'ready';
+      const sub = raiseSub(`#${number}`, ready ? [`→ ${R.formatWeight(x.impact.scenario.result)}`, TIER.tierOf(x.impact.scenario.result)] : null, null, c.raisePer(U.shn({ lo: per, hi: per })));
+      const a = raiseRow(snap, 'raise-buy', 'a', x.id, el('strong', '', c.raisePlanCost(I.btc(x.price), 1)), sub, U.shn(x.impact.allocation.delta, true), c.raiseWeek, trend(x.impact.allocation.delta));
       a.href = U.marketFind(snap, x.id); a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = c.raiseBuyHint(number); buy.append(a);
     }
     return buy;
@@ -532,33 +611,36 @@
     if (!rows.length) plan.append(el('p', 'raise-note', c.raisePlanDone));
     else if (!reach.length) plan.append(el('p', 'raise-note', auto.length ? c.raisePlanAuto(auto.length) : c.raisePlanNone));
     for (const r of reach.slice(0, RAISE_ROWS)) {
-      const top = el('strong', '', `#${r.number}`); top.append(el('span', 'raise-to', `${r.before.lo.weight}% → ${R.RULES.capPct}%`)); if (r.side === 'mates') top.append(el('span', 'raise-tag', c.raiseMate));
-      const cost = c.raisePlanCost(I.btc(r.plan.cost), r.plan.buys), sub = r.value === null ? cost : `${cost} · ${c.raisePer(U.shn({ lo: r.value, hi: r.value }))}`;
-      const b = raiseRow(snap, 'raise-plan', 'button', r.id, top, sub, U.shn(r.total, true), c.raiseWeek, trend(r.total)); b.type = 'button'; b.title = c.raisePlanHint(r.number); b.addEventListener('click', () => openPage(`plan-${r.number}`)); plan.append(b);
+      const sub = raiseSub(`#${r.number}`, [`${r.before.lo.weight}% → ${R.RULES.capPct}%`, 'max'], r.side === 'mates' ? c.raiseMate : null, r.value === null ? null : c.raisePer(U.shn({ lo: r.value, hi: r.value })));
+      const b = raiseRow(snap, 'raise-plan', 'button', r.id, el('strong', '', c.raisePlanCost(I.btc(r.plan.cost), r.plan.buys)), sub, U.shn(r.total, true), c.raiseWeek, trend(r.total)); b.type = 'button'; b.title = c.raisePlanHint(r.number); b.addEventListener('click', () => openPage(`plan-${r.number}`)); plan.append(b);
     }
     const sim = el('button', 'raise-link'); sim.type = 'button'; sim.append(el('strong', '', c.raiseSimTitle), el('span', '', c.raiseSimLine)); sim.addEventListener('click', () => openPage('planner-sim'));
     return [plan, lockCard(c, snap, ours), sim];
   }
-  /** Own a trait: the traits buying listings makes ours, best value first, then the ones a private deal is still needed
-   * for, the fewest pieces missing first (NakaPlanner.lockGroups); the traits already all ours need nothing and stay on
+  /** Own a trait: the traits buying listings makes ours, best value first, then the traits all ours where keeping one of
+   * ours listed at the +100% line pays (keepListed), then the ones a private deal is still needed for, the fewest pieces
+   * missing first (NakaPlanner.lockGroups, the page's order); the other traits already all ours need nothing and stay on
    * the page. A row shows one of our pieces carrying the trait (my holdings first) and opens that tab on the page. */
   function lockCard(c, snap, ours) {
-    const U = globalThis.NakaExploreUI, T = I.pick(state.lang), { can, have, far, missing } = planCache.lock, all = can.length + have.length + far.length, rows = [...can, ...far].slice(0, RAISE_ROWS);
+    const U = globalThis.NakaExploreUI, T = I.pick(state.lang), { can, have, far, missing } = planCache.lock, all = can.length + have.length + far.length, rows = [...can, ...have.filter((t) => t.monopoly.keepListed), ...far].slice(0, RAISE_ROWS);
     const card = raiseCard(c.raiseLockTitle, all ? c.raiseAllTraits(all) : null, 'planner-lock'), pct = (b) => b.lo === b.hi ? `+${b.lo}%` : `+${b.lo}–${b.hi}%`;
     if (!rows.length) card.append(el('p', 'raise-note', c.raiseLockNone(have.length)));
     rows.forEach((t, i) => {
       const m = t.monopoly, type = t.type === 'Hair And Headwear' ? T.headwear : t.type, top = el('strong', 'raise-trait');
       top.append(el('span', 'raise-value', t.value), el('span', 'raise-type', type));
-      // The bonus once all ours; owned.state is 'no-floor' instead when buying the listings would leave none on the market.
-      const once = t.owned.state === 'ready' ? c.raiseLockOnce(pct(t.owned.after)) : c.raiseLockNoFloor;
       let sub, gain, gainSub, tone;
       if (m.state === 'possible') {
-        // Ours once the others' listings are bought and ours reclaimed: the cost and our weekly total then. With no listing
-        // to remove there is no total: the trait is all ours already and owning it changes nothing, so the bonus it keeps.
-        sub = `${m.buy.length ? c.raisePlanCost(I.btc(m.cost), m.buy.length) : c.raiseFree} · ${once}`;
-        [gain, gainSub, tone] = m.total ? [U.shn(m.total, true), c.raiseWeek, trend(m.total)] : [pct(t.owned.after), c.raiseLockKept, 'same'];
+        // Ours once the others' listings are bought and ours reclaimed, or — when the planner found that better — with one
+        // of ours kept listed at the +100% line (keepListed: the page's row shows the same way): the cost, the bonus then
+        // and our weekly total. With no listing to remove and none to keep there is no total: the trait is all ours already
+        // and owning it changes nothing, so the bonus it keeps.
+        const k = m.keepListed ?? null, after = k === null ? t.owned.after : k.after, total = k === null ? (Object.hasOwn(m, 'total') ? m.total : null) : k.total;
+        sub = [m.buy.length ? c.raisePlanCost(I.btc(m.cost), m.buy.length) : c.raiseFree, ...(k === null ? [] : [c.raiseLockKeep(k.number)]), c.raiseLockOnce(pct(after))].join(' · ');
+        [gain, gainSub, tone] = total === null ? [pct(after), c.raiseLockKept, 'same'] : [U.shn(total, true), c.raiseTotalWeek, trend(total)];
       } else {
-        // Someone else holds one, one is unminted, or buying leaves no listing to score: what is still missing.
+        // Someone else holds one, one is unminted, or buying leaves no listing to score: what is still missing. The bonus
+        // once all ours; owned.state is 'no-floor' instead when buying the listings would leave none on the market.
+        const once = t.owned.state === 'ready' ? c.raiseLockOnce(pct(t.owned.after)) : c.raiseLockNoFloor;
         sub = [c.raiseLockOurs(t.held, t.supply), ...(t.wanted.length ? [c.raiseLockDeal(t.wanted.length)] : []), ...(t.unminted.length ? [c.raiseLockUnminted(t.unminted.length)] : []), once].join(' · ');
         [gain, gainSub, tone] = [String(missing(t)), c.raiseLockMissing, 'missing'];
       }
@@ -668,6 +750,8 @@
     renderCompareList(snap);
     // The tab in use stays rendered under the sheet (inert while covered), so opening or closing the sheet moves nothing.
     for (const view of ['home', 'raise', 'block', 'about']) $('view' + view[0].toUpperCase() + view.slice(1)).hidden = view !== state.view;
+    // The network panel loads only while it can be seen, so it is refreshed after the tab it sits in is shown.
+    NakaLedgerUI.network({ snap, lang: state.lang, clock: state.blockClock, parent: $('blockNetwork') });
     // The previous worker still runs (files replaced, extension not reloaded): one card in place of the views, tabs and
     // search, which would all show data this version cannot read.
     const stale = state.workerCurrent === false;
@@ -678,11 +762,12 @@
     renderStatus(T);
   }
 
+
   Promise.all([
-    chrome.storage.local.get([K.live, K.closing, K.liveStatus, I.STORAGE_KEY, EXP.KEY, HOLD.KEY, HOLD.TEAM,A.KEY,A.STATUS,A.OBSERVED,A.WEEKS,HOLD.LEFT,HOLD.LEFT_SEEN,HOLD.EVENTS,HOLD.META]),
+    chrome.storage.local.get([K.live, K.closing, K.liveStatus, I.STORAGE_KEY, EXP.KEY, HOLD.KEY, HOLD.TEAM,A.KEY,A.STATUS,A.OBSERVED,A.WEEKS,HOLD.LEFT,HOLD.LEFT_SEEN,HOLD.EVENTS,HOLD.META,HOLD.ABSENT,NakaLedger.KEY]),
     chrome.storage.session.get(SRC.SESSION_VISIBLE),
   ]).then(([got, ses]) => {
-    rewardWeek=got[A.KEY];rewardStatus=got[A.STATUS];officialReadings=got[A.OBSERVED];rewardWeeks=got[A.WEEKS];leftPieces=got[HOLD.LEFT];leftSeen=got[HOLD.LEFT_SEEN];holdingEvents=got[HOLD.EVENTS];holdingsMeta=got[HOLD.META];comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);team=HOLD.mates(got[HOLD.TEAM]);
+    rewardWeek=got[A.KEY];rewardStatus=got[A.STATUS];officialReadings=got[A.OBSERVED];rewardWeeks=got[A.WEEKS];leftPieces=got[HOLD.LEFT];leftSeen=got[HOLD.LEFT_SEEN];holdingEvents=got[HOLD.EVENTS];holdingsMeta=got[HOLD.META];walletAbsent=got[HOLD.ABSENT];state.ledger=got[NakaLedger.KEY];comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);team=HOLD.mates(got[HOLD.TEAM]);
     state.lang = I.resolveLang(got[I.STORAGE_KEY]);
     state.live = got[K.live];
     state.closing = got[K.closing];
@@ -705,7 +790,8 @@
       return;
     }
     if (area !== 'local') return;
-    if(has(changes,A.WEEKS))rewardWeeks=changes[A.WEEKS].newValue;if(has(changes,HOLD.LEFT))leftPieces=changes[HOLD.LEFT].newValue;if(has(changes,HOLD.LEFT_SEEN))leftSeen=changes[HOLD.LEFT_SEEN].newValue;if(has(changes,HOLD.EVENTS))holdingEvents=changes[HOLD.EVENTS].newValue;if(has(changes,HOLD.META))holdingsMeta=changes[HOLD.META].newValue;
+    if(has(changes,A.WEEKS))rewardWeeks=changes[A.WEEKS].newValue;if(has(changes,HOLD.LEFT))leftPieces=changes[HOLD.LEFT].newValue;if(has(changes,HOLD.LEFT_SEEN))leftSeen=changes[HOLD.LEFT_SEEN].newValue;if(has(changes,HOLD.EVENTS))holdingEvents=changes[HOLD.EVENTS].newValue;if(has(changes,HOLD.META))holdingsMeta=changes[HOLD.META].newValue;if(has(changes,HOLD.ABSENT))walletAbsent=changes[HOLD.ABSENT].newValue;
+    if(has(changes,NakaLedger.KEY)){state.ledger=changes[NakaLedger.KEY].newValue;holdingsKey='';}
     if(has(changes,A.KEY))rewardWeek=changes[A.KEY].newValue;if(has(changes,A.STATUS))rewardStatus=changes[A.STATUS].newValue;if(has(changes,A.OBSERVED))officialReadings=changes[A.OBSERVED].newValue;
     if(has(changes,EXP.KEY)) comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);
     if(has(changes,HOLD.KEY)) holdings=HOLD.normalize(changes[HOLD.KEY].newValue);
@@ -778,7 +864,7 @@
    * here; focus goes to the number while it is not a valid one, otherwise to the block height (the current block, so no
    * reward week is chosen). */
   function openHistoryDialog(){state.localError=null;state.status=undefined;state.pendingLookup=null;const selected=SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap,raw=$('lookupNumber').value,n=LOOKUP.parseNumber(raw);$('syncHeight').value=String(selected.snapshot.height);$('rewardBoundary').value='';$('historyNumber').value=n===null?raw.trim():String(n);$('historyNumber').removeAttribute('aria-invalid');boundaryKey='';$('fixedDialog').showModal();render();const first=n===null?$('historyNumber'):$('syncHeight');first.focus();first.select();chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok&&Number.isSafeInteger(c.height)&&c.height>=0){state.rewardClock=c;boundaryKey='';if($('fixedDialog').open)renderBoundaries(I.pick(state.lang));}}).catch(()=>{});}
-  $('historyLookup').addEventListener('click',openHistoryDialog);
+  $('historyLookup').addEventListener('click',()=>NakaLedgerUI.inspect(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap,state.lang,LOOKUP.parseNumber($('lookupNumber').value)));
   $('rewardBoundary').addEventListener('change',()=>{if($('rewardBoundary').value)$('syncHeight').value=$('rewardBoundary').value;});
   $('fixedCancel').addEventListener('click',()=>{if(!state.historyPending){state.pendingLookup=null;$('fixedDialog').close();$('historyLookup').focus();}});
   $('fixedDialog').addEventListener('cancel',e=>{if(state.historyPending)e.preventDefault();});

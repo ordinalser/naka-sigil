@@ -17,7 +17,8 @@
     const number=parseNumber(raw), height=snap.snapshot.height;
     if (number===null) return {state:'invalid',height};
     const entry=Object.entries(snap.items).find(([,row])=>row[0]===number);
-    if (!entry) return {state:'missing',number,height};
+    // A number outside the collection's range is not a piece the data lacks: it does not exist.
+    if (!entry) { const first=snap.collection.numberStart,last=first+R.RULES.catalogPieces-1; return {state:'missing',number,height,outOfRange:number<first||number>last,first,last}; }
     const [id,[, ...indexes]]=entry;
     return {state:'found',number,height,id,listing:P.listingStatus(snap,id),result:R.evaluateSnapshot(snap,id)};
   }

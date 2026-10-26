@@ -1,5 +1,11 @@
 # Naka Sigil visual system
 
+## Classic-only audit, v0.13.0
+
+Preserve the published visual grammar and spatial memory: the big current-week reference, a compact statistics row, square NFT tiles, original badge geometry and one continuous planning workspace. New information should replace misleading metrics or reuse existing space; it should not require a new skin or change the meaning of weight percentages.
+
+Historical totals describe completed holding periods, not wallet balances. Estimated weekly and remaining output are capacities frozen at the displayed block. Network output separates the exact theoretical vector, identifiable unrewarded lower bound and receipt totals. Never display these as exact actual eligible owner output. Current milestones remain independent of historical selection. See [projection and evidence contracts](MINING.md).
+
 Original stepped shield/crown/violet gaze, graphite surfaces and restrained amber accents fit Shielded Nakas and Ord Dropz. No external artwork or fonts and no custom cursor. Motion is brief and functional — a found card's reveal on the market, a newly added holding's highlight, the Look up sheet's entrance and a loading pulse — and all of it honours reduced motion. Primary weights and block height use bitmap digits; labels use readable system monospace with Chinese fallbacks.
 
 ## Meaning and hierarchy
@@ -328,3 +334,89 @@ Five tabs, each opening with one line of “I want …” and one of “how”: 
 **原地升级。** 升级方法是替换目录里的文件后点“重新加载”，持仓、比较、添加的编号和设置都会保留。如果只是重启了 Chrome，Chrome 会加载新的页面，却继续运行旧版本的后台，新页面需要的数据它给不出来。现在每个页面都会问后台在运行哪个版本；版本不一致时，弹窗和独立页不再显示读不了的数字，而是在中间显示一张“完成更新”卡片（徽记、一句说明、“重新加载插件”按钮）。重新加载时 Chrome 会关闭插件的所有页面，所以按钮会请新后台把同一个页面再打开：弹窗回到平常的界面（Chrome 127 起支持；更早的版本下次点图标时就是正常界面），独立页回到原来的位置。升级步骤只删除早已停用的固定区块模式留下的键、上次检查的状态，以及新版本读不了的公开快照（下次检查会重新下载），不碰任何用户数据；它在新版本后台第一次启动时执行一次，不再只依赖 Chrome 的安装事件，因为这种重启之后再重新加载时 Chrome 不会发出安装事件。
 
 **有没有奖励，直接说。** 中文界面不再用“计入 / 不计”这种像记账的说法：各种操作表、本周概览那一行（“5 枚本周有奖励”）、每一枚的说明和增加权重里的提示，都直接写“有奖励”或“没有奖励”；奖励时间表写“最后有奖励的区块”。英文原本就写 earns / nothing。
+
+## v0.13.0 — what changed since v0.12.5 / 相对 v0.12.5 的变化
+
+v0.13.0 follows the published v0.12.5. The work had three aims: answer the three questions a holder or buyer actually asks (what do I earn this week and later, which listing is worth buying for me, will this figure still hold at the next block), make every screen readable in one look, and never let a layout or a word suggest something the data does not say. An optional mining skin was built and removed during development: v0.13.0 has one interface (an old `nakaSkin` preference is kept untouched, as all user data is). Every screen was checked in a real browser at the popup's 380 × 600 and on the page, in both languages.
+
+**Principles.** One leading figure per screen; explanations on the About tab and exact bases in tooltips. Figures add up or follow from one another (the holdings totals are the sum of the tiles; network share = per week ÷ the weekly pool 266,640; full output = earnable + forfeited). Related figures sit together and a figure's place says what it belongs to. Bounds are written as bounds (≤, ≥) when public data cannot identify a piece. One place does one thing, and the same data looks the same on every page. Figures keep their places while data loads.
+
+### Rules and data
+
+- **Every scenario is the next block's world.** A listing already closing (someone's purchase confirming, or a reclaim on its way) is gone at the next block whatever we do. Every scenario — Best buy, Reach 400%, Own a trait, Simulate, and the single-sale model behind the market card, look-up and Compare — first removes all closing listings at no cost. Before, a closing floor listing could prop up a plan that fell to 375% once the block came.
+- **Advice only when it pays.** Own a trait suggests keeping one of our pieces listed on the tier line only when that beats not keeping it and leaves us ahead; each row shows the plan it is ranked by. Combined plans retry rejected targets until nothing changes and say why a target stays out.
+- **Holdings the Wallet page does not show.** The Wallet page lists a piece that left only while it has unclaimed full weeks; one sent away earlier, or after its weeks were claimed, has no row, so it used to be counted as held. After a sync the popup and the extension page ask about such holdings ("It left" / "Still mine").
+- **Market badges.** The market's collection cards now show the official snapshot image (`assets.ord-dropz.xyz/snapshots/<inscription ID>.webp`) instead of the inscription content URL. v0.12.5 did not recognise it, so the collection grid showed no badges. Both addresses are recognised; with `?shn-debug=1` the page shows how many images it recognised and why any card took no badge.
+- **Audit.** Every formula and rule was checked against the programme inscription, the official engine and the public endpoints (240 checks; a block-by-block replay of the first reward week with zero difference). Tests pin the values a wrong formula would change.
+
+### Holdings
+
+- **Popup.** One big figure, this week's SHNAKAS so far, with the week's progress under it; then past total (it opens the holding history), per week and remaining. Tiles are three a row; each shows its number and weight, this week's SHNAKAS, and its own per week and remaining, so the totals add up from the tiles.
+- **Extension page.** Past total → network share → per week → remaining: each figure follows from the one before. Before rewards start the share is shown like per week, as "once started". A label too long for its column wraps upward and every figure stays on one line; at phone width the four figures sit two by two. The weight badge on a tile opens its details; the rest of the tile simulates listing it, and only the rest shows that hint.
+- **Holding history.** A page head like every other section, a hero with one bar per week, and each week's pieces with their artwork, sorted by output; an earning piece shows its share of the week, the others are dimmed with their reason. A recorded interval replaces the public-record reading for the current holding but never removes a past run a public sale proves; at a week's last block the week is still this week, so the past total counts it from the next block.
+
+### Block
+
+- **Hero.** The block in amber pixels with its age and live state, the reward week and how far into it the block is, then three figures of that block: collection floor, listings, and what a 100% weight earns in a full week (the unit every listing's weekly gain is measured in).
+- **Schedule.** This week's end, the last rewarded block and the claim deadline: the exact blocks left first, the estimated local date beside them.
+- **Network output.** Read top down as one sum: **full output** (the week's output if all 3,333 pieces earned) on one line; a 1 px split under it; **earnable ≤** under its left half and **forfeited ≥** under its right, with its share (lost to listing, moving or not minting; never issued). **Claimed** comes from the public claim receipts, a separate fact, so it has its own line under a dotted rule. An earlier layout put claimed beside full output above the split, where it read as half of the line.
+- The tab fits the popup without scrolling, in both languages and for any week, and loads when it is shown.
+
+### Details cards (market popover, look-up, extension page)
+
+- The artwork large on the left. On the right: the state in one word, the block every figure is computed at, the weight with one caption naming its world and start week ("after sale · from week 3"), then per week and remaining with their unit, SHNAKAS. Words keep the left edge and figures the right, as in the trait table.
+- Relay credits and the collection floor are a two-cell strip under the trait table; the ratio formula and the private-claim rule are one line of fine print; past sales open on request and are read once per block.
+- A listing already bought and confirming says **Selling**, explains why it cannot be bought, and still shows the per week and remaining its buyer looked at; it offers no buy sequence and no gain for my holdings. A listing being reclaimed goes back to its seller and shows no sale.
+- One badge opens one popover; opening the past-sales fold no longer pins a market popover.
+
+### Listings and Raise weight
+
+- **Listings (page).** Tiles like the holdings: artwork with the after-sale weight (its Sub tier inline), the number with a small buy link, the ask in gold, what buying adds to my holdings each week (or what the piece earns, with no holdings) and relay credits. Compare, My holdings and the buy sequence (up to four listings, each valued after the earlier ones) are in the badge's details; a line above the cards gives the sequence's total. My own listing shows what reclaiming does.
+- **Raise weight (popup).** Best buy and Reach 400% share one layout: the cost first, then the number, the weight it reaches and the gain per 0.001 BTC, the weekly change of my holdings on the right.
+
+### Words
+
+Plain names instead of ledger terms: **full output**, **earnable**, **forfeited**, **claimed**. Every figure carries its unit; every tooltip is one short sentence.
+
+中文：
+
+v0.13.0 接在已发布的 v0.12.5 之后。目标有三个：回答持有人和买家真正关心的三个问题（这周和以后能产出多少、哪单值得我买、这个数字到下一块还成立吗）；每个界面一眼读完；版面和用词都不暗示数据没有说的东西。开发中做过一个可选的矿机皮肤，发布前删掉了，v0.13.0 只有一套界面（旧的 `nakaSkin` 设置和所有用户数据一样原样保留）。每个界面都在真实浏览器里按弹窗 380 × 600 和独立页、中英文核对过。
+
+**原则。** 每屏一个主数字；说明放在“说明”页，精确依据放在悬停提示。数字能加起来、能互相推出来（持仓合计 = 各卡片之和；全网占比 = 预计每周 ÷ 每周奖池 266,640；满额产出 = 可产出 + 流失）。相关的数字放在一起，位置本身说明它属于什么。公开数据认不出是哪一枚时，按上下限写（≤、≥）。一个位置只做一件事，同一份数据在每个页面显示得一样。读取数据时数字位置不变。
+
+### 规则与数据
+
+- **所有情景都是“下一块的世界”。** 正在成交或撤单中的挂单，不管我们做什么，下一块都会离开市场。买哪单划算、冲 400%、垄断特征、模拟，以及市场卡片、查询和比较背后的单笔成交模型，都先把全部成交中 / 撤单中的挂单零成本移走。以前一张正在成交的地板单，可能撑起一个到了下一块只剩 375% 的方案。
+- **只给划算的建议。** 垄断特征只有在守线确实好于不守、而且净收益为正时，才建议把我方一枚按线挂出；每一行显示的就是它排序所依据的方案。合并方案会重试被拒的目标直到没有变化，仍被排除的写明原因。
+- **钱包页没有显示的持仓。** 钱包页只在离手的 Naka 还有未领取的完整周时才列出它；更早转走的、或领取之后转走的没有任何一行，以前会一直按持有计算。现在同步后，弹窗和独立页会问你（“已离手” / “仍持有”）。
+- **市场标签。** 官方市场的集合页卡片改用官方快照图（`assets.ord-dropz.xyz/snapshots/<铭文 ID>.webp`），不再用铭文内容地址。v0.12.5 认不出新地址，集合页上就没有标签。现在两种地址都能识别；地址后加 `?shn-debug=1`，页面会显示认出了多少张图、哪张卡为什么没挂上标签。
+- **审计。** 对照规则铭文、官方引擎和公开接口核对了全部公式与规则（240 条；第 1 周逐块重放，零偏差）。测试固定了改错公式就会变的数值。
+
+### 持仓
+
+- **弹窗。** 一个大数：本周已产出，下面是本周进度；再是历史累计（点开看持仓历史）、预计每周、预计剩余。卡片一行三枚，每枚写编号、权重、本周已产出和它自己的每周、剩余，合计由卡片加出来。
+- **独立页。** 历史累计 → 全网占比 → 预计每周 → 预计剩余，每一项都能由前一项推出。奖励开始前，全网占比和每周一样写“开始后”。标签放不下时向上换行，四个数字始终在同一条线上；手机宽度下四个数字两行两列。卡片上的权重标签打开它的详情；卡片其它位置是模拟挂单，也只有这些位置显示这条提示。
+- **持仓历史。** 页头和其他模块一致；主卡片带每周柱状图；每周的藏品带头像、按产出排序，有奖励的写占本周比例，其余变暗并写原因。补录区间替代对当前持仓的公开记录推断，但不会抹掉公开成交证实的过去持有段；一周的最后一块仍属本周，历史累计从下一块起才计入。
+
+### 区块
+
+- **主卡片。** 橙色像素字的区块号，旁边是区块时间和实时状态；奖励周和本周进度；再是这一区块的三个数字：集合地板、挂单数、权重 100% 一整周的产出（衡量每单周增量的单位）。
+- **奖励时间表。** 本周结束、最后有奖励的区块、领取截止：先写准确的剩余块数，旁边是估计的本地日期。
+- **网络产出。** 从上往下读成一道加法：**满额产出**（3,333 枚都有资格时这一周的产出）一行；下面一条 1 像素分隔线；左半段下面是**可产出 ≤**，右半段下面是**流失 ≥** 和它的占比（因挂单、转移或未铸造而失去，不会发行）。**已领取**来自公开领取回执，是另一回事，所以单独一行、用虚线隔开。早先的版面把已领取和满额产出并排放在线条上方，读起来像是线条的一段。
+- 中英文、任何一周，这一页在弹窗里都不用滚动；切到这一页时才读取。
+
+### 详情卡片（市场浮层、查询、独立页）
+
+- 左边大头像。右边依次是一词状态、所有数字所依据的区块、权重及一行说明（是哪种情形、第几周起，如“成交后 · 第 3 周起”），再是带单位 SHNAKAS 的每周和剩余。文字靠左、数字靠右，和特征表一致。
+- 中继额度和集合地板放在特征表下的两格；比值公式和隐私领取规则合成一行小字；历史成交点开才读，每个区块只读一次。
+- 已被买下、等待确认的挂单写“成交中”，说明为什么买不了，仍显示买家下单前看到的每周和剩余；不进连买，也不算我的持仓变化。撤单中的挂单会回到卖家手里，不显示成交数字。
+- 一个标签只开一个浮层；在市场页点开历史成交不再把浮层固定住。
+
+### 挂单与增加权重
+
+- **市场挂单（独立页）。** 和持仓一样的卡片：头像加成交后权重（Sub 档在同一行）、编号和小的购买链接、金色挂价、买入后我的持仓每周增加多少（没有持仓时是这一枚每周）和中继额度。比较、我的持仓和连买（最多 4 单，后买的按前面成交后的权重计算）都在标签的详情里；卡片上方一行写连买合计。我自己的挂单显示撤单后的效果。
+- **增加权重（弹窗）。** “买哪单划算”和“冲 400%”同一种布局：先写花费，再写编号、达到的权重和每 0.001 BTC 的收益，右侧是我的持仓每周变化。
+
+### 用词
+
+用直白的名字代替记账术语：**满额产出**、**可产出**、**流失**、**已领取**。每个数字带单位；每条悬停提示只有一句。

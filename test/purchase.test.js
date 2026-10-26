@@ -18,6 +18,19 @@ function fixture(prices, indexes=[[0],[0],[1]],numbers=[1000,1001,1002]) {
   const traits=[['Hair','Red'],['Hair','Blue']].map(([type,value],idx)=>{const ps=prices.filter((p,i)=>indexes[i].includes(idx));return [type,value,ps.length?Math.min(...ps):null,ps.length];});
   return {snapshot:{height:100,collectionFloor:Math.min(...prices)},traits,items:Object.fromEntries(indexes.map((idx,i)=>[id(i),[numbers[i],...idx]])),offers:prices.map((p,i)=>[id(i),p])};
 }
+test('A prior simulated purchase stays out of the next listing and can change its after-sale weight',()=>{
+  const s=fixture([100,150,125]);
+  const alone=P.create(s).get(id(0));
+  const next=P.create(s,{priorSales:[id(1)]}).get(id(0));
+  assert.equal(P.create(s,{priorSales:[]}).get(id(0)).result.lo.weight,alone.result.lo.weight);
+  assert.equal(next.afterFloor,125);
+  assert.equal(next.remaining,1);
+  assert.equal(alone.result.hi.weight,100);
+  assert.equal(next.result.hi.weight,200);
+  assert.equal(next.result.traits[0].floor,null);
+  assert.equal(JSON.stringify(s),JSON.stringify(fixture([100,150,125])));
+  assert.throws(()=>P.create(s,{priorSales:[1]}));
+});
 test('Removing the unique collection floor recalculates both floors before applying exact weight tiers',()=>{
   const s=fixture([100,150,125]);const before=JSON.stringify(s);
   const x=P.create(s).get(id(0));
@@ -111,4 +124,54 @@ test('Cancellation removes only an owned listing without inventing a sale or reu
 test('Delisting a rare final ask without sales cannot invent a zero in place of a carry-forward bonus',()=>{
  const s=fixture([150,100],[[0],[1],[0]],[1000,1001,1002]);s.saleHistory=[];
  const out=P.create(s,{action:'cancel'}).get(id(0));assert.equal(out.state,'ready');assert.equal(out.before.lo.weight,150);assert.equal(out.result.traits[0].method,'carry-unverified');assert.equal(out.result.exact,false);assert.equal(out.result.lo.weight,100);assert.equal(out.result.hi.weight,200);
+});
+
+test('Other closing listings leave the single-listing world at the next block: floors, sales and K as planner.scenario',()=>{
+  const PL=require('../src/lib/planner.js'),scored=r=>({weight:R.formatWeight(r),traits:r.traits.map(t=>[t.method,t.measured?t.pct:[t.pctLo,t.pctHi]])});
+  // The floor listing (id 0 @100) is being bought: buying id 2 @125 leaves only id 1 @150, so the after-sale floor is 150.
+  const s=fixture([100,150,125]);s.closing=[[id(0),'sale']];
+  const x=P.create(s).get(id(2));
+  assert.equal(x.state,'ready');assert.equal(x.remaining,1);assert.equal(x.afterFloor,150);assert.equal(x.beforeFloor,100);
+  const sc=PL.scenario(s,{remove:[[id(2),'sale'],[id(0),'sale']]});
+  assert.equal(sc.floor,x.afterFloor);assert.deepEqual(x.programmeUnits(),sc.programmeUnits());assert.deepEqual(x.unitChange(),sc.unitChange());
+  for(const other of Object.keys(s.items))assert.deepEqual(scored(x.evaluate(other)),scored(sc.evaluate(other)),other);
+  assert.equal(P.create(fixture([100,150,125])).get(id(2)).afterFloor,100,'without closing rows the world is this block minus the operated listing');
+  // The only other listing is closing: nothing is left to score.
+  const two=fixture([100,150]);two.closing=[[id(1),'cancel']];assert.equal(P.create(two).get(id(0)).state,'no-floor');
+  // A closing listing bought is a sale of its traits at the next block (the operated purchase stays the hypothetical newest
+  // sale); one being reclaimed is no trade and leaves a bonus-tier trait's carry unverified, as planner.scenario scores both.
+  const sold=fixture([100,150,200],[[1],[0],[1]]);sold.saleHistory=[[0,[]],[1,[]]];sold.closing=[[id(1),'sale']];
+  const a=P.create(sold).get(id(2)),at=PL.scenario(sold,{remove:[[id(2),'sale'],[id(1),'sale']]});
+  const red=a.evaluate(id(1)).traits[0]; // the trait of the closing listing, no listing left: scored on that sale
+  assert.equal(red.method,'sales-median');assert.equal(red.pct,50);assert.deepEqual(red.saleHistory,[[150,101]]);assert.equal(red.pendingSale,undefined);
+  assert.equal(a.result.traits[0].method,'floor');assert.equal(a.result.traits[0].pendingSale,200,'the operated purchase stays the hypothetical newest sale of its own trait');
+  for(const other of [id(0),id(1),id(2)])assert.deepEqual(scored(a.evaluate(other)),scored(at.evaluate(other)),other);
+  const reclaimed={...sold,closing:[[id(1),'cancel']]};
+  const b=P.create(reclaimed).get(id(2)),bt=PL.scenario(reclaimed,{remove:[[id(2),'sale'],[id(1),'cancel']]});
+  const reclaimedRed=b.evaluate(id(1)).traits[0];assert.equal(reclaimedRed.method,'carry-unverified');assert.deepEqual(reclaimedRed.saleHistory,[]);for(const other of [id(0),id(1),id(2)])assert.deepEqual(scored(b.evaluate(other)),scored(bt.evaluate(other)),other);
+  // A trait losing a reclaimed listing and a bought one at once is scored on that sale, not carried.
+  const both=fixture([100,150,160,120],[[1],[0],[0],[1]],[1000,1001,1002,1003]);both.saleHistory=[[0,[]],[1,[]]];both.closing=[[id(1),'cancel'],[id(2),'sale']];
+  const o=P.create(both).get(id(0)),ot=PL.scenario(both,{remove:[[id(0),'sale']]});
+  assert.equal(o.afterFloor,120);const bothRed=o.evaluate(id(1)).traits[0];assert.equal(bothRed.method,'sales-median');assert.equal(bothRed.pct,25);assert.deepEqual(bothRed.saleHistory,[[160,101]]);
+  for(const other of Object.keys(both.items))assert.deepEqual(scored(o.evaluate(other)),scored(ot.evaluate(other)),other);
+});
+
+test('Trait text: unmeasured bounds as the rules engine sets them; the sales basis ratio is exact, not the rounded basis price',()=>{
+  const T=require('../src/lib/i18n.js').pick('en');
+  assert.equal(P.traitPct({measured:true,pct:25}),'+25%');
+  assert.equal(P.traitPct({measured:false,method:'missing-sale',pctLo:0,pctHi:100}),'+0–100%');
+  const tied=R.recentSalesTier([[130000,500],[100000,500],[90000,500],[140000,500]],undefined,100000);
+  assert.equal(tied.method,'sales-ambiguous');assert.equal(P.traitPct(tied),'+0–25%');
+  // Two sales 125002 and 125001 against a floor of 100001: their mean 125001.5 meets 1.25×, the rounded basis price does not.
+  const mean=R.recentSalesTier([[125002,9],[125001,8]],undefined,100001);
+  assert.equal(mean.pct,25);assert.equal(R.formatRatio(mean.basisPrice,100001),'1.24×');
+  assert.equal(P.traitRatio({...mean,supply:5},100001,T),`${T.salesMedianShort} 1.25×`);
+  assert.equal(P.traitRatio({method:'floor',floor:150,measured:true,pct:50},100,T),'1.50×');
+  assert.equal(P.traitRatio({method:'held',supply:21,measured:true,pct:100},100,T),T.heldTrait(21));
+  assert.equal(P.traitRatio({method:'sales-ambiguous',measured:false},100,T),T.salesTied);
+  assert.throws(()=>P.traitRatio({method:'unknown-method'},100,T),/Unknown trait method/);
+});
+
+test('Sequential previews reject phantom purchases and cannot reclaim a listing already selling',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),sandbox={};vm.runInNewContext(fs.readFileSync(require.resolve('../src/data/snapshot.js'),'utf8'),sandbox);const s=sandbox.SHNAKAS_SNAPSHOT,id=s.offers[0][0];assert.throws(()=>P.create(s,{priorSales:['unknown']}),/active listing/);const selling={...s,closing:[[id,'sale']]};assert.equal(P.create(selling,{action:'cancel'}).get(id).state,'closing');
 });

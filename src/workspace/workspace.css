@@ -66,7 +66,7 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-section-head h2{font-size:20px;margin:0;letter-spacing:-.02em}
 
 /* My holdings: the weekly SHNAKAS figure leads, wallet-style tiles follow. */
-.ws-portfolio{margin:0 0 40px;padding:20px 24px 20px;background:#1b1a17;border:1px solid #33302a;border-top:3px solid #ffcf6b;scroll-margin-top:84px}
+.ws-portfolio{margin:0 0 40px;padding:20px 24px 20px;background:#1b1a17;border:1px solid #33302a;border-top:3px solid #ffcf6b;scroll-margin-top:0}
 .ws-portfolio-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 28px;flex-wrap:wrap}
 .ws-portfolio-title{display:flex;align-items:baseline;gap:12px}
 .ws-portfolio-title h2{margin:0;font-size:24px;letter-spacing:-.02em}
@@ -91,10 +91,13 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-holding-top strong{color:#e5d8bd;font-size:14px}
 .ws-holding-top .naka-weight{font-size:15px;font-weight:800}
 .ws-holding-weekly{display:flex;align-items:baseline;gap:6px;margin:0;color:#ffd25e;font-size:10px;line-height:1.3;white-space:nowrap}
+html:not([data-naka-skin=mining]) .ws-holding-weekly{flex-direction:column;align-items:flex-start;gap:0;white-space:normal}
+html:not([data-naka-skin=mining]) .ws-holding-weekly span{order:-1;color:#9e9991;font-size:10px;line-height:1.2}
 .ws-holding-weekly.is-zero{color:#8f877c}
 .ws-holding-weekly b{font-size:16px;font-variant-numeric:tabular-nums}
 .ws-holding-weekly b.is-blank{visibility:hidden}
 .ws-holding-sub{display:block;min-height:15px;color:#9e9991;font-size:10px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:not([data-naka-skin=mining]) .ws-holding-sub{min-height:28px;white-space:pre-line;overflow:visible;text-overflow:clip}
 .ws-holding-sub--waiting{color:#c4b5fd}
 .ws-holding-sub--listed,.ws-holding-sub--paused{color:#e8c58c}
 .ws-holding-listed{color:#e8c58c;font-size:11px}
@@ -107,6 +110,51 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 @keyframes ws-new{0%{transform:scale(.86);box-shadow:0 0 0 0 #94dcb4;border-color:#94dcb4}35%{transform:scale(1.04);box-shadow:0 0 0 6px #94dcb455}100%{transform:none;box-shadow:0 0 0 14px #94dcb400;border-color:#2f3038}}
 @media(prefers-reduced-motion:reduce){.ws-holding.is-new{animation:none;border-color:var(--mint)}}
 .ws-holdings-how{margin:4px 0 0}
+
+/* Holdings management is its own page: the popup opens it instead of a dialog inside the 380px panel. */
+#manage{display:none}
+body.is-manage .ws-hero,body.is-manage #holdings,body.is-manage #planner,body.is-manage #compare,body.is-manage #listings,body.is-manage #about{display:none!important}
+body.is-manage #manage{display:block}
+.mg-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 28px;margin:0 0 18px}
+.mg-head h2{margin:6px 0 0;font-size:28px}
+.mg-back{color:#c5b3e5;font-size:13px}
+.mg-tools{display:flex;align-items:center;gap:16px}
+.mg-count{margin:0;color:var(--muted);font-size:13px}
+.mg-add-btn{min-height:36px;padding:8px 14px;background:#ffb348;color:#1c140a;border:0;font-weight:700}
+.mg-hint,.mg-msg,.mg-empty{margin:8px 0 0;color:#9e9991;font-size:12px;line-height:1.5}
+.mg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:16px}
+.mg-card{display:flex;flex-direction:column;min-width:0;background:var(--panel2);border:1px solid #2f3038}
+.mg-art{position:relative}
+.mg-art .ws-image{width:100%}
+.mg-art .ws-image img,.mg-art .ws-image .ws-art-fallback{width:100%;height:auto;aspect-ratio:1;object-fit:contain;background:#0d0e10}
+.mg-x{position:absolute;top:6px;right:6px;width:26px;height:26px;padding:0;background:#101115d9;border:1px solid #4a4650;color:#cfc8bd;font-size:15px;line-height:1}
+.mg-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 10px 10px;font-size:12px}
+.mg-ask span{flex:1 0 100%;color:#ffd7a1}
+.mg-ask button{flex:1}
+.mg-info{display:flex;flex-direction:column;gap:2px;padding:8px 10px 4px;min-width:0}
+.mg-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mg-weight{display:flex;align-items:baseline;gap:4px}
+.mg-weight small{color:#9e9991;font-size:10px}
+.mg-info strong{font-size:14px}
+.mg-k{color:#9e9991;font-size:10px}
+.mg-earn{color:#ffd25e;font-size:16px;font-variant-numeric:tabular-nums}
+.mg-info small{color:#b8b2a6;font-size:12px}
+.mg-remove,.mg-cancel{min-height:28px;padding:4px 8px;font-size:12px}
+.mg-remove{color:#1c140a;background:#ffb0a6;border-color:#ffb0a6}
+.mg-left{margin-top:28px}
+.mg-left h3{margin:0 0 10px;font-size:16px}
+.nl-backfill{margin-top:28px;color:#9e9991;font-size:12px}
+.nl-backfill summary{cursor:pointer;width:max-content;color:#c5b3e5}
+.ws-notes{margin-top:18px;color:#9e9991;font-size:12px}
+.ws-notes summary{cursor:pointer;width:max-content;color:#c5b3e5;margin-bottom:8px}
+.mg-left-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-top:1px solid #2f3038}
+.mg-left-row small{display:block;color:#9e9991}
+@media(max-width:700px){.mg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mg-head{flex-direction:column;align-items:flex-start}}
+/* Keep the published continuous Classic workspace and its anchor navigation.
+   History is a separate reading task; legacy #manage resolves to holdings. */
+#manage,#history{display:none}
+body[data-section=history] main>section,body[data-section=history] #about,body[data-section=history] .ws-hero{display:none!important}
+body[data-section=history] #history{display:block!important}
 /* The market's weight bubble (lib/popover.js, styled by content/content.css) adds this week's average weight. */
 .ws-wcard-avg{margin:8px 0 0;padding-top:6px;border-top:1px solid #39353d;color:#d8c19b;font-size:11px}
 /* Owner confirmation, weekly totals and sold pieces under the grid. */
@@ -123,7 +171,7 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-left-actions{display:flex;gap:14px;margin-left:auto}
 
 /* Raise weight: one goal per tab. The goal line says what the tab is for and how to use it; results follow in one frame. */
-.ws-planner{margin:0 0 40px;scroll-margin-top:84px}
+.ws-planner{margin:0 0 40px;scroll-margin-top:0}
 .ws-planner>.ws-section-head{margin-bottom:10px}
 .ws-pbasis{color:var(--muted);font-size:11px}
 .ws-ptabs{display:flex;flex-wrap:wrap;gap:2px;margin-left:auto;padding:3px;background:#17181d;border:1px solid #2e2e36}
@@ -149,8 +197,12 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-ppanel>.ws-sort{margin:0 0 12px}
 .ws-pbuys{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:10px}
 .ws-pbuy{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;padding:10px 12px;background:#15161b;border:1px solid #2f3038}
+.ws-pbuy-media{position:relative;display:block;width:48px;height:48px}
+html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:auto;right:auto;bottom:auto;display:flex;width:max-content;max-width:100%;height:18px;min-height:0;margin:2px 0;padding:0 4px;overflow:hidden;font-size:11px;cursor:pointer}
 .ws-pbuy>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-.ws-pbuy strong{color:#e9d3ac;font-size:13px}
+.ws-pbuy strong{color:#e9d3ac;font-size:14px}
+.ws-pbuy-title{display:flex;align-items:center;gap:10px;min-width:0}
+.ws-pbuy-title .shn-badge{margin:0!important}
 .ws-pgain{color:var(--mint);font-size:17px;font-weight:800}
 .ws-pbuy small{color:#a49e95;font-size:11px}
 .ws-pbuy .ws-image img,.ws-pbuy .ws-image .ws-art-fallback{width:48px;height:48px}
@@ -164,7 +216,8 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-psim-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 0;border-bottom:1px solid #2a2a31}
 .ws-psim-row.is-focus{background:#1f1c2a}
 .ws-psim-row .ws-image img,.ws-psim-row .ws-image .ws-art-fallback{width:44px;height:44px}
-.ws-psim-who{display:flex;flex-direction:column;width:96px}
+.ws-psim-who{display:flex;flex-direction:column;min-width:96px}
+.ws-psim-who small{white-space:nowrap}
 .ws-psim-who strong{color:#e5d8bd;font-size:13px}.ws-psim-who small{color:#a49e95;font-size:11px}
 .ws-psim-row .ws-plabel,.ws-psim-any .ws-plabel{flex-direction:row;align-items:center;gap:8px}
 .ws-psim-row .ws-plabel input{width:118px;padding:6px 8px}
@@ -287,7 +340,7 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-holding.is-simulable{cursor:pointer}
 
 /* Compare. */
-.ws-compare{margin:0 0 40px;scroll-margin-top:84px}
+.ws-compare{margin:0 0 40px;scroll-margin-top:0}
 .ws-compare>.ws-section-head{margin-bottom:12px}
 .ws-selection{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);white-space:nowrap}
 .ws-pips{display:flex;gap:5px}
@@ -347,7 +400,7 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-limits{font-size:10px;color:#c7a875;margin:4px 0}
 
 /* Snapshot listings. */
-.ws-catalog{scroll-margin-top:84px}
+.ws-catalog{scroll-margin-top:0}
 .ws-catalog>.ws-section-head{margin-bottom:6px}
 .ws-filter{font-size:11px;display:flex;gap:8px;align-items:center;margin-left:auto}
 .ws-filter select{padding:5px 8px}
@@ -355,30 +408,26 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-sort{display:inline-flex;border:1px solid #56505c}
 .ws-sort button{padding:5px 9px;font-size:11px;border:0}
 .ws-catalog>p{font-size:11px;color:var(--muted)}
-.ws-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.ws-candidate{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);background:#191a1f;min-width:0}
-.ws-candidate[tabindex]{cursor:pointer}
-.ws-candidate:hover{border-color:#5d5241}
-.ws-candidate strong{display:block;font-size:13px;color:#cfc6b5}
-.ws-card-now{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;margin:2px 0 8px}
-.ws-candidate .ws-ask{font-size:16px;font-weight:800;color:#e9d3ac;white-space:nowrap;letter-spacing:-.02em}
-.ws-card-now .ws-credits{color:#8f877c!important}
-.ws-card-after{padding-top:7px;border-top:1px dashed #34323a}
-.ws-candidate small{display:block;font-size:10px;color:var(--muted)}
-.ws-candidate .naka-weight{display:block;font-size:18px;font-weight:800}
-.ws-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.ws-card-actions>button{padding:4px 8px}
+.ws-sim{min-width:36px;border:1px solid #76664c;background:#241e14;color:#ffcf6b;cursor:pointer}
+.ws-sim[aria-pressed=true]{background:#ffcf6b;color:#21190c}
+.ws-arrow{color:#9f978b;padding:0 4px}
 .ws-buy{padding:4px 8px;background:var(--gold);color:#1c140a;font-size:11px;font-weight:800;text-decoration:none;white-space:nowrap}
 .ws-buy:hover{background:#ffc46e}
-.ws-candidate.is-selected{border-color:#b99861;box-shadow:inset 3px 0 #ffb348}
-.ws-impact{margin-top:4px;color:var(--mint)!important}
-.ws-impact[data-change=down]{color:#efb29f!important}.ws-impact[data-change=same]{color:#a6a19b!important}.ws-impact[data-change=unknown]{color:#e8c58c!important}
+
+#compareAdd{display:inline-flex;align-items:center;gap:6px;width:auto;height:auto;padding:6px 10px;font-size:12px;white-space:nowrap}
+/* A listing already closing (bought and confirming, or being reclaimed): a quiet tag beside the ask (cards) or the listing
+   state (comparison), the market's colours; the card's after-sale figure dims and no purchase is offered. */
+.ws-closing-tag{display:inline-block;padding:1px 5px;border:1px solid #8a6230;background:#2b2012;color:#ffd7a1;font-size:10px;line-height:1.4;white-space:nowrap}
+.ws-closing-tag--cancel{border-color:#5d5296;background:#1f1a33;color:#d9d3ff}
+.ws-item .ws-closing-tag{margin-top:3px}
 .ws-full-note{margin:-4px 0 10px;color:#ffd08b;font-size:11px}
 #more{margin-top:12px}
 
 /* About: folded explanations at the end of the page. */
 .ws-about{border-top:1px solid var(--line);margin-top:44px;padding-top:22px}
 .ws-about h2{font-size:15px;margin:0 0 10px}
+.ws-about-card{max-width:760px;margin:0 0 8px;padding:16px 18px 8px;background:#17151c;border:1px solid #3a342c;border-left:3px solid #c4b5fd}
+.ws-about-card h3{margin:0 0 4px;color:#d6cbea;font-size:15px}
 .ws-about-item{border-bottom:1px solid #2a2a31}
 .ws-about-item summary{padding:12px 0;cursor:pointer;color:#d9d1c4;font-size:13px}
 .ws-about-item summary:hover{color:var(--gold)}
@@ -404,7 +453,7 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-hc-row>span:first-child{min-width:64px;color:#cfc6b5}
 .ws-hc-note{color:#8f8a83;font-size:10px}
 /* Number entry popover. */
-.ws-entry{position:fixed;z-index:1100;display:flex;flex-direction:column;gap:10px;width:300px;padding:16px;background:#1c1d23;border:1px solid #8c7346;border-top:3px solid var(--gold);box-shadow:8px 8px #000a}
+.ws-entry{position:fixed;z-index:1100;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 32px));padding:16px;background:#1c1d23;border:1px solid #8c7346;border-top:3px solid var(--gold);box-shadow:8px 8px #000a}
 .ws-entry strong{font-size:14px}
 .ws-entry input{width:100%;font-size:15px}
 .ws-entry input[aria-invalid=true]{border-color:#ff9c91}
@@ -416,12 +465,11 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 
 /* Four comparison columns need 136 + 4 × 235 px; below that the table scrolls sideways. */
 @media(max-width:1140px){.ws-scroll-hint{display:block}}
-@media(max-width:1100px){.ws-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Below this a card's info column cannot hold the weight badge with its Sub tag: two cards a row. */
 @media(max-width:1240px){.ws-top-inner{flex-wrap:wrap;row-gap:8px}.ws-tabs{order:3;width:100%;margin:0}.ws-tab{flex:1;justify-content:center}.ws-basis{margin-left:auto}html{scroll-padding-top:120px}}
 @media(max-width:900px){.ws-top-inner{padding:10px 16px}}
 @media(max-width:800px){
   main{padding:20px 16px}
-  .ws-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ws-table th,.ws-table td{padding-left:12px;padding-right:12px}
 }
 @media(max-width:700px){.ws-portfolio{padding:18px 16px}.ws-holding-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ws-plus{margin-left:0}}
@@ -430,12 +478,9 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
   .ws-tab{gap:4px;padding:6px 5px;font-size:12px;white-space:nowrap}
   .ws-tab-count{min-width:0;padding:0 4px}
   #intro{font-size:12px}
-  .ws-cards{grid-template-columns:1fr}
   .ws-table th:first-child{position:sticky;left:0;background:#191a1f;z-index:1;box-shadow:1px 0 #3a373e}
   .ws-trait-guide th:first-child{position:static}
   .ws-total .naka-weight{font-size:25px}
-  .ws-candidate .ws-image img{width:64px;height:64px}
-  .ws-candidate{grid-template-columns:64px 1fr auto}
 }
 
 /* Raise weight: direction of a change, the figure that matters, quick asks. */
@@ -460,3 +505,47 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-confirm-actions{display:inline-flex;gap:12px}
 .ws-confirm-error{flex-basis:100%;color:#efb29f;font-size:11px}
 .ws-holding[role=button]:focus-visible{outline:2px solid #ffd25e;outline-offset:2px}
+
+/* Listings: the weight badge keeps its Sub tier on the same line. */
+/* The buy sequence: one line above the cards while one is being assembled. */
+.ws-sequence{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 10px;padding:9px 14px;background:#1d1a14;border:1px solid #5a4a33;border-left:3px solid #ffcf6b;font-size:12px}
+.ws-sequence[hidden]{display:none}
+.ws-sequence__text{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;min-width:0}
+.ws-sequence__text b{color:#ffcf6b}
+.ws-sequence__gain{color:var(--mint)}.ws-sequence__gain[data-change=down]{color:#efb29f}
+/* A listing's details: compare, my holdings and the buy sequence under the title. */
+.shn-pop__actions{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.shn-pop__actions .shn-compare-add{margin-left:0}
+
+/* Listing cards: every card has the same parts in the same places.
+   Top: the artwork, and beside it the number with the ask (the larger figure), then the weight after the sale.
+   Foot: one figure (what buying it adds to my holdings each week, or what the piece earns) over one line (from which week,
+   relay credits), the buy link on the right. */
+
+/* Holding history page head: back to holdings as a framed button, the title, the week select on the right. */
+.nl-page-head{margin:0 0 14px}
+.nl-page-tools{margin-left:auto}
+.nl-page-tools .nl-select{min-width:180px;min-height:34px}
+.ws-back{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid #4a4650;color:#ffb348;font-size:12px;text-decoration:none}
+.ws-back::before{content:'‹';margin-right:6px}
+.ws-back:hover{border-color:#ffb348}
+
+/* Listings: tiles like the holdings above them (lib holdings classes), with the ask and the gain for my holdings. */
+.ws-listing-grid{margin:0}
+.ws-listing.is-selected{border-color:#b99861;box-shadow:inset 0 3px #ffb348}
+.ws-listing.is-closing .ws-holding-art img{opacity:.45}
+.ws-listing-step{background:#2b2212e6;color:#ffd08a}
+.ws-listing-closing{position:absolute;left:8px;top:8px}
+.ws-listing .ws-holding-top{align-items:center}
+.ws-listing-buy{padding:2px 7px;border:1px solid #8c7346;color:#ffd99c;font-size:11px;text-decoration:none;white-space:nowrap}
+.ws-listing-buy:hover{background:#2a2519;border-color:#ffcf6b}
+.ws-listing-ask{margin:0;color:#ffd25e;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ws-listing-ask span{color:#9e9991;font-size:10px;font-weight:600;letter-spacing:0}
+.ws-listing-gain b{color:var(--mint)}
+.ws-listing-gain[data-change=down] b{color:#efb29f}.ws-listing-gain[data-change=same] b{color:#a6a19b}.ws-listing-gain[data-change=unknown] b{color:#e8c58c}
+.ws-listing-gain[data-change=closing] b{color:#e8c58c;font-size:11px;font-weight:700;white-space:normal}
+.ws-listing .ws-holding-sub{min-height:14px}
+/* Raise weight · best buy: the Sub tier sits inline in the weight badge on the price line. */
+.ws-pbuy .shn-badge{flex-wrap:nowrap;white-space:nowrap}
+.ws-pbuy .shn-badge>.naka-number-badge--inline{flex-direction:row;align-self:center;gap:0;padding:2px 5px;min-width:0}
+.ws-pbuy .shn-badge>.naka-number-badge--inline .naka-number-badge__prefix{font-size:10px;line-height:1.1}

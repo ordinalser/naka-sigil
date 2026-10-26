@@ -192,3 +192,21 @@ test('An exit in the final reward week must not promise a restart beyond the pro
  const {RULES,rewardContext}=require('../src/lib/rules'),h=RULES.startBlock+(RULES.weeks-1)*RULES.weekBlocks+2;
  assert.equal(rewardContext({snapshot:{height:h},rewardEvents:[['piece',h-1,'cancel']]},'piece','unlisted').state,'no-future-week');
 });
+
+test('Weekly allocation bounds: my low with the largest K, my high with the smallest; the figures are units × v × 1008 ÷ 10⁸',()=>{
+ const R=require('../src/lib/rules.js');
+ // v(1010) = floor(26,452,380,952.38 ÷ 1010) = 26,190,476; v(1000) = 26,452,380. 4 units: 1,055.99999232 and 1,066.5599616.
+ assert.deepEqual(R.weeklyAllocation({lo:4,hi:4},{lo:1000,hi:1010}),{lo:1055.99999232,hi:1066.5599616});
+ assert.deepEqual(R.weeklyAllocation({lo:4,hi:8},{lo:1000,hi:1000}),{lo:1066.5599616,hi:2133.1199232});
+ assert.deepEqual(R.blockAllocation({lo:4,hi:4},{lo:1000,hi:1010}),{lo:1.04761904,hi:1.0580952});
+});
+test('Trait supply counts minted and not-yet-minted catalog pieces; an official basis from another block is not used',()=>{
+ const R=require('../src/lib/rules.js'),id=n=>String(n).padStart(64,'0')+'i0';
+ const snap=n=>({snapshot:{height:100,collectionFloor:100},traits:[['Hair','X',null,0]],items:Object.fromEntries(Array.from({length:n},(_,i)=>[id(i+1),[1000+i,0]])),pending:[[1000+n,0]]});
+ // 19 minted + 1 pending: 20 pieces, held at +100% without any sale; 18 + 1: 19 pieces, priced from sales it has none of here.
+ const held=snap(19);assert.equal(R.snapshotTraits(held,[0])[0].supply,20);assert.equal(R.evaluateSnapshot(held,id(1)).traits[0].method,'held');assert.equal(R.evaluateSnapshot(held,id(1)).lo.weight,200);
+ const small=snap(18);assert.equal(R.snapshotTraits(small,[0])[0].supply,19);assert.equal(R.evaluateSnapshot(small,id(1)).traits[0].method,'missing-sale');assert.equal(R.evaluateSnapshot(small,id(1)).exact,false);
+ // The official basis of block 99 says nothing about block 100.
+ const stale={...snap(18),rewardBasis:{height:99,traits:[[0,75,'sales',19]]}};assert.equal(R.evaluateSnapshot(stale,id(1)).traits[0].method,'missing-sale');assert.equal(R.snapshotTraits(stale,[0])[0].officialPct,undefined);
+ const current={...snap(18),rewardBasis:{height:100,traits:[[0,75,'sales',19]]}};assert.equal(R.evaluateSnapshot(current,id(1)).traits[0].method,'official-sales');assert.equal(R.evaluateSnapshot(current,id(1)).lo.weight,175);
+});

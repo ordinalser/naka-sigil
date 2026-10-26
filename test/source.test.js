@@ -27,10 +27,11 @@ test('要不要检查：100 秒内有页面可见、距上次满 1 分钟、不�
   assert.equal(SRC.shouldCheck({ ...base, nextAt: now }), true);
 });
 
-test('退避：1, 2, 4, 8, 16, 30, 30 分钟；Retry-After 更长时照办', () => {
-  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((n) => SRC.backoffMinutes(n, null)), [1, 2, 4, 8, 16, 30, 30]);
+test('退避：1, 2, 4, 8, 10, 10 分钟；Retry-After 更长时照办', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((n) => SRC.backoffMinutes(n, null)), [1, 2, 4, 8, 10, 10, 10]);
   assert.equal(SRC.backoffMinutes(1, 600), 10);
-  assert.equal(SRC.backoffMinutes(5, 60), 16);
+  assert.equal(SRC.backoffMinutes(5, 60), 10);
+  assert.equal(SRC.backoffMinutes(1, 1800), 30);
   assert.throws(() => SRC.backoffMinutes(0, null));
 });
 
@@ -38,6 +39,14 @@ test('失败原因分类：限流 / 服务端 / 其它 HTTP / 网络 / 数据校
   const f = (status) => Object.assign(new Error('x'), { isFetch: true, status });
   assert.equal(SRC.classify(f(429)), 'rate-limit');
   assert.equal(SRC.classify(f(503)), 'server');
+  const syncing = Object.assign(new Error('HTTP 503: Shielded indexer is still syncing'), { isFetch: true, status: 503, syncing: true });
+  assert.equal(SRC.classify(syncing), 'syncing');
+  assert.equal(SRC.retryMinutes('syncing', 8, null), 3);
+  assert.equal(SRC.retryMinutes('server', 4, null), 8);
+  assert.equal(SRC.statusOf({ state:'error', kind:'syncing', status:503, message:syncing.message, failures:3, waitMin:1, nextAt:1, checkedAt:1 }, 'live').kind, 'syncing');
+  const quoted = SRC.statusOf({ state:'error', kind:'server', status:503, message:'x', apiError:'Shielded indexer is still syncing', failures:1, waitMin:1, nextAt:1, checkedAt:1 }, 'live');
+  assert.equal(quoted.apiError, 'Shielded indexer is still syncing');
+  assert.equal(SRC.statusOf({ state:'error', kind:'server', status:503, message:'x', apiError:1, failures:1, waitMin:1, nextAt:1, checkedAt:1 }, 'live'), undefined);
   assert.equal(SRC.classify(f(404)), 'http');
   assert.equal(SRC.classify(f(null)), 'network');
   assert.equal(SRC.classify(new Error('挂单 x 的资产号非法')), 'data');
@@ -70,6 +79,10 @@ test('Malformed progress and backoff records are ignored rather than crashing UI
   for (const value of [null,1,'bad',{}, {state:'done'}, {state:'running',stage:'meta',done:2,total:1}, {state:'error',message:null}]) assert.equal(SRC.statusOf(value,'history'),undefined);
   for (const value of [null,{}, {state:'ok'}, {state:'error',failures:NaN}, {state:'error',checkedAt:1,nextAt:2,waitMin:1,failures:1,kind:'invalid',status:null,message:'x'}]) assert.equal(SRC.statusOf(value,'live'),undefined);
   assert.equal(SRC.statusOf({state:'done',height:0},'history').height,0);
+  // A failed live check keeps the stored batch's epoch (/pulse epoch, a string); records without one are older or a first start.
+  const failed={state:'error',checkedAt:1,nextAt:2,waitMin:1,failures:1,kind:'network',status:null,message:'x'};
+  assert.equal(SRC.statusOf(failed,'live'),failed);assert.equal(SRC.statusOf({...failed,epoch:'mvbyjivd.0'},'live').epoch,'mvbyjivd.0');
+  for(const epoch of [1,null,{},['e']])assert.equal(SRC.statusOf({...failed,epoch},'live'),undefined,JSON.stringify(epoch));
 });
 
 
@@ -116,9 +129,12 @@ test('Pending catalog rows use valid traits and never repeat a minted number',()
 test('Persisted official trait basis is height-bound and credits require an active listing',()=>{
   const s=structuredClone(BUNDLED),id=Object.keys(s.items)[0];
   s.rewardBasis={height:100,traits:[[0,0,'ask',1]]};s.credits=[[id,0]];assert.equal(SRC.isSnapshot(s),true);
-  for(const mutate of [x=>x.rewardBasis.height++,x=>x.rewardBasis.traits[0][1]=12,x=>x.rewardBasis.traits[0][2]='sales',x=>x.rewardBasis.traits[0][3]=0,x=>x.rewardBasis.extra='no',x=>x.credits[0][1]=-1,x=>x.credits.push(x.credits[0]),x=>x.credits[0][0]='b'.repeat(64)+'i0']){
+  for(const mutate of [x=>x.rewardBasis.height++,x=>x.rewardBasis.traits[0][1]=12,x=>x.rewardBasis.traits[0][2]='sales',x=>x.rewardBasis.traits[0][3]=0,x=>x.rewardBasis.traits[0][3]=2,x=>x.rewardBasis.extra='no',x=>x.credits[0][1]=-1,x=>x.credits.push(x.credits[0]),x=>x.credits[0][0]='b'.repeat(64)+'i0']){
     const bad=structuredClone(s);mutate(bad);assert.equal(SRC.isSnapshot(bad),false);
   }
+  // The official piece count is the catalog's, pending rows included: one minted and one pending piece of the trait make two.
+  const pending={...structuredClone(s),pending:[[1,0]]};assert.equal(SRC.isSnapshot(pending),false,'supply 1 of 2');
+  pending.rewardBasis={height:100,traits:[[0,0,'ask',2]]};assert.equal(SRC.isSnapshot(pending),true);
 });
 
 test('Optional reward events reject future, foreign, duplicate and private-shaped data',()=>{
@@ -164,3 +180,5 @@ test('Any damaged field of a real snapshot is refused or read, never thrown on (
   // The one that threw before: a pending row that is not a row, with a sale history to count.
   assert.equal(SRC.isSnapshot({...structuredClone(real),saleHistory:[],pending:[null]}),false);
 });
+
+test('Indexer syncing respects a longer server Retry-After while retaining the normal three-minute wait',()=>{assert.equal(SRC.retryMinutes('syncing',1,600),10);assert.equal(SRC.retryMinutes('syncing',8,30),3);});

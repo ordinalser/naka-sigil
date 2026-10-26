@@ -5,7 +5,12 @@ const raw=(over={})=>({w:0,height:971700,blocks:4,complete:false,base:'14566968'
 // rewardEvents [] : this week's records were read and hold no sale or reclaim of these pieces.
 const snap={snapshot:{height:971704,collectionFloor:100},collection:{numberStart:0},traits:[],items:{[id(0)]:[0],[id(1)]:[1]},offers:[],rewardEvents:[]};
 test('Official accumulator is decoded exactly, not approximated as current rate times elapsed blocks',()=>{const row=A.normalize(raw());assert.equal(row.height,971704);assert.equal(row.acc.length,35552);assert.equal(A.piece(row,1200),0.14566968);assert.equal(A.piece(row,3333),null);assert.equal(A.piece(row,-1),null);const altered=raw();altered.pieces[10]='58267872';assert.equal(A.piece(A.normalize(altered),10),0.58267872);});
-test('Reject malformed week, height, size, integer, completion and packed data',()=>{for(const patch of [{w:78},{height:971701},{blocks:1009},{complete:true},{pieces:['4']},{base:'x'},{pieces:Array(3333).fill('-1')},{pieces:Array(3333).fill('18446744073709551616')}])assert.throws(()=>A.normalize(raw(patch)));assert.equal(A.table({...A.normalize(raw()),acc:'bad'}),null);});
+test('Reject malformed week, height, size, integer, completion and packed data',()=>{for(const patch of [{w:78},{height:971701},{blocks:1009},{complete:true},{pieces:['4']},{base:'x'},{pieces:Array(3333).fill('-1')},{pieces:Array(3333).fill('18446744073709551616')}])assert.throws(()=>A.normalize(raw(patch)));assert.equal(A.table({...A.normalize(raw()),acc:'bad'}),null);
+ // A stored row is read back only as the worker writes it: its height is start + week × 1008 + blocks, and a row marked complete covers all 1,008 blocks.
+ const row=A.normalize(raw());assert.notEqual(A.table(row),null);
+ for(const bad of [{height:971705},{height:971700},{week:1},{blocks:5},{complete:true},{complete:true,blocks:1008},{complete:'true'}])assert.equal(A.table({...row,...bad}),null,JSON.stringify(bad));
+ assert.deepEqual(A.weeks({format:1,weeks:{0:{...row,complete:true}}}),{},'a five-block table flagged complete is not a finished week');
+ const full=A.normalize({...raw(),blocks:1008,complete:true});assert.deepEqual(A.weeks({format:1,weeks:{0:full}}),{0:full});});
 test('A number alone yields a reference, not confirmed personal accrual or claimable balances',()=>{const out=A.portfolio(snap,[id(0),id(1)],A.normalize(raw()));assert.equal(out.reference,0.29133936);assert.equal(out.verified,false);assert.equal(out.confirmed,null);assert.equal(A.history(snap,[id(0),id(1)],{},{rows:{}},{},out.phase).weeks.length,0,'No completed week in week one');assert.equal(out.unverified,2);});
 test('Only explicit official eligibility readings confirm this week; waiting and listed accrue zero',()=>{const observed={rows:{[id(0)]:{week:0,height:971704,state:'earning'},[id(1)]:{week:0,height:971704,state:'waiting'}}};const out=A.portfolio(snap,[id(0),id(1)],A.normalize(raw()),observed);assert.equal(out.verified,true);assert.equal(out.confirmed,0.14566968);assert.equal(out.rows[1].amount,0);const listed={...snap,offers:[[id(0),100]]};assert.equal(A.portfolio(listed,[id(0)],A.normalize(raw()),observed).confirmed,0);});
 test('Old-week, future-block and private claim data are not invented or mixed into the current week',()=>{const row=A.normalize(raw()),later={...snap,snapshot:{...snap.snapshot,height:972709}};const out=A.portfolio(later,[id(0)],row,{rows:{[id(0)]:{week:0,height:971704,state:'earning'}}});assert.equal(out.state,'loading');assert.equal(A.history(later,[id(0)],{},null,{},out.phase).total,null,'Week one finished but its table and the records are not loaded: unknown, not zero');assert.equal(out.reference,null);assert.equal(A.portfolio({...snap,snapshot:{...snap.snapshot,height:971703}},[id(0)],row).reference,null);});
@@ -55,7 +60,7 @@ test('Each reason names the blocks and the week it counts from; a wallet reading
 
 test('Week share is accrued over the pool issued so far; average weight comes from the piece accumulator',()=>{
  const data=A.portfolio(snap,[id(0)],A.normalize(raw()));
- assert.equal(A.weekShare(data),0.14566968/(R.RULES.poolPerWeek*4/1008));assert.equal(data.rows[0].avg,100,'every piece equals the base accumulator in this fixture');
+ assert.equal(A.weekShare(data),0.14566968/(266640*4/1008),'266,640 SHNAKAS a week, 4 of 1,008 blocks issued');assert.equal(data.rows[0].avg,100,'every piece equals the base accumulator in this fixture');
  const twice=raw();twice.pieces[0]=String(14566968*2);assert.equal(A.portfolio(snap,[id(0)],A.normalize(twice)).rows[0].avg,200);
 });
 
@@ -84,6 +89,12 @@ test('Completed weeks use official tables only: each holding counts its own run,
  const left={[id(3)]:{number:3,runs:[{listedAt:S+Wb+50,soldAt:S+Wb+60,weeks:[[0,0]],source:'sale'}]}},hl=A.history(s5,[],left,events,tables(5),phase(s5),{});
  assert.deepEqual(hl.left.map(x=>[x.number,x.weeks,x.amount]),[[3,1,v(0,3)]]);assert.deepEqual(hl.weeks.map(x=>x.pieces),[1,0,0,0,0]);
  const old=A.history(s5,[],{[id(3)]:{number:3,listedAt:S+Wb+50,soldAt:S+Wb+60,firstWeek:0,lastWeek:0}},events,tables(5),phase(s5),{});assert.equal(old.left[0].amount,null);assert.equal(old.total,null);
+ // A private run the wallet showed held through the current week (index 5): its amount covers the finished weeks 1–5 only.
+ const through=A.history(s5,[],{[id(3)]:{number:3,runs:[{listedAt:null,soldAt:null,weeks:[[0,5]],source:'wallet'}]}},events,tables(5),phase(s5),{});
+ assert.equal(through.left[0].weeks,6);assert.equal(through.left[0].amount,[0,1,2,3,4].reduce((a,w)=>a+v(w,3),0));
+ // A run whose weeks are not public (left privately, noticed by the Wallet page sync): every week undecided, nothing summed.
+ const unknown=A.history(s5,[],{[id(3)]:{number:3,runs:[{listedAt:null,soldAt:null,weeks:null,source:'wallet-absent'}]}},events,tables(5),phase(s5),{});
+ assert.deepEqual(unknown.left.map(x=>[x.weeks,x.amount]),[[null,null]]);assert.deepEqual(unknown.weeks.map(x=>[x.unknown,x.amount]),Array(5).fill([1,null]));assert.equal(unknown.total,null);
  assert.equal(A.weeks({format:1,weeks:{0:full(0)}})[0].week,0);assert.deepEqual(A.weeks({format:1,weeks:{0:full(0),1:full(0)}}),{0:full(0)},'an invalid row is left out, valid ones kept');
 });
 
@@ -91,7 +102,8 @@ test('Before launch a listed holding is listed, not counted from week 1 or in th
  const S=R.RULES.startBlock,s={...snap,snapshot:{height:S-100,collectionFloor:100},offers:[[id(1),100]],listedAt:[[id(1),S-500]]},row=null;
  const data=A.portfolio(s,[id(0),id(1)],row);
  assert.deepEqual(data.rows.map(r=>r.status),['idle','listed']);assert.equal(data.count.idle,1);assert.equal(data.count.listed,1);
- const steady=A.steadyRate(s,data),one=R.weeklyAllocation(R.units(R.evaluateSnapshot(s,id(0))),R.programmeUnits(s));assert.deepEqual(steady,one,'only the unlisted holding counts');
+ // Both fixture pieces are Sub 10 at 300% (12 units each), K = 24, v = floor(26,664,000,000,000 ÷ 1008 ÷ 24) = 1,102,182,539: one piece's week is 12 × v × 1008 ÷ 10⁸.
+ assert.deepEqual(A.steadyRate(s,data),{lo:133319.99991744,hi:133319.99991744},'only the unlisted holding counts');
  const e=A.explain(data.rows[1].reason,'zh');assert.match(e.full,/奖励启动前/);assert.doesNotMatch(e.full,/第 -?\d+ 周）/);
  assert.match(A.explain(data.rows[1].reason,'en').full,/before rewards started/);
 });
@@ -122,4 +134,22 @@ test('Wallet readings: last-week waiting has no later week, a "before" reading i
  const d=A.portfolio(lastWeek,[id(0)],row,ob);assert.equal(d.rows[0].status,'ended');assert.deepEqual(A.steadyRate(lastWeek,d),{lo:0,hi:0});
  const before=A.portfolio(snap,[id(0)],A.normalize(raw()),{rows:{[id(0)]:{week:0,height:971704,state:'before'}}});assert.equal(before.rows[0].status,'earning');assert.equal(before.readings,0);
  const listedOnly=A.portfolio({...snap,offers:[[id(0),100]]},[id(0)],A.normalize(raw()));assert.equal(listedOnly.verified,true);assert.equal(listedOnly.readings,0,'no wallet check was used');
+});
+
+test('While this week’s table is not loaded, the note says why: the official accumulator behind the block is not a failed read',()=>{
+ for(const [lang,notYet,failed,loading] of [['zh','官方累计表尚未更新到本块，下次检查再读','累计读取失败，下次检查时重试','正在读取本周累计…'],['en','The official accumulator has not reached this block yet; read again at the next check','Reward data unavailable; retried at the next check','Reading this week’s accumulator…']]){
+  const c=A.copy(lang),at=(reason)=>({state:'error',reason,height:971705,at:1});
+  assert.equal(A.statusLine(at('advanced'),c),notYet);assert.equal(A.statusLine(at('not-yet'),c),notYet);assert.equal(A.statusLine(at('failed'),c),failed);
+  assert.equal(A.statusLine({state:'error',height:971705,at:1},c),failed,'a record from before reasons existed: a failed read');
+  for(const status of [undefined,null,{state:'loading',height:971705},{state:'done',height:971705}])assert.equal(A.statusLine(status,c),loading);
+ }
+ // The latest block pays a few thousandths: six decimals, rounded, as lastBlockHint says.
+ assert.equal(A.blockText(0.03960972),'0.03961');assert.equal(A.blockText(3.1687776),'3.168778');assert.equal(A.blockText(0.0396097249),'0.03961');assert.equal(A.blockText(0),'0.00');assert.equal(A.blockText(12.5),'12.50');
+ for(const lang of ['zh','en'])assert.match(A.copy(lang).lastBlockHint('971,705','3'),lang==='zh'?/6 位小数/:/6 decimals/);
+});
+
+test('A recorded current receipt narrows current-week eligibility without certifying ownership or erasing saved data',()=>{
+ const S=R.RULES.startBlock,nft=id(0),s={snapshot:{height:S+1010,collectionFloor:100},collection:{numberStart:0},items:{[nft]:[0]},offers:[],rewardEvents:[]},raw={w:1,height:S+1008,blocks:2,complete:false,base:'100000000',pieces:Array(3333).fill('100000000')},row=A.normalize(raw),ledger={format:1,runs:{[nft]:[{from:S+1009,to:null,confirmed:true,label:'keep'}]}},before=JSON.stringify(ledger);
+ const x=A.portfolio(s,[nft],row,null,null,ledger);assert.equal(x.rows[0].status,'waiting');assert.equal(x.rows[0].amount,0);assert.equal(x.rows[0].startsWeek,3);assert.equal(JSON.stringify(ledger),before);
+ const earlier={format:1,runs:{[nft]:[{from:S,to:null,confirmed:true}]}};assert.equal(A.portfolio(s,[nft],row,null,null,earlier).verified,false,'A manual interval never becomes official wallet proof');
 });

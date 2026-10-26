@@ -11,15 +11,15 @@
   'use strict';
 
   const ZH = {
-    heldTrait: n=>`零挂单 · ≥${n} 件`,
+    heldTrait: count=>`零挂单 · ${count} 件（≥20 件 +100%）`,
     heldRule: '该特征至少 20 件且零挂单：官方加成 +100%。件数来自所选快照目录。',
     officialSales: '官方 · 近3笔成交',
     officialNoSales: '暂无成交记录',
-    officialLastBlock: '官方沿用前块加成',
+    officialLastBlock: '官方 · 零挂单、无成交（lastBlock）',
     carryUnknown: '撤单沿用值未核实',
     officialBasis: '同一区块的官方奖励接口；不足20件且零挂单的特征采用官方加成。',
     relayCredits: '中继额度',
-    relayCreditsMeaning: '此挂单在该区块的剩余预付中继次数，随藏品转移；发送、上架、撤单可消耗额度。奖励领取另付网络费。',
+    relayCreditsMeaning: '这一枚预付的中继次数，随藏品转移；转账和挂单会用掉。',
     salesMedianShort: '成交中位',
     salesMedianBasis: btc=>`最近 3 笔成交价中位数 ${btc} BTC ÷ 集合地板（两笔取平均、一笔取该笔）；不足 20 件且零挂单时适用`,
     noSales: '无成交',
@@ -61,21 +61,20 @@
     inspectProvisional: '隐私领取100% · 展示藏品可领全部权重',
     formulaTitle: '持有权重公式',
     formulaColumn: '该区块',
-    listing: {
-      listed: {label:'该区块已挂单'},
-      unlisted: {label:'该区块未挂单'},
-      unknown: {label:'挂单状态未知'}
-    },
+    listing: { listed: { label: '该区块已挂单', short: '已挂单' }, unlisted: { label: '该区块未挂单', short: '未挂单' }, unknown: { label: '挂单状态未知', short: '状态未知' } },
     activityShort: '基于同步区块，非成交时的历史权重。',
     numberBadge: (label,pct) => `${label} · 编号加成 +${pct}%，已包含在总权重中`,
     lookupBack: '返回',
     change: {up:'加成上升',down:'加成下降',market:'计价依据变化',unknown:'价格依据缺失',known:'价格依据已知'},
     pastRewardNote:'既有奖励属于此前持有记录，不随藏品转移。',buyEligibilityNote:'成交确认后从下个奖励周起有奖励；成交当周这一枚买卖双方都没有奖励。',
-    closingSaleTag:'成交中',closingCancelTag:'撤单中',
+    closingSaleTag:'成交中',closingSaleShort:'正在成交确认，现在买会失败',closingCancelShort:'卖家正在撤单',closingCancelTag:'撤单中',
     closingSale:'已有人买下这单，正在等下一块确认：现在去买会失败，只有那笔购买失败它才会回到市场。',
     closingCancel:'卖家正在撤单，下一块确认后下架。',
     cancelScopeNote:'自己的挂单显示撤单后权重，仅移除对应挂单；奖励从下一奖励周恢复。',cancelBefore:'挂单中公式值',cancelAfter:'撤单后',cancelTitle:'撤单后持有权重',cancelAssumption:'仅撤销此挂单，其他挂单不变。',cancelNoFloor:'撤销后无剩余挂单，无法计算集合地板及权重。',
     buyTitle: '成交后持有权重',
+    // Inspection hero: the piece's output at the shown weight, and its public sales (opened on request).
+    formulaOnly: '公式值', claimShort: '隐私领取按 100%', rateWeek: '每周', rateRest: '剩余', rateFrom: (n) => `第 ${n} 周起`, rateNone: '—', rateHint: '按这一区块的权重：每周是一整周的产量，剩余是到奖励结束（区块 1,050,324）还能产出的总量。',
+    salesTitle: '历史成交', salesCount: (n) => `${n} 笔`, salesLoading: '正在读取公开成交…', salesNone: '没有公开成交记录', salesFailed: '成交记录暂时读不到', salesRetry: '重试', salesMore: (n) => `只列最近 6 笔，共 ${n} 笔`, salesAt: (h) => `区块 ${h}`,
     formulaBefore: '成交前公式值',
     changedRows: '高亮行：成交前 → 成交后',
     buyAfter: '成交后',
@@ -118,6 +117,7 @@
     lookupPlaceholder: '输入编号，例如 379',
     lookupButton: '查权重',
     lookupInvalid: '请输入有效的非负整数编号，支持 #0、#379。',
+    lookupRange: (a, b) => `Shielded Nakas 的编号是 #${a} 到 #${b}，没有这个编号。`,
     lookupMissing: (n) => `所选区块快照未收录 Shielded #${n}，不代表这件 NFT 不存在；实时模式会随新区块补入新铸造的藏品。`,
     lookupBasis: (h) => `区块 ${h} 公式值；非官方结算或累计奖励。`,
     lookupView: '前往市场 ↗',
@@ -156,11 +156,15 @@
     updateHint: '在扩展管理页点“重新加载”效果相同。',
     liveOk: (h, age) => `已同步区块 ${h} · ${age}`,
     liveFail: (reason, min) => `最近一次检查失败：${reason}。${min} 分钟后自动重试`,
+    retryNow: '立即重试',
+    liveSyncingTip: '官方索引器还在追块。仍显示上次的数据。',
+    liveErrorTip: '仍显示上次成功的数据。',
     liveKeep: (h) => `页面继续使用区块 ${h} 的数据`,
     liveKeepNone: '页面继续使用内置快照',
     failReason: {
       'rate-limit': '接口限流',
-      server: '接口服务端出错',
+      server: '官方接口服务端出错',
+      syncing: '官方索引器同步中',
       http: '接口返回错误',
       network: '网络不通或请求超时',
       data: '数据校验没通过',
@@ -174,15 +178,15 @@
   };
 
   const EN = {
-    heldTrait: n=>`Zero listed · ≥${n} items`,
+    heldTrait: count=>`Zero listed · ${count} pieces (≥20 → +100%)`,
     heldRule: 'At least 20 items and none listed: official +100% bonus. Count uses the selected catalog.',
     officialSales: 'Official · recent 3 sales',
     officialNoSales: 'No recorded sales',
-    officialLastBlock: 'Official carried bonus',
+    officialLastBlock: 'Official · zero listed, no sales (lastBlock)',
     carryUnknown: 'Delisting carry unverified',
     officialBasis: 'Official reward API at this block; rare zero-listed trait bonus.',
     relayCredits: 'Relay credits',
-    relayCreditsMeaning: 'Remaining prepaid relay uses on this listing at this block, carried with the piece. Sending, listing or cancelling may consume credits. Reward claims pay network fees separately.',
+    relayCreditsMeaning: 'Prepaid relay uses carried with the piece; sending and listing use them.',
     salesMedianShort: 'Sales median',
     salesMedianBasis: btc=>`Median of the last 3 sales ${btc} BTC ÷ collection floor (two sales: their mean; one: that sale); for zero-listed traits with fewer than 20 items`,
     noSales: 'No sales',
@@ -224,21 +228,19 @@
     inspectProvisional: 'Private claim: 100% · Reveal for full weight',
     formulaTitle: 'Holding formula',
     formulaColumn: 'At this block',
-    listing: {
-      listed: {label:'Listed at this block'},
-      unlisted: {label:'Unlisted at this block'},
-      unknown: {label:'Listing status unknown'}
-    },
+    listing: { listed: { label: 'Listed at this block', short: 'Listed' }, unlisted: { label: 'Unlisted at this block', short: 'Unlisted' }, unknown: { label: 'Listing status unknown', short: 'Status unknown' } },
     activityShort: 'Selected-block formula, not sale-time weight.',
     numberBadge: (label,pct) => `${label} · number bonus +${pct}%, already included in total weight`,
     lookupBack: 'Back',
     change: {up:'Bonus up',down:'Bonus down',market:'Price basis changed',unknown:'Price basis missing',known:'Price basis known'},
     pastRewardNote:'Past rewards belong to the prior holding record and do not transfer with the piece.',buyEligibilityNote:'A new holding starts the reward week after confirmation; in the sale week the piece earns nothing for either side.',
-    closingSaleTag:'Selling',closingCancelTag:'Reclaiming',
+    closingSaleTag:'Selling',closingSaleShort:'Sale confirming; buying now fails',closingCancelShort:'The seller is reclaiming it',closingCancelTag:'Reclaiming',
     closingSale:'Someone has bought this listing and it is confirming in the next block: buying it now fails; it comes back only if that purchase fails.',
     closingCancel:'The seller is reclaiming this listing; it leaves the market at the next block.',
     cancelScopeNote:'Owned listings show weight after delisting: only that ask is removed. Rewards resume next reward week.',cancelBefore:'Listed formula',cancelAfter:'After delisting',cancelTitle:'Holding weight after delisting',cancelAssumption:'Only this listing is cancelled; others unchanged.',cancelNoFloor:'No listings remain after cancellation; floor and weight are unavailable.',
     buyTitle: 'Holding weight after sale',
+    formulaOnly: 'Formula', claimShort: 'private claim pays 100%', rateWeek: 'Per week', rateRest: 'Remaining', rateFrom: (n) => `from week ${n}`, rateNone: '—', rateHint: 'At this block’s weights: per week is one full week; remaining is all output to the end of rewards (block 1,050,324).',
+    salesTitle: 'Past sales', salesCount: (n) => `${n}`, salesLoading: 'Reading public sales…', salesNone: 'No public sales', salesFailed: 'Sales are unavailable right now', salesRetry: 'Retry', salesMore: (n) => `Latest 6 of ${n}`, salesAt: (h) => `Block ${h}`,
     formulaBefore: 'Before-sale formula',
     changedRows: 'Highlighted: before → after sale',
     buyAfter: 'After sale',
@@ -280,6 +282,7 @@
     lookupPlaceholder: 'Enter number, e.g. 379',
     lookupButton: 'Check weight',
     lookupInvalid: 'Enter a non-negative whole number, e.g. #0 or #379.',
+    lookupRange: (a, b) => `Shielded Nakas are numbered #${a} to #${b}; there is no such number.`,
     lookupMissing: (n) => `Shielded #${n} is not in the selected snapshot. This does not mean it does not exist; Live mode adds newly minted pieces as new blocks arrive.`,
     lookupBasis: (h) => `Formula at block ${h}; not an official settlement or accrued rewards.`,
     lookupView: 'View on market ↗',
@@ -318,11 +321,15 @@
     updateHint: 'Reload on chrome://extensions does the same.',
     liveOk: (h, age) => `Synced block ${h} · ${age}`,
     liveFail: (reason, min) => `Last check failed: ${reason}. Retrying in ${min} min`,
+    retryNow: 'Retry now',
+    liveSyncingTip: 'The official indexer is still catching up. The last good data stays on screen.',
+    liveErrorTip: 'The last good data stays on screen.',
     liveKeep: (h) => `Pages keep using block ${h} data`,
     liveKeepNone: 'Pages keep using the bundled snapshot',
     failReason: {
       'rate-limit': 'rate limited',
-      server: 'server error',
+      server: 'official server error',
+      syncing: 'Official indexer is still syncing',
       http: 'the API returned an error',
       network: 'network unreachable or timed out',
       data: 'data validation failed',
@@ -378,17 +385,28 @@
   }
   function blockTimeTitle(T, s) {
     const ts=blockTimestamp(s);
-    return ts === null ? T.blockTimeUnknown : T.blockTimeExact(new Date(ts*1000).toISOString().replace('T',' ').replace('.000Z',' UTC'));
+    return ts === null ? T.blockTimeUnknown : T.blockTimeExact(localTime(ts*1000));
   }
   function blockBasis(T, s, now=Date.now()) { return `${int(s.height)} (${blockAge(T,s,now)})`; }
-  /** A moment in the viewer's local time with its UTC offset, to the minute: "2026-10-23 18:47 UTC+8". */
+  /** Browser-local calendar time, without transmitting or displaying the viewer's time-zone. */
   function localTime(ms) {
-    const d=new Date(ms),p=n=>String(n).padStart(2,'0'),off=-d.getTimezoneOffset(),h=Math.trunc(Math.abs(off)/60),m=Math.abs(off)%60;
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} UTC${off<0?'−':'+'}${h}${m?':'+p(m):''}`;
+    if(!Number.isFinite(ms))return '—';
+    const d=new Date(ms),p=n=>String(n).padStart(2,'0');
+    if(!Number.isFinite(d.getTime()))return '—';
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  /** Nearby dates follow the browser calendar, including local day changes; no time-zone label is exposed. */
+  function localTimeShort(ms, lang='en', now=Date.now()) {
+    const full=localTime(ms);if(full==='—'||!Number.isFinite(now))return full;
+    const d=new Date(ms),today=new Date(now),tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);
+    const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+    if(same(d,today))return (lang==='zh'?'今天 ':'Today ')+full.slice(11);
+    if(same(d,tomorrow))return (lang==='zh'?'明天 ':'Tomorrow ')+full.slice(11);
+    return d.getFullYear()===today.getFullYear()?full.slice(5):full;
   }
   function measureNote(T, snapshotHeight, s) {
     return T.beforeMeasure(s ? blockBasis(T,s) : int(snapshotHeight));
   }
 
-  return { LANGS, DEFAULT_LANG, STORAGE_KEY, resolveLang, pick, btc, int, blockTimestamp, blockAge, blockAgeShort, blockTimeTitle, blockBasis, localTime, measureNote, ZH, EN };
+  return { LANGS, DEFAULT_LANG, STORAGE_KEY, resolveLang, pick, btc, int, blockTimestamp, blockAge, blockAgeShort, blockTimeTitle, blockBasis, localTime, localTimeShort, measureNote, ZH, EN };
 });

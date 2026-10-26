@@ -57,6 +57,13 @@
   // 每种挂单状态对应唯一的关闭字段（2026-10-08 实测 /state 只有这三种：SOLD 由买单 note 关闭、CLAIMED 由卖家取回 note 关闭）。
   // 出现其它状态、或 closedTxid 非空，说明协议有了新的关闭方式，要先核实语义再改这里，而不是猜。
   const CLOSE_FIELD = Object.freeze({ ACTIVE: null, SOLD: 'soldTxid', CLAIMED: 'claimTxid' });
+  /** /listings between blocks: pending means a buy is confirming next block, cancelling means a reclaim is in flight.
+   * Both at once is not a defined state. */
+  function listingClose(l) {
+    if (typeof l.pending !== 'boolean' || typeof l.cancelling !== 'boolean') throw new Error(`挂单 ${l.nf} 缺少 pending / cancelling 标记`);
+    if (l.pending && l.cancelling) throw new Error(`挂单 ${l.nf} 同时标记正在购买和撤单中`);
+    return l.pending ? 'sale' : l.cancelling ? 'cancel' : null;
+  }
   const CLOSE_FIELDS = ['soldTxid', 'claimTxid', 'closedTxid'];
 
   /** 挂单的关闭高度；仍有效的挂单返回 null。 */
@@ -311,9 +318,11 @@
     for(const v of data.values){const key=JSON.stringify([v.type,v.value]);
       if(values.has(key)||!['ask','sales','zeroListed','none','lastBlock'].includes(v.source)||![0,25,50,75,100].includes(v.pct)||!uint(v.pieces)||v.pieces<1||v.pieces>10000)throw new Error('Invalid official trait basis');values.set(key,v);}
     for(const p of data.pieces){if(!uint(p.p)||pieces.has(p.p)||!uint(p.pct)||p.pct<100||p.pct>400||p.pct%25||!uint(p.weight)||p.weight*25!==p.pct)throw new Error('Invalid official piece weight');pieces.set(p.p,p.pct);}
-    const localCounts=new Array(snapshot.traits.length).fill(0);for(const row of Object.values(snapshot.items))for(const i of row.slice(1))localCounts[i]++;
+    // Catalog pieces per trait, minted and not yet minted: the official count must be exactly this, both ways. A larger
+    // official count would silently replace the local supply (and may move a trait across the 20-piece rule).
+    const localCounts=new Array(snapshot.traits.length).fill(0);for(const row of [...Object.values(snapshot.items),...(snapshot.pending??[])])for(const i of row.slice(1))localCounts[i]++;
     const rows=snapshot.traits.map(([type,value,floor],idx)=>{const v=values.get(JSON.stringify([type,value]));
-      if(!v||v.pieces<localCounts[idx])throw new Error('Official reward catalog differs');
+      if(!v||v.pieces!==localCounts[idx])throw new Error('Official reward catalog differs');
       if(floor!==null){if(v.source!=='ask'||String(v.floor)!==String(floor)||R.traitTier(floor,snapshot.snapshot.collectionFloor).pct!==v.pct)throw new Error('Official ask basis differs');}
       else if(v.source==='ask'||v.floor!==null||v.source==='zeroListed'&&(v.pieces<20||v.pct!==100)||v.source==='none'&&v.pct!==0||['sales','none','lastBlock'].includes(v.source)&&v.pieces>=20)throw new Error('Official zero-listing basis differs');
       return [idx,v.pct,v.source,v.pieces];});
@@ -348,9 +357,13 @@
     let lastErr;
     let status = null;
     let retryAfterSec = null;
+    let syncing = false;
+    let apiError = null;
     let tries = 0;
     while (tries < attempts) {
       tries += 1;
+      syncing = false;
+      apiError = null;
       try {
         const r = await fetch(url, { signal: AbortSignal.timeout(90000) });
         if (r.ok) return await r.json();
@@ -358,8 +371,17 @@
         const raw = r.headers.get('retry-after');
         const ra = raw !== null && /^\d+$/.test(raw) ? Number(raw) : Math.ceil((Date.parse(raw) - Date.now()) / 1000);
         retryAfterSec = Number.isFinite(ra) && ra > 0 ? ra : null;
-        lastErr = new Error(`HTTP ${r.status}`);
-        if (r.status < 500 || retryAfterSec !== null) break; // 4xx（除限流）重试也不会变，直接失败
+        // The API explains a refusal as {"error": text} (the weights endpoint: "No sums for that week yet"); a body that is
+        // not that (a gateway's HTML, nothing) adds nothing to the status.
+        let detail = null;
+        try { detail = await r.json(); } catch { detail = null; }
+        if (detail !== null && typeof detail.error === 'string' && detail.error.length > 0) apiError = detail.error.slice(0, 200);
+        const reason = apiError === null ? '' : `: ${apiError}`;
+        // Production answers 503 {"error":"Shielded indexer is still syncing..."} while it catches up. That is not a
+        // changed route and not a 5xx fault to hammer: the same JSON is what every shielded route returns in that state.
+        syncing = r.status === 503 && apiError !== null && apiError.includes('still syncing');
+        lastErr = new Error(`HTTP ${r.status}${reason}`);
+        if (syncing || r.status < 500 || retryAfterSec !== null) break; // 4xx（除限流）重试也不会变，直接失败
       } catch (e) {
         lastErr = e;
         status = null;
@@ -370,6 +392,8 @@
     err.isFetch = lastErr.name !== 'SyntaxError'; // 与数据校验抛出的错误区分开，便于给用户分类说明
     err.status = status;
     err.retryAfterSec = retryAfterSec;
+    err.syncing = syncing;
+    err.apiError = apiError;
     throw err;
   }
 
@@ -497,10 +521,10 @@
       if (k && k.number !== numberStart + l.assetId) throw new Error(`挂单 ${l.nf} 的资产号 ${l.assetId} 与已知编号 ${k.number} 不符`);
       if (!k) unknownListed = true;
       // /listings names the confirmation height listedAt; /state names it height. One shape from here on.
-      if (typeof l.pending !== 'boolean' || typeof l.cancelling !== 'boolean') throw new Error(`挂单 ${l.nf} 缺少 pending / cancelling 标记`);
-      if (l.listedAt <= H) active.push({ ...l, height: l.listedAt });
+      const close = listingClose(l);
+      if (l.listedAt <= H) active.push({ ...l, height: l.listedAt, close });
     }
-    const closing = active.filter(l => l.pending || l.cancelling).map(l => [l.assetId, l.pending ? 'sale' : 'cancel']);
+    const closing = active.filter(l => l.close).map(l => [l.assetId, l.close]);
 
     // 有新铸造的藏品（挂单里出现未知铭文，或已铭刻数多于已知藏品数）时，才读 /collection（约 38KB）并补拉它们的元数据
     // /pulse 没给已铭刻数时无法判断有没有新藏品，按「可能有」处理去核对 /collection（多 38KB，但结果一定对）
@@ -551,12 +575,12 @@
       if (!Number.isSafeInteger(l.assetId) || l.assetId < 0) throw new Error(`挂单 ${l.nf} 的资产号非法：${l.assetId}`);
       if (typeof l.inscriptionId !== 'string' || !ID_RE.test(l.inscriptionId)) throw new Error(`挂单 ${l.nf} 的铭文 ID 非法`);
       if (!Number.isSafeInteger(l.listedAt) || l.listedAt < 0) throw new Error(`挂单 ${l.nf} 缺少确认高度 listedAt`);
-      if (typeof l.pending !== 'boolean' || typeof l.cancelling !== 'boolean') throw new Error(`挂单 ${l.nf} 缺少 pending / cancelling 标记`);
-      if (l.listedAt <= H) { if (active.has(l.inscriptionId)) throw new Error(`挂单 ${l.inscriptionId} 重复`); active.set(l.inscriptionId, l); }
+      const close = listingClose(l);
+      if (l.listedAt <= H) { if (active.has(l.inscriptionId)) throw new Error(`挂单 ${l.inscriptionId} 重复`); active.set(l.inscriptionId, { ...l, close }); }
     }
     const offers = new Set(snap.offers.map(o => o[0]));
     if (active.size !== offers.size || [...active.keys()].some(id => !offers.has(id))) return null;
-    return [...active.values()].filter(l => l.pending || l.cancelling).map(l => [l.inscriptionId, l.pending ? 'sale' : 'cancel']).sort((a, b) => a[0].localeCompare(b[0]));
+    return [...active.values()].filter(l => l.close).map(l => [l.inscriptionId, l.close]).sort((a, b) => a[0].localeCompare(b[0]));
   }
 
   /** Sale history and the latest public sale / reclaim per piece at the tip, from one listing-record read. A failed read
@@ -587,7 +611,7 @@
   }
 
   return {
-    readBlockTime, BLOCK_API, FORMAT, API, COLLECTION, NUMBER_TRAIT_TYPE,
-    attachRewardBasis, rewardEventsAt, rewardEventsFromRecords, rewardEventsThisWeek, listingRecords, closingRows, txHeights, closeHeight, activeListingsAt, saleHistoryAt, PENDING_CATALOG, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
+    readBlockTime, BLOCK_API, FORMAT, API, COLLECTION, NUMBER_TRAIT_TYPE, HELD_SUPPLY, RULES_RECENT_SALES,
+    attachRewardBasis, withRewardBasis, rewardEventsAt, rewardEventsFromRecords, rewardEventsThisWeek, listingRecords, closingRows, txHeights, closeHeight, activeListingsAt, saleHistoryAt, PENDING_CATALOG, floorsOf, artTraits, knownTraits, buildSnapshot, fetchJson, mapLimit, generate, generateLive,
   };
 });

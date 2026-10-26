@@ -81,7 +81,7 @@ test('Comparison copy has identical English/Chinese keys and function arities',(
 const batchBox={ShnakasLookup:require('../src/lib/lookup.js')};
 vm.runInNewContext(fs.readFileSync(require.resolve('../src/lib/explore-ui.js'),'utf8'),batchBox);
 const batchUI=batchBox.NakaExploreUI;
-const batchSnap={snapshot:{height:100,collectionFloor:100},traits:[],items:Object.fromEntries([379,1025,1500].map((n,i)=>[String(i).padStart(64,'0')+'i0',[n]])),offers:[]};
+const batchSnap={snapshot:{height:100,collectionFloor:100},collection:{numberStart:0},traits:[],items:Object.fromEntries([379,1025,1500].map((n,i)=>[String(i).padStart(64,'0')+'i0',[n]])),offers:[]};
 const batchIds=Object.keys(batchSnap.items);
 test('Batch additions accept commas, spaces, mixed whitespace, and preserve optional hash notation',()=>{
  for(const lang of ['en','zh'])for(const raw of ['379,1025,1500','379 1025 1500',' 379, 1025\t1500\n','379,\n1025  1500','# 379 #1025, # 1500','379，1025，1500','379、1025、1500','379\u30001025\u30001500','379\n1025\r\n1500']){
@@ -103,4 +103,15 @@ test('A wanted post imports as its numbers: our own lead-in in either language, 
    const out=batchUI.resolveNumbers(batchSnap,raw,[],c,c.skipHeld);assert.deepEqual(Array.from(out.ids),batchIds,raw);assert.equal(out.skipped.length,0,raw);}
   const loose=batchUI.resolveNumbers(batchSnap,'I want 379',[],c,c.skipHeld);assert.equal(loose.ids.length,1);assert.deepEqual(Array.from(loose.skipped),[c.skipInvalid('I'),c.skipInvalid('want')]);
  }
+});
+
+test('Entries carry how a listing is already closing; candidates keep their selection and order and the ladder its engine',()=>{
+ const [a,b,c]=snap.offers.map(([id])=>id),closing={...snap,closing:[[a,'sale'],[b,'cancel']]},m=P.create(closing);
+ assert.equal(E.entry(closing,m,a).closing,'sale');assert.equal(E.entry(closing,m,b).closing,'cancel');assert.equal(E.entry(closing,m,c).closing,null);
+ assert.equal(E.entry(snap,model,a).closing,null,'no closing rows: open');
+ const held=ids.find(id=>!snap.offers.some(o=>o[0]===id));assert.equal(E.entry(closing,m,held).closing,null);
+ const entries=E.candidates(closing,m);
+ assert.deepEqual(entries.map(e=>e.id),E.candidates(snap,model).map(e=>e.id));
+ assert.deepEqual(new Map(entries.filter(e=>e.closing!==null).map(e=>[e.id,e.closing])),new Map(closing.closing));
+ for(const e of E.ladder(closing,m))assert.deepEqual(e.result,m.get(e.id).result);
 });

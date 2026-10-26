@@ -24,9 +24,11 @@
    * After the folder's files are replaced, Chrome loads the new pages at once but keeps running the previous worker until
    * the extension is reloaded: a page asks the worker which version it runs (shn-build), and a worker from before this
    * check does not answer at all. */
-  const BUILD = '0.12.5';
+  const BUILD = '0.13.0';
+  // Kept in the worker handshake beside BUILD; one release, one value.
+  const REVISION = BUILD;
   /** Whether the worker runs this code, from its answer to shn-build (undefined when it sent none). */
-  function sameBuild(answer) { return answer !== null && typeof answer === 'object' && answer.ok === true && answer.build === BUILD; }
+  function sameBuild(answer) { return answer !== null && typeof answer === 'object' && answer.ok === true && answer.build === BUILD && answer.revision === REVISION; }
   /** chrome.storage.local: the page that asked for that reload, {page: 'popup' | 'workspace', section, at}. Chrome closes
    * every extension page on reload; the new worker opens it again, if asked within REOPEN_MS. */
   const REOPEN = 'nakaReopen', REOPEN_MS = 60 * 1000;
@@ -34,7 +36,7 @@
   const CHECK_MS = 60 * 1000;           // 每分钟最多检查一次 /pulse
   const HEARTBEAT_MS = 45 * 1000;       // 页面可见时每 45 秒报一次心跳
   const VISIBLE_MS = 100 * 1000;        // 100 秒内收到过心跳才算「有页面在看」（容得下一次心跳延迟）
-  const BACKOFF_MAX_MIN = 30;
+  const BACKOFF_MAX_MIN = 10;
 
 
   /** Validate persisted data before any consumer dereferences it. Storage is not a trust boundary. */
@@ -94,9 +96,10 @@
     if(s.rewardBasis!==undefined) {
       const b=s.rewardBasis;
       if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).sort().join()!=='height,traits'||b.height!==h.height||!Array.isArray(b.traits)||b.traits.length!==s.traits.length)return false;
-      const counts=new Array(s.traits.length).fill(0);for(const row of Object.values(s.items))for(const idx of row.slice(1))counts[idx]++;
+      // The official piece count of a trait is the catalog's, minted and pending rows alike (snapshot-core.attachRewardBasis).
+      const counts=new Array(s.traits.length).fill(0);for(const row of [...Object.values(s.items),...(Array.isArray(s.pending)?s.pending:[])])for(const idx of row.slice(1))counts[idx]++;
       const seen=new Set();for(const row of b.traits){if(!Array.isArray(row)||row.length!==4)return false;const[idx,pct,source,supply]=row;
-        if(!uint(idx)||idx>=s.traits.length||seen.has(idx)||![0,25,50,75,100].includes(pct)||!['ask','sales','zeroListed','none','lastBlock'].includes(source)||!uint(supply)||supply<counts[idx]||supply>10000)return false;
+        if(!uint(idx)||idx>=s.traits.length||seen.has(idx)||![0,25,50,75,100].includes(pct)||!['ask','sales','zeroListed','none','lastBlock'].includes(source)||!uint(supply)||supply!==counts[idx])return false;
         const floor=s.traits[idx][2];if(floor!==null?source!=='ask':source==='ask'||source==='zeroListed'&&(supply<20||pct!==100)||['sales','none','lastBlock'].includes(source)&&supply>=20||source==='none'&&pct!==0)return false;
         seen.add(idx);
       }
@@ -174,7 +177,11 @@
       if (!uint(s.checkedAt)) return undefined;
       if (s.state === 'ok') return s;
       if (s.state !== 'error' || !uint(s.nextAt) || !uint(s.waitMin) || !uint(s.failures) || s.failures < 1) return undefined;
-      if (!['rate-limit','server','http','network','data'].includes(s.kind) || !(s.status === null || uint(s.status)) || typeof s.message !== 'string') return undefined;
+      if (!['rate-limit','server','syncing','http','network','data'].includes(s.kind) || !(s.status === null || uint(s.status)) || typeof s.message !== 'string') return undefined;
+      if (s.apiError !== undefined && (typeof s.apiError !== 'string' || s.apiError.length < 1 || s.apiError.length > 200 || s.apiError.includes('\0'))) return undefined;
+      // A failed check keeps the epoch of the batch in storage (/pulse epoch, a string), so the check after it recognises
+      // the same block instead of downloading it again; a record written before that, or after a first start, has none.
+      if (s.epoch !== undefined && typeof s.epoch !== 'string') return undefined;
       return s;
     }
     if (s.state === 'done' && uint(s.height)) return s;
@@ -192,25 +199,34 @@
     return true;
   }
 
-  /** 连续失败 n 次后等几分钟再试：1, 2, 4, 8, 16, 30, 30…；服务端给了 Retry-After 时取两者较大者。 */
+  /** 连续失败 n 次后等几分钟再试：1, 2, 4, 8, 10, 10…。服务端 Retry-After 更长时照那个时间等。 */
   function backoffMinutes(failures, retryAfterSec) {
     if (!Number.isSafeInteger(failures) || failures < 1) throw new Error(`失败次数非法：${failures}`);
     const exp = Math.min(BACKOFF_MAX_MIN, 2 ** (failures - 1));
     return retryAfterSec === null ? exp : Math.max(exp, Math.ceil(retryAfterSec / 60));
   }
 
+  /** Minutes until the next live check. Indexer syncing is a known official delay, so it waits 3 minutes
+   * instead of the outage backoff and instead of polling every minute. Any other kind uses backoffMinutes. */
+  function retryMinutes(kind, failures, retryAfterSec) {
+    if (kind === 'syncing') return Math.max(3, Number.isFinite(retryAfterSec) ? Math.ceil(retryAfterSec / 60) : 0);
+    return backoffMinutes(failures, retryAfterSec);
+  }
+
   /**
    * 失败原因分类：
-   *   rate-limit 被限流（HTTP 429） · server 服务端出错（5xx） · http 其它 HTTP 错误 · network 网络不通或超时 · data 数据校验没通过
+   *   rate-limit 被限流（HTTP 429） · syncing 索引器正在追块（HTTP 503 且正文说明 still syncing）
+   *   server 其它 5xx · http 其它 HTTP 错误 · network 网络不通或超时 · data 数据校验没通过
    * 只有 snapshot-core.fetchJson 抛出的错误带 isFetch；其余都是数据校验抛出的。
    */
   function classify(err) {
     if (err.isFetch !== true) return 'data';
+    if (err.syncing === true) return 'syncing';
     if (err.status === 429) return 'rate-limit';
     if (err.status !== null && err.status >= 500) return 'server';
     if (err.status !== null) return 'http';
     return 'network';
   }
 
-  return { KEYS, SESSION_VISIBLE, BUILD, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, classify };
+  return { KEYS, SESSION_VISIBLE, BUILD, REVISION, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, retryMinutes, classify };
 });

@@ -16,7 +16,7 @@
    tabs:{buy:'买哪单划算',plan:'冲 400%',lock:'垄断特征',sim:'模拟'},
    goal:{buy:'针对我的持仓，我想花最少的钱，让每周 SHNAKAS 增加最多',plan:'针对我的持仓，在当前区块把它们冲到 400%',lock:'我想垄断一个特征：带它的 Naka 全在我们手里',sim:'我想知道挂单、成交或撤单会对我和全网有什么影响'},
    how:{buy:'按每 0.001 BTC 换来的每周增量排序。买到的这一枚下周起有奖励；现有持仓的变化从成交那一块起生效。正在成交确认的挂单买不到，不列出。',
-    plan:'每行是这一枚单独冲到 400% 最省钱的做法，按每 0.001 BTC 换来的每周增量排序，点一行看步骤。勾选两枚以上，合起来算一份方案：共用的挂单只买一次。',
+    plan:'每行是这一枚单独冲到 400% 最省钱的做法，按每 0.001 BTC 换来的每周增量排序，点一行看步骤。勾选两枚以上，合起来算一份方案：共用的挂单只买一次（合并方案不一定最省）。',
     lock:'垄断后，没人能再挂低价单拉低它的加成。点一行看做法：在售的买下；没挂单的私下收购，复制求购信息发到 Naka Telegram 群。持仓和队友的编号加得越全，越能找到最接近垄断的特征：每多一枚，就少找一枚。',
     sim:'在持仓旁输入挂价，或点“地板 / 1.5× / 2× / 3×”快捷挂价，结果马上算出；点 × 清空。也可以输入任意编号，假设它挂单、成交或撤单。'},
    needHoldings:'先在上面的“我的持仓”添加你的 Naka。',
@@ -33,41 +33,43 @@
    planCols:{piece:'编号',weight:'权重',cost:'花费',week:'这一枚每周',total:'我们每周合计',value:'每 0.001 BTC'},
    planTo:(a,b)=>`${a}% → ${b}%`,planMax:(a,b)=>`${a}% → 最高 ${b}%`,planStuck:a=>`${a}% · 抬不高`,planFree:'免费',planAuto:'无需操作',planAutoNote:'挂单关闭后自动达到',planBuys:(b,k)=>[b?`买 ${b} 单`:'',k?`撤 ${k} 单`:''].filter(Boolean).join(' · '),
    pickLabel:n=>`#${n} 加入合并方案`,expand:n=>`展开 #${n} 的步骤`,collapse:n=>`收起 #${n} 的步骤`,
-   planLegend:'我们每周合计 = 持仓（含添加的编号）每周的变化 + 买到的几枚下周起的收益。全网共享一个奖池，所以合计小于权重的增量。',
+   planLegend:'我们每周合计 = 持仓（含添加的编号）每周的变化 + 买到的几枚下周起的收益；撤单取回的几枚同样从下周起有奖励。全网共享一个奖池，所以合计小于权重的增量。',
    stepsTitle:'步骤（按顺序）',stepLifts:list=>`提升 ${list}`,serveTitle:(n,list)=>`提升 #${n} 的 ${list}`,
    stepSale:(n,p)=>`买 #${n} · ${p} BTC`,stepCancel:n=>`撤掉自己的挂单 #${n}（免费）`,stepMate:n=>`请队友撤单 #${n}（免费）`,stepClosing:n=>`#${n} 正在成交确认，不用买`,stepClosingCancel:n=>`#${n} 卖家正在撤单，不用买`,stepOwnClosing:(n,mate,sale)=>`#${n} ${mate?'队友':'你'}的挂单正在${sale?'成交':'撤回'}，不用操作`,restSteps:n=>`其余 ${n} 步`,fewerSteps:'收起',
    jointTitle:n=>`合并方案 · 选中的 ${n} 枚`,jointSum:(r,t)=>`${r} / ${t} 枚可到 400%`,jointCost:(c,b,k,f)=>[b?`花 ${c} BTC · 买 ${b} 单`:'不用花钱',k?`撤单 ${k} 单（免费）`:'',f?`${f} 单已在成交或撤单中（不用买）`:''].filter(Boolean).join(' · '),
    jointPer:v=>`每 0.001 BTC 换来每周 +${v}`,jointSeparate:v=>`单独方案相加 ${v} BTC`,
    jointMine:d=>`我的持仓每周 ${d}`,jointExtra:d=>`添加的编号每周 ${d}`,oursWeek:d=>`持仓和添加的编号每周 ${d}`,bought:(n,v)=>`买到的 ${n} 枚下周起每周 +${v}`,boughtNoWeek:n=>`这是最后一个奖励周：买到的 ${n} 枚已经没有能拿奖励的完整周`,jointUnavailable:'这组目标买下后市场上没有挂单，算不出权重。',
-   conflict:n=>`#${n}：单独可以冲到 400%，但和其它几枚一起买时集合地板上升会把它拉下来，这份合并方案先不冲它。`,capped:(n,b)=>`#${n}：够不到 400%，最高 ${b}%`,
+   conflict:{self:n=>`#${n}：单独可以冲到 400%，但它的方案和已选的几枚合在一起算，它自己到不了 400%，这份合并方案先不冲它。`,others:n=>`#${n}：单独可以冲到 400%，但它的方案会把已选的几枚拉到 400% 以下，这份合并方案先不冲它。`,'no-floor':n=>`#${n}：单独可以冲到 400%，但和已选的几枚一起买完后市场上没有挂单，算不出权重，这份合并方案先不冲它。`},capped:(n,b)=>`#${n}：够不到 400%，最高 ${b}%`,
    whyCeiling:(t,num,c)=>`只有 ${t} 个特征${num?`，编号 +${num}%`:''}：理论上限 ${c}%`,whyRare:(name,top,s)=>`${name}：仅 ${s} 件，清空挂单后按最近 3 笔成交（含买入价）计，最多 +${top}%`,whyTrait:(name,top)=>`${name}：现有挂单撑不到 +100%，最多 +${top}%`,
    kLine:(a,b,p)=>`全网权重单位 K ${a} → ${b}（${p}）：共享这些特征的 Naka 也会变强，每个人的份额同比摊薄，所以每周增量小于权重增量。之后有人挂出更低价的同特征挂单，会再降档。`,
-   monoCan:'买下挂单就能垄断',monoHave:'已经垄断',monoFar:'需要私下收购才能垄断',traitCount:n=>`${n} 个特征`,monoNoneCan:'现在没有只靠买挂单就能垄断的特征：每个特征都还有几枚在别人手里、没挂单，市场上买不到。',monoNoneFar:'没有需要私下收购的特征。',
+   monoCan:'买下或撤掉挂单就能垄断',monoHave:'已经垄断',monoFar:'需要私下收购才能垄断',traitCount:n=>`${n} 个特征`,monoNoneCan:'现在没有只靠买下或撤掉挂单就能垄断的特征：其余的要么已经垄断，要么还有几枚在别人手里、没挂单，市场上买不到。',monoNoneFar:'没有需要私下收购的特征。',
    lockCols:{trait:'特征',ours:'我们 / 共',listed:'在售',missing:'还差',bonus:'加成 现在 → 垄断后',cost:'花费',week:'我们每周'},lockExpand:t=>`展开 ${t} 的做法`,lockCollapse:t=>`收起 ${t} 的做法`,
-   bonusStable:'稳定',bonusMoves:'随集合地板变',bonusNoFloor:'算不出',buyFirst:n=>`先买 ${n} 单`,keepLine:n=>`按线挂 #${n}`,
+   bonusStable:'稳定',bonusMoves:'随集合地板变',bonusNoFloor:'算不出',buyFirst:n=>`先买 ${n} 单`,keepMark:n=>`按线挂 #${n}`,
    lockBuy:'买下挂单',lockBuyFirst:'先买下挂单',monoReclaim:'撤掉自己的挂单（免费）',
    monoSplit:(a,n,b)=>`持仓 ${a} · 买到的 ${n} 枚下周起 +${b}`,monoReclaiming:'已在撤单（不用操作）',
-   monoStable:'20 件以上且没人挂单：始终 +100%，集合地板怎么变都不影响',monoHolds:(p,a,b)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：集合地板在 ${a}–${b} BTC 之间时保持 ${p}（高于 ${b} 降档，低于 ${a} 升档）`,monoHoldsTop:(p,b)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：集合地板不高于 ${b} BTC 时保持 ${p}，高于就降档`,monoHoldsLow:(p,a)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：现在 ${p}，集合地板跌到 ${a} BTC 以下才会升档`,monoHoldsAll:p=>`少于 20 件、没有成交记录：始终 ${p}`,monoHoldsUnknown:p=>`少于 20 件，按最近 3 笔成交计（现在 ${p}）；这几笔成交给不出精确区间，集合地板一变，加成可能跟着变`,
+   monoStable:'20 件以上且没人挂单：始终 +100%，集合地板怎么变都不影响',monoHolds:(p,a,b)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：集合地板在 ${a}–${b} BTC 之间时保持 ${p}（高于 ${b} 可能降档，低于 ${a} 可能升档）`,monoHoldsTop:(p,b)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：集合地板不高于 ${b} BTC 时保持 ${p}，高于就可能降档`,monoHoldsLow:(p,a)=>`少于 20 件，按最近 3 笔成交与集合地板之比计：现在 ${p}，集合地板跌到 ${a} BTC 以下才可能升档`,monoHoldsAll:p=>`少于 20 件、没有成交记录：始终 ${p}`,monoHoldsUnknown:p=>`少于 20 件，按最近 3 笔成交计（现在 ${p}）；这几笔成交给不出精确区间，集合地板一变，加成可能跟着变`,
    keepNew:(n,price,floor,x)=>`建议：让 #${n} 以 ≥ ${price} BTC 挂出（集合地板 ${floor} BTC 的 ${x} 倍；地板涨，这条线也涨）`,keepAsk:(n,ask,price)=>`建议：保留 #${n} 现有挂单（${ask} BTC，不低于线 ${price} BTC）`,keepRaise:(n,ask,price)=>`建议：把 #${n} 改价到 ${price} BTC（现在 ${ask} BTC，低于线）`,
-   keepWhy:(n,a,b)=>`这样其余几枚保持 +100%；#${n} 挂着没有奖励，任何人都能买走它，一旦成交，垄断就结束。我们每周 ${a}（不挂：${b}）`,monoNoFloor:'买下后市场上没有挂单，算不出权重',
+   keepWhy:(n,a,b,fresh)=>`这样其余几枚保持 +100%；#${n} 挂着没有奖励${fresh?'（挂单当周整周没有奖励，本周已产出的 SHNAKAS 也拿不到了）':''}，而且任何人都能买走它，一旦成交，垄断就结束。我们每周 ${a}（不挂：${b}）`,monoNoFloor:'买下后市场上没有挂单，算不出权重',
    closingOwnSale:'我方·成交中',farWanted:n=>`需私下收购 ${n} 枚`,farUnminted:(n,list)=>`未铸造 ${n} 枚：${list}（铸造后才能收购）`,closingSale:'成交中',closingCancel:'撤单中',
    showNumbers:n=>`显示全部 ${n} 个`,hideNumbers:'收起',lockShowAll:n=>`显示全部 ${n} 个特征`,lockShowLess:'收起',
    simAny:'任意编号',simAnyPlaceholder:'如 1500',simPrice:'挂价 BTC',simPricePlaceholder:'如 0.0035',simSale:'假设成交',simCancel:'假设撤单',simListedAt:p=>`挂单中 · ${p} BTC`,simMine:'我的持仓',simBad:'挂价要是 BTC 数字，例如 0.0035',
    clear:'清空',clearAll:'全部清空',
    quick:{floor:'地板',x15:'1.5×',x2:'2×',x3:'3×'},quickHint:(label,v)=>`按 ${label} 挂：${v} BTC`,
    simHead:{list:(n,p)=>`假设 #${n} 以 ${p} BTC 挂出`,sale:n=>`假设 #${n} 成交`,cancel:n=>`假设 #${n} 撤单`},
-   safeRuns:list=>`安全挂价：${list} 时不影响任何其它 Naka`,safeRun:(a,b)=>b===null?`≥ ${a} BTC`:`${a}–${b} BTC（不含 ${b}）`,safeNone:'没有安全挂价：这一枚的几个特征要求的价位互相冲突，挂在哪个价都会让别人升档或降档',safeRange:'这一枚有特征是区间值，给不出确定的安全挂价',
-   simSelf:(n,a,v)=>`#${n} 挂出后：每周 ${a} → 0（挂单期间没有奖励）${v?`；本周已累计的 ${v} SHNAKAS 也拿不到了`:''}`,
+   safeRuns:list=>`安全挂价：${list} 时不影响任何其它 Naka`,safeNoFloor:'算不出安全挂价：市场上其它挂单都在成交或撤单中，下一块没有地板。',safeRun:(a,b)=>b===null?`≥ ${a} BTC`:`${a}–${b} BTC（不含 ${b}）`,safeNone:'没有安全挂价：这一枚的几个特征要求的价位互相冲突，挂在哪个价都会让别人升档或降档',safeRange:'这一枚有特征是区间值，给不出确定的安全挂价',
+   simSelf:(n,a,v)=>`#${n} 挂出后：每周 ${a} → 0（挂单期间没有奖励）${v?`；本周已产出的 ${v} SHNAKAS 也拿不到了`:''}`,
    simK:(a,b,down,up)=>`全网：权重单位 K ${a} → ${b} · ${down} 枚降 · ${up} 枚升`,simWeek:(a,b,d)=>`我的持仓每周：${a} → ${b}（${d}）`,
    simRow:(n,a,b,wa,wb,d)=>`#${n} ${a} → ${b} · 每周 ${wa} → ${wb}（${d}）`,simGone:n=>`#${n} 成交后离开你的持仓`,simSame:'我的其它持仓权重不变',
    simOtc:'想卖给队友？私下转账不产生公开挂单，地板不变；但转出那一周这一枚双方都没有奖励，接收方下周起有奖励。',simListedSelf:'挂单中',
+   simReclaim:n=>`#${n} 撤单当周整周没有奖励，从下周起才有`,simReclaimNoWeek:n=>`这是最后一个奖励周：#${n} 撤单后已经没有能拿奖励的完整周`,
+   simClosing:{sale:n=>`#${n} 已有人买下，正在等下一块确认：不能再撤单，只能假设成交`,cancel:n=>`#${n} 卖家正在撤单，下一块确认后下架：不会再成交，只能假设撤单`},
   },
   en:{
    title:'Raise weight',tab:'Raise weight',basis:'From the listings at the block shown above · fees excluded',sep:', ',
    tabs:{buy:'Best buy',plan:'Reach 400%',lock:'Own a trait',sim:'Simulate'},
    goal:{buy:'For my holdings: the most weekly SHNAKAS for the least BTC',plan:'For my holdings: take them to 400% at this block',lock:'I want to own a trait: every Naka with it in our hands',sim:'I want to see what a listing, sale or reclaim does to me and everyone'},
    how:{buy:'Sorted by weekly gain per 0.001 BTC. The piece you buy counts from next week; your other holdings change from the block of the sale. Listings already being bought cannot be bought and are left out.',
-    plan:'Each row is that piece’s own cheapest way to 400%, sorted by weekly gain per 0.001 BTC; select a row for its steps. Tick two or more for one combined plan: a listing they share is bought once.',
+    plan:'Each row is that piece’s own cheapest way to 400%, sorted by weekly gain per 0.001 BTC; select a row for its steps. Tick two or more for one combined plan: a listing they share is bought once (not necessarily the cheapest combination).',
     lock:'Once it is all ours, nobody can list one cheaply to pull its bonus down. Select a row for the way there: buy what is listed; for the rest, copy a wanted post into the Naka Telegram group. Add all your holdings and teammates’ numbers to find the traits you are closest to owning: each piece added is one fewer to find.',
     sim:'Type an ask next to a holding, or pick Floor / 1.5× / 2× / 3×, and the result appears at once; × clears it. Or enter any number and assume it lists, sells or is reclaimed.'},
    needHoldings:'Add your Nakas under My holdings above first.',
@@ -84,34 +86,36 @@
    planCols:{piece:'Naka',weight:'Weight',cost:'Cost',week:'This piece / week',total:'Ours / week',value:'Per 0.001 BTC'},
    planTo:(a,b)=>`${a}% → ${b}%`,planMax:(a,b)=>`${a}% → ${b}% at most`,planStuck:a=>`${a}% · cannot rise`,planFree:'Free',planAuto:'Nothing to do',planAutoNote:'reached once listings close',planBuys:(b,k)=>[b?`buy ${b}`:'',k?`reclaim ${k}`:''].filter(Boolean).join(' · '),
    pickLabel:n=>`Add #${n} to the combined plan`,expand:n=>`Show the steps for #${n}`,collapse:n=>`Hide the steps for #${n}`,
-   planLegend:'Ours / week = the weekly change of our pieces (holdings and numbers added) + what the pieces bought earn from next week. Everyone shares one pool, so it is smaller than the weight gain.',
+   planLegend:'Ours / week = the weekly change of our pieces (holdings and numbers added) + what the pieces bought earn from next week; a piece reclaimed earns from next week too. Everyone shares one pool, so it is smaller than the weight gain.',
    stepsTitle:'Steps, in order',stepLifts:list=>`lifts ${list}`,serveTitle:(n,list)=>`Lifts ${list} of #${n}`,
    stepSale:(n,p)=>`Buy #${n} · ${p} BTC`,stepCancel:n=>`Reclaim your listing #${n} (free)`,stepMate:n=>`Ask a teammate to reclaim #${n} (free)`,stepClosing:n=>`#${n} is already being bought; no need to buy`,stepClosingCancel:n=>`#${n} is being reclaimed by its seller; no need to buy`,stepOwnClosing:(n,mate,sale)=>`#${n}: ${mate?'a teammate’s':'your'} listing is already being ${sale?'bought':'reclaimed'}; nothing to do`,restSteps:n=>`${n} more step${n===1?'':'s'}`,fewerSteps:'Show fewer',
    jointTitle:n=>`Combined plan · the ${n} ticked`,jointSum:(r,t)=>`${r} of ${t} reach 400%`,jointCost:(c,b,k,f)=>[b?`${c} BTC · buy ${b}`:'No cost',k?`reclaim ${k} (free)`:'',f?`${f} already being bought or reclaimed (no need to buy)`:''].filter(Boolean).join(' · '),
    jointPer:v=>`+${v} / week per 0.001 BTC`,jointSeparate:v=>`Plans one by one add up to ${v} BTC`,
    jointMine:d=>`My holdings ${d} / week`,jointExtra:d=>`Added numbers ${d} / week`,oursWeek:d=>`Holdings and numbers added ${d} / week`,bought:(n,v)=>`The ${n} bought: +${v} / week from next week`,boughtNoWeek:n=>`This is the last reward week: the ${n} bought ${n===1?'has':'have'} no full week left`,jointUnavailable:'Buying for these targets leaves no listing on the market, so no weight can be scored.',
-   conflict:n=>`#${n}: reaches 400% alone, but bought together with the others the collection floor rises and pulls it down, so this combined plan leaves it out.`,capped:(n,b)=>`#${n}: cannot reach 400% (at most ${b}%)`,
+   conflict:{self:n=>`#${n}: reaches 400% alone, but settled together with the pieces already in this plan its own plan leaves it under 400%, so this combined plan leaves it out.`,others:n=>`#${n}: reaches 400% alone, but its plan would pull a piece already in this plan under 400%, so this combined plan leaves it out.`,'no-floor':n=>`#${n}: reaches 400% alone, but bought together with the pieces already in this plan it would leave no listing on the market to score, so this combined plan leaves it out.`},capped:(n,b)=>`#${n}: cannot reach 400% (at most ${b}%)`,
    whyCeiling:(t,num,c)=>`Only ${t} trait${t===1?'':'s'}${num?`, number +${num}%`:''}: ${c}% at most`,whyRare:(name,top,s)=>`${name}: only ${s} piece${s===1?'':'s'}; once cleared it uses its last 3 sales (purchases included): +${top}% at most`,whyTrait:(name,top)=>`${name}: current listings cannot hold +100%; +${top}% at most`,
    kLine:(a,b,p)=>`Programme units K ${a} → ${b} (${p}): every Naka sharing these traits rises too, diluting each share alike, so weekly gains are smaller than weight gains. A later cheaper listing of the same trait drops it a tier again.`,
-   monoCan:'Ours once the listings are bought',monoHave:'Already ours',monoFar:'Needs private deals to own',traitCount:n=>`${n} trait${n===1?'':'s'}`,monoNoneCan:'No trait can be owned by buying listings alone: each still has pieces held by others and not listed, so they cannot be bought on the market.',monoNoneFar:'No trait needs private deals.',
+   monoCan:'Ours once listings are bought or reclaimed',monoHave:'Already ours',monoFar:'Needs private deals to own',traitCount:n=>`${n} trait${n===1?'':'s'}`,monoNoneCan:'No trait can be owned by buying or reclaiming listings alone: the rest are already ours, or still have pieces held by others and not listed, so they cannot be bought on the market.',monoNoneFar:'No trait needs private deals.',
    lockCols:{trait:'Trait',ours:'Ours / all',listed:'Listed',missing:'Missing',bonus:'Bonus now → once ours',cost:'Cost',week:'Ours / week'},lockExpand:t=>`Show the way to own ${t}`,lockCollapse:t=>`Hide the way to own ${t}`,
-   bonusStable:'stable',bonusMoves:'moves with the collection floor',bonusNoFloor:'cannot be scored',buyFirst:n=>`buy ${n} first`,keepLine:n=>`list #${n} at the line`,
+   bonusStable:'stable',bonusMoves:'moves with the collection floor',bonusNoFloor:'cannot be scored',buyFirst:n=>`buy ${n} first`,keepMark:n=>`keep #${n} listed`,
    lockBuy:'Buy listed',lockBuyFirst:'Buy listed first',monoReclaim:'Reclaim yours (free)',
    monoSplit:(a,n,b)=>`holdings ${a} · the ${n} bought +${b} from next week`,monoReclaiming:'Already being reclaimed (nothing to do)',
-   monoStable:'20+ pieces and none listed: +100% whatever the floors do',monoHolds:(p,a,b)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: holds ${p} while the floor is between ${a} and ${b} BTC (above ${b} it drops a tier, below ${a} it rises)`,monoHoldsTop:(p,b)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: holds ${p} while the floor is at most ${b} BTC; above that it drops`,monoHoldsLow:(p,a)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: ${p} now; it rises only if the floor falls below ${a} BTC`,monoHoldsAll:p=>`Under 20 pieces and no sale on record: ${p} at any floor`,monoHoldsUnknown:p=>`Under 20 pieces, scored on its last 3 sales (${p} now); they give no exact range, so a move of the collection floor may change it`,
+   monoStable:'20+ pieces and none listed: +100% whatever the floors do',monoHolds:(p,a,b)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: holds ${p} while the floor is between ${a} and ${b} BTC (above ${b} it may drop a tier, below ${a} it may rise)`,monoHoldsTop:(p,b)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: holds ${p} while the floor is at most ${b} BTC; above that it may drop a tier`,monoHoldsLow:(p,a)=>`Under 20 pieces, scored on its last 3 sales against the collection floor: ${p} now; only a floor below ${a} BTC may lift it`,monoHoldsAll:p=>`Under 20 pieces and no sale on record: ${p} at any floor`,monoHoldsUnknown:p=>`Under 20 pieces, scored on its last 3 sales (${p} now); they give no exact range, so a move of the collection floor may change it`,
    keepNew:(n,price,floor,x)=>`Advice: list #${n} at ≥ ${price} BTC (${x}× the collection floor of ${floor} BTC; if the floor rises, so does this line)`,keepAsk:(n,ask,price)=>`Advice: keep your listing #${n} (${ask} BTC, not under the line of ${price} BTC)`,keepRaise:(n,ask,price)=>`Advice: reprice #${n} to ${price} BTC (now ${ask} BTC, under the line)`,
-   keepWhy:(n,a,b)=>`The others then hold +100%; #${n} earns nothing while listed and anyone can buy it, which ends the monopoly. Ours ${a} / week (not listed: ${b})`,monoNoFloor:'Buying them leaves no listing on the market, so no weight can be scored',
+   keepWhy:(n,a,b,fresh)=>`The others then hold +100%; #${n} earns nothing while listed${fresh?' (nothing for the whole listing week, the SHNAKAS it accrued this week included)':''} and anyone can buy it, which ends the monopoly. Ours ${a} / week (not listed: ${b})`,monoNoFloor:'Buying them leaves no listing on the market, so no weight can be scored',
    closingOwnSale:'Ours · selling',farWanted:n=>`${n} by private deal`,farUnminted:(n,list)=>`${n} unminted: ${list} (only after minting)`,closingSale:'Selling',closingCancel:'Reclaiming',
    showNumbers:n=>`Show all ${n}`,hideNumbers:'Show fewer',lockShowAll:n=>`Show all ${n} traits`,lockShowLess:'Show fewer',
    simAny:'Any number',simAnyPlaceholder:'e.g. 1500',simPrice:'Ask BTC',simPricePlaceholder:'e.g. 0.0035',simSale:'Assume sold',simCancel:'Assume reclaimed',simListedAt:p=>`Listed · ${p} BTC`,simMine:'My holdings',simBad:'The ask must be a BTC number, e.g. 0.0035',
    clear:'Clear',clearAll:'Clear all',
    quick:{floor:'Floor',x15:'1.5×',x2:'2×',x3:'3×'},quickHint:(label,v)=>`List at ${label}: ${v} BTC`,
    simHead:{list:(n,p)=>`Assume #${n} is listed at ${p} BTC`,sale:n=>`Assume #${n} sells`,cancel:n=>`Assume #${n} is reclaimed`},
-   safeRuns:list=>`Safe ask: ${list} changes no other Naka`,safeRun:(a,b)=>b===null?`≥ ${a} BTC`:`${a}–${b} BTC (${b} excluded)`,safeNone:'No safe ask: this piece’s traits ask for conflicting price levels, so any ask moves someone up or down',safeRange:'A trait of this piece has a range value; no exact safe ask',
+   safeRuns:list=>`Safe ask: ${list} changes no other Naka`,safeNoFloor:'No safe ask: every other listing is closing, so the next block has no floor.',safeRun:(a,b)=>b===null?`≥ ${a} BTC`:`${a}–${b} BTC (${b} excluded)`,safeNone:'No safe ask: this piece’s traits ask for conflicting price levels, so any ask moves someone up or down',safeRange:'A trait of this piece has a range value; no exact safe ask',
    simSelf:(n,a,v)=>`#${n} once listed: ${a} → 0 / week (nothing while listed)${v?`; ${v} SHNAKAS accrued this week is lost`:''}`,
    simK:(a,b,down,up)=>`Everyone: programme units K ${a} → ${b} · ${down} down · ${up} up`,simWeek:(a,b,d)=>`My holdings per week: ${a} → ${b} (${d})`,
    simRow:(n,a,b,wa,wb,d)=>`#${n} ${a} → ${b} · ${wa} → ${wb} / week (${d})`,simGone:n=>`#${n} leaves your holdings when it sells`,simSame:'My other holdings keep their weight',
    simOtc:'Selling to a teammate? A private transfer makes no public listing, so no floor moves; but neither side earns that week for the piece, and the receiver starts next week.',simListedSelf:'Listed',
+   simReclaim:n=>`#${n} earns nothing for the reclaim week; it earns again from next week`,simReclaimNoWeek:n=>`This is the last reward week: #${n} has no full week left after the reclaim`,
+   simClosing:{sale:n=>`#${n} has been bought and is confirming in the next block: it can no longer be reclaimed, only its sale can be assumed`,cancel:n=>`#${n} is being reclaimed by its seller and leaves the market at the next block: it can no longer sell, only its reclaim can be assumed`},
   },
  };
  function mount(api){
@@ -123,11 +127,9 @@
   const typeName=type=>type==='Hair And Headwear'?I.pick(api.lang()).headwear:type;
   const traitName=(s,idx)=>`${typeName(s.traits[idx][0])} · ${s.traits[idx][1]}`;
   const numberOf=(s,id)=>s.items[id][0];
-  // Results depend on the block and, for plans and owning a trait, on the listings already closing (they change between
-  // blocks). Those can only remove listings that carry a trait of one of our pieces (planner.js): a listing elsewhere that
-  // starts closing changes none of these results, so it is left out of their keys.
-  const blockKey=s=>`${s.snapshot.height}|${s.snapshot.generatedAt}`;
-  const closingKey=(s,ids)=>{const traits=new Set(ids.flatMap(id=>s.items[id].slice(1)));return JSON.stringify((s.closing??[]).filter(([id])=>s.items[id].slice(1).some(idx=>traits.has(idx))));};
+  // Results depend on the block and on the listings already closing (they change between blocks): every scenario is the
+  // next block's world without them (planner.js, purchase.js), so any listing that starts closing moves floors or K.
+  const blockKey=s=>`${s.snapshot.height}|${s.snapshot.generatedAt}|${JSON.stringify(s.closing??[])}`;
   /** A result computed once the page has painted, cached by key. The last one stays on screen, marked busy, until the next
    * is ready, so a refresh never blanks it; "Computing…" shows only while none exists yet. */
   const slot=()=>({key:'',done:'',value:null});
@@ -136,8 +138,9 @@
    setTimeout(()=>{if(cache.key!==key)return;cache.value=fn();cache.done=key;if(state.tab===tab)render();},30);
   }
   const link=(s,id,text)=>{const a=n('a','',text);a.href=U.marketFind(s,id);a.target='_blank';a.rel='noopener noreferrer';return a;};
-  const trend=d=>d.lo>0?'up':d.hi<0?'down':d.lo===0&&d.hi===0?'same':'unknown',ARROW={up:'▲',down:'▼',same:'–',unknown:'↕'};
-  /** A change with its direction: arrow and colour from the bounds (both above zero: up, both below: down). */
+  const trend=U.trend,ARROW={up:'▲',down:'▼',same:'–',unknown:'↕'};
+  /** A change with its direction: arrow and colour from the bounds as shown (U.trend rounds as the figure does: both
+   * above zero: up, both below: down). */
   const moving=(text,d)=>{const t=trend(d),span=n('span',`ws-pmove ws-pmove--${t}`);span.append(n('b','ws-parrow',ARROW[t]),n('span','',text));return span;};
   const pct=b=>b.lo===b.hi?`+${b.lo}%`:`+${b.lo}–${b.hi}%`;
   const byNumber=s=>{const m=new Map(Object.entries(s.items).map(([id,r])=>[r[0],id]));return x=>m.get(x);};
@@ -235,8 +238,8 @@
    const held=mine();buyMore.hidden=true;buyCount.textContent='';
    if(!held.length){buyOut.replaceChildren(n('p','ws-muted',c.needHoldings));return;}
    if(['ended','closed'].includes(R.rewardPhase(s.snapshot).state)){buyOut.replaceChildren(n('p','ws-muted',c.ended));return;}
-   // The ranking never reads the closing listings (NakaPortfolio.rank): it is kept for the block, and the listings that
-   // started closing since are only filtered out here.
+   // Each listing's effect is computed in the next block's world (NakaPortfolio.rank), so the ranking is keyed on the closing
+   // listings too; the ones closing are also left out of the rows, since nobody can buy them.
    const key=`${blockKey(s)}|${held.join()}`,closing=closingSet(s);
    if(rankCache.key!==key)rankCache={key,rows:H.rank(s,held).filter(x=>x.impact.allocation.delta.lo>0)};
    const value=x=>x.impact.allocation.delta.lo/x.price;
@@ -245,8 +248,14 @@
    if(!rows.length){buyOut.replaceChildren(n('p','ws-muted',c.buyNone));return;}
    const SHOW=15,shown=state.buyAll?rows:rows.slice(0,SHOW);
    buyOut.replaceChildren(...shown.map(x=>{const a=x.impact.allocation,card=n('article','ws-pbuy'),text=n('div',''),per=value(x)*100000;
-    text.append(n('strong','',`#${numberOf(s,x.id)} · ${btc(x.price)} BTC`),n('span','ws-pgain',c.buyGain(U.shn(a.delta))),n('small','',a.pieceCounts?c.buySplit(delta(a.others.delta),U.shn(a.piece)):c.buyNoWeek),n('small','',c.buyRate(U.shn({lo:per,hi:per}))));
-    const go=link(s,x.id,c.buyLink);go.className='ws-buy';go.dataset.focus=`buy:${x.id}`;card.append(api.image(x.id,'buy'),text,go);return card;}));
+    // The number and ask, then on the same line the weight after the sale and the Sub tier, as on the listing cards.
+    const shownWeight=x.impact.scenario?.state==='ready'?x.impact.scenario.result:null,media=n('span','ws-pbuy-media'),badge=n('span',`shn-badge shn-badge--grid shn-t-${root.ShnakasTier.tierOf(shownWeight)}`);badge.dataset.shnId=x.id;badge.dataset.shnPriors='';badge.tabIndex=0;badge.title=c.buyLink;
+    const weight=n('span','shn-badge__weight');weight.append(n('span','shn-badge__txt',shownWeight?root.ShnakasRules.formatWeight(shownWeight):'—'));badge.append(weight);
+    const tier=root.NakaPurchase.numberBadge(numberOf(s,x.id),I.pick(api.lang()));if(tier){tier.classList.add('naka-number-badge--inline');badge.append(tier);}
+    const title=n('div','ws-pbuy-title');title.append(n('strong','',`#${numberOf(s,x.id)} · ${btc(x.price)} BTC`),badge);
+    text.append(title,n('span','ws-pgain',c.buyGain(U.shn(a.delta))),n('small','',a.pieceCounts?c.buySplit(delta(a.others.delta),U.shn(a.piece)):c.buyNoWeek),n('small','',c.buyRate(U.shn({lo:per,hi:per}))));
+    const go=link(s,x.id,c.buyLink);go.className='ws-buy';go.dataset.focus=`buy:${x.id}`;
+    media.append(api.image(x.id,'buy'));card.append(media,text,go);return card;}));
    buyMore.hidden=rows.length<=SHOW;buyMore.textContent=state.buyAll?c.showLess:c.showAll(rows.length);
   }
 
@@ -259,7 +268,7 @@
    // Every target's own plan takes a moment with many pieces: the page answers first, the table follows. The rows keep the
    // inputs they were computed from, so rows still on screen while newer ones compute stay consistent; only those (not
    // "Computing…") are marked busy.
-   compute(rowsCache,`${blockKey(s)}|${held.join()}|${extra.join()}|${closingKey(s,[...held,...extra])}`,'plan',()=>({rows:PL.targetPlans(s,{mine:held,mates:extra}),s,held,extra}));
+   compute(rowsCache,`${blockKey(s)}|${held.join()}|${extra.join()}`,'plan',()=>({rows:PL.targetPlans(s,{mine:held,mates:extra}),s,held,extra}));
    const v=rowsCache.value,busy=rowsCache.done!==rowsCache.key;planOut.setAttribute('aria-busy',String(busy&&v!==null));
    if(v===null){planBar.hidden=true;jointOut.replaceChildren();planOut.replaceChildren(n('p','ws-muted',c.running));return;}
    const rows=v.rows,reachable=rows.filter(r=>r.state==='reachable');
@@ -357,7 +366,7 @@
     box.append(sum,gains,jointSteps(c,s,t),n('p','ws-pnote',kText(s,t.K.after)));
    }
    const left=t.targets.filter(x=>x.state!=='reached');
-   if(left.length){const ul=n('ul','ws-pleft');for(const x of left){const li=n('li','',x.state==='conflict'?c.conflict(x.number):c.capped(x.number,x.best??x.before.lo.weight));
+   if(left.length){const ul=n('ul','ws-pleft');for(const x of left){const li=n('li','',x.state==='conflict'?c.conflict[x.reason](x.number):c.capped(x.number,x.best??x.before.lo.weight));
      if(x.state==='capped')for(const w of x.why)li.append(n('small','',whyText(c,w)));ul.append(li);}box.append(ul);}
    jointOut.replaceChildren(box);
   }
@@ -376,7 +385,7 @@
   function lockPanel(c,s){
    paintExtras(c,s,lockExtras);
    const held=mine(),extra=extraIds(),list=[...held,...extra];if(!list.length){lockOut.replaceChildren(n('p','ws-muted',c.needHoldings));return;}
-   const key=`${blockKey(s)}|${list.join()}|${closingKey(s,list)}`;if(lockCache.key!==key)lockCache={key,groups:PL.lockGroups(PL.lockTraits(s,list)),s};
+   const key=`${blockKey(s)}|${list.join()}`;if(lockCache.key!==key)lockCache={key,groups:PL.lockGroups(PL.lockTraits(s,list)),s};
    // Shown with the snapshot they were computed on: a listing closing elsewhere since leaves them as they are.
    const g=lockCache.groups,out=[n('p','ws-pscope',c.scope(held.length,extra.length)),lockTable(c,lockCache.s,g)];
    if(g.far.length>FAR_SHOWN){const more=n('button','ws-pselect-btn ws-pshow',state.lockAll?c.lockShowLess:c.lockShowAll(g.far.length));more.type='button';more.dataset.focus='traits';more.addEventListener('click',()=>{state.lockAll=!state.lockAll;render();});out.push(more);}
@@ -393,7 +402,8 @@
    // and the group to post it in are in view at once; the first toggle starts from what is shown.
    const open=state.lockOpen??new Set(far.slice(0,1).map(t=>t.idx));
    const toggle=idx=>{const next=new Set(open);if(!next.delete(idx))next.add(idx);state.lockOpen=next;render();};
-   // Already ours is a status, shown only when some trait is; the other two groups say why they are empty.
+   // Already ours is a status (a row there may still carry keep-listed advice), shown only when some trait is; the other
+   // two groups say why they are empty.
    const groups=[['can',c.monoCan,can,c.monoNoneCan],...(have.length?[['have',c.monoHave,have,null]]:[]),['far',c.monoFar,far,c.monoNoneFar]];
    for(const [kind,title,rows,none] of groups){
     const body=n('tbody',''),head=n('tr','ws-pgroup'),th=n('th','',title);th.colSpan=COLS.length;th.scope='rowgroup';th.append(n('span','',c.traitCount(rows.length)));head.append(th);body.append(head);
@@ -411,18 +421,21 @@
   }
   /** A trait's row: its value (type under it), ours / all its pieces, the others' open listings, the pieces missing (where a
    * private deal is needed), the bonus now → once ours and whether it holds, the cost with what it buys, and our weekly
-   * change. A trait buying makes ours shows its way: the listings bought and ours reclaimed or, with neither, one of ours
-   * listed at the line (keepListed: what puts it in that group). One needing a private deal shows the listings to buy
-   * first; one already ours has neither cost nor change. */
+   * change. The figures are those of the way lockGroups ranks the row by: with keep-listed advice (planner.js gives it only
+   * when keeping one of ours listed at the line beats owning the trait plainly) the bonus and weekly change are the
+   * kept-listed ones, marked "keep #n listed"; otherwise the plain ones. A trait buying makes ours shows the listings
+   * bought and ours reclaimed; one already ours has cost and change only with that advice; one needing a private deal
+   * shows the listings to buy first. */
   function lockRow(c,t,kind,missing){
    const tr=n('tr','ws-prow is-expandable'),o=t.owned,m=t.monopoly,trait=n('td',''),bonus=n('td','ws-pbonus'),dash=()=>n('td','ws-pnum ws-pmuted','—');
    trait.append(n('span','',t.value),n('small','',typeName(t.type)));
    // A listing kept at the line holds the others only while it stays at or above the line, which follows the collection floor.
-   const keep=kind==='can'&&!m.buy.length&&!m.reclaim.length?m.keepListed:null,after=keep?{p:keep.after,stable:false}:o.state==='ready'?{p:o.after,stable:o.stable}:null;
+   const keep=kind!=='far'&&m.keepListed?m.keepListed:null,after=keep?{p:keep.after,stable:false}:o.state==='ready'?{p:o.after,stable:o.stable}:null;
    if(after===null)bonus.append(n('span','',`${pct(t.bonus)} → —`),n('small','',c.bonusNoFloor));
    else bonus.append(n('span',`ws-pmove--${trend({lo:after.p.lo-t.bonus.hi,hi:after.p.hi-t.bonus.lo})}`,`${pct(t.bonus)} → ${pct(after.p)}`),n('small','',after.stable?c.bonusStable:c.bonusMoves));
-   const cost=kind==='can'?costCell(m.buy.length?`${btc(m.cost)} BTC`:c.planFree,keep?c.keepLine(keep.number):c.planBuys(m.buy.length,m.reclaim.length)):kind==='far'&&t.buyable.length?costCell(`${btc(t.buyable.reduce((a,x)=>a+x.price,0))} BTC`,c.buyFirst(t.buyable.length)):dash();
-   const gain=kind==='can'?gainCell(keep?keep.total:m.total):dash();
+   const how=[kind==='can'?c.planBuys(m.buy.length,m.reclaim.length):'',keep?c.keepMark(keep.number):''].filter(Boolean).join(' · ');
+   const cost=kind==='can'?costCell(m.buy.length?`${btc(m.cost)} BTC`:c.planFree,how):kind==='have'&&keep?costCell(c.planFree,how):kind==='far'&&t.buyable.length?costCell(`${btc(t.buyable.reduce((a,x)=>a+x.price,0))} BTC`,c.buyFirst(t.buyable.length)):dash();
+   const gain=kind==='can'?gainCell(keep?keep.total:m.total):kind==='have'&&keep?gainCell(keep.total):dash();
    tr.append(trait,n('td','ws-pnum',`${t.held} / ${t.supply}`),n('td','ws-pnum',String(t.buyable.length)),kind==='far'?n('td','ws-pnum ws-pmiss',String(missing(t))):dash(),bonus,cost,gain);
    return tr;
   }
@@ -439,17 +452,21 @@
    if(m.buy.length)lockLine(box,c.lockBuy,'ws-plock-cell',m.buy.map(x=>link(s,x.id,`#${x.number} · ${btc(x.price)} BTC`)));
    if(m.reclaim.length)lockLine(box,c.monoReclaim,'ws-plock-cell',m.reclaim.map(x=>link(s,x.id,`#${x.number}`)));
    if(m.reclaiming.length)lockLine(box,c.monoReclaiming,'ws-plock-cell',m.reclaiming.map(x=>n('span','',`#${x.number}`)));
-   // The row's weekly total split: our pieces' change, and what the pieces bought earn from next week.
-   if(m.total&&m.buy.length)lockLine(box,c.lockCols.week,'ws-plock-cell',[n('span','',laterWeeks(s)?c.monoSplit(delta(m.change.delta),m.buy.length,week(m.bought)):c.boughtNoWeek(m.buy.length))]);
+   // The row's weekly total split (of the kept-listed way when advised, as the row shows it): our pieces' change, and what
+   // the pieces bought earn from next week.
+   const way=m.keepListed?m.keepListed:m;
+   if(way.total&&m.buy.length)lockLine(box,c.lockCols.week,'ws-plock-cell',[n('span','',laterWeeks(s)?c.monoSplit(delta(way.change.delta),m.buy.length,week(way.bought)):c.boughtNoWeek(m.buy.length))]);
    box.append(n('p','ws-plock-note',lasting(c,t)));
    if(m.keepListed){const k=m.keepListed,line=btc(k.price),advice=k.listed===null?c.keepNew(k.number,line,btc(k.floor),k.multiple.num/k.multiple.den):k.listed>=k.price?c.keepAsk(k.number,btc(k.listed),line):c.keepRaise(k.number,btc(k.listed),line);
     // Compared with owning it without that listing: the plain total, or, with no listing to remove, our figures unchanged.
-    box.append(n('p','ws-plock-note ws-plock-advice',advice),n('p','ws-plock-note',c.keepWhy(k.number,delta(k.total),delta(m.total?m.total:{lo:0,hi:0}))));}
+    // A piece listed anew for it also loses the whole listing week, what it accrued this week included (not one kept listed).
+    box.append(n('p','ws-plock-note ws-plock-advice',advice),n('p','ws-plock-note',c.keepWhy(k.number,delta(k.total),delta(m.total?m.total:{lo:0,hi:0}),k.listed===null)));}
    return box;
   }
   /** How long the bonus once owned lasts: 20+ pieces with no listing hold +100% whatever the floors do; a smaller trait,
    * scored on its last three sales, keeps it while the collection floor stays within `owned.holds` (no range when its
-   * sales give none). */
+   * sales give none). Outside that range the tier may change: it drops or rises for sure when its sales score exactly
+   * there, but same-block ties can make it a range instead, so the copy says "may". */
   function lasting(c,t){
    const o=t.owned,p=pct(o.after);if(o.stable)return c.monoStable;if(o.holds===null)return c.monoHoldsUnknown(p);
    const {min,max}=o.holds;if(min===null&&max===null)return c.monoHoldsAll(p);
@@ -486,12 +503,18 @@
 
   // ---------------------------------------------------------------- Simulate.
   const sats=text=>/^\d+(\.\d{1,8})?$/.test(text)?Math.round(Number(text)*1e8):null;
-  function simResult(c,s,x,listedId){
-   const box=n('div','ws-psim-res');if(x.state!=='ready'){box.append(n('p','ws-pmuted','—'));return box;}
-   const ch=x.change,num=numberOf(s,ch.id);box.append(n('p','ws-psim-title',ch.kind==='list'?c.simHead.list(num,btc(ch.price)):c.simHead[ch.kind](num)));
-   if(ch.kind==='list'){const safe=x.safe;box.append(n('p','ws-pkey',safe.state==='range'?c.safeRange:safe.state==='none'?c.safeNone:c.safeRuns(safe.runs.map(r=>c.safeRun(btc(r.min),r.below===null?null:btc(r.below))).join(c.sep))));}
+  /** One simulation's result for piece `id`; `listedId` is the piece when it is my holding being listed (its reward accrued
+   * this week is then named as lost). A listing already closing takes only the action it is closing by (state 'closing'). */
+  function simResult(c,s,id,x,listedId){
+   const box=n('div','ws-psim-res'),num=numberOf(s,id);
+   if(x.state==='closing'){box.append(n('p','ws-pmuted',c.simClosing[x.closing](num)));return box;}
+   if(x.state!=='ready'){box.append(n('p','ws-pmuted','—'));return box;}
+   const ch=x.change;box.append(n('p','ws-psim-title',ch.kind==='list'?c.simHead.list(num,btc(ch.price)):c.simHead[ch.kind](num)));
+   if(ch.kind==='list'){const safe=x.safe;box.append(n('p','ws-pkey',safe.state==='range'?c.safeRange:safe.state==='none'?c.safeNone:safe.state==='no-floor'?c.safeNoFloor:c.safeRuns(safe.runs.map(r=>c.safeRun(btc(r.min),r.below===null?null:btc(r.below))).join(c.sep))));}
    const row=listedId?api.rewardRow(listedId):null,self=x.mine.rows.find(r=>r.id===ch.id);
    if(ch.kind==='list'&&self)box.append(n('p','ws-pdown',c.simSelf(num,week(self.weeklyBefore),row?.status==='earning'&&row.amount?api.format(row.amount):null)));
+   // A holding reclaimed earns again from the week after the reclaim; in the last reward week no week is left.
+   if(ch.kind==='cancel'&&self)box.append(n('p','ws-pmuted',laterWeeks(s)?c.simReclaim(num):c.simReclaimNoWeek(num)));
    box.append(n('p','',c.simK(I.int(x.K.before.lo),I.int(x.K.after.lo),x.down.length,x.up.length)));
    if(x.mine.rows.length){
     box.append(moving(c.simWeek(week(x.mine.before),week(x.mine.after),delta(x.mine.delta)),x.mine.delta));
@@ -506,15 +529,18 @@
   function simPanel(c,s){
    anyLabel.firstChild.textContent=c.simAny;anyInput.placeholder=c.simAnyPlaceholder;anyPriceLabel.firstChild.textContent=c.simPrice;anyPrice.placeholder=c.simPricePlaceholder;anySale.textContent=c.simSale;anyCancel.textContent=c.simCancel;
    simTitle.textContent=c.simMine;simClearAll.textContent=c.clearAll;for(const f of [anyField,anyPriceField]){f.x.title=c.clear;f.x.setAttribute('aria-label',c.clear);f.sync();}
-   const held=mine(),offers=new Map(s.offers);
-   // Any number: listed → sale / reclaim; unlisted → an ask field with quick asks.
+   const held=mine(),offers=new Map(s.offers),closing=new Map(s.closing??[]);
+   // A listing already closing closes the way it is closing (planner.js): only that action can be assumed of it.
+   const closingTag=id=>closing.has(id)?` · ${closing.get(id)==='sale'?c.closingSale:c.closingCancel}`:'',canAssume=(id,action)=>!closing.has(id)||closing.get(id)===action;
+   // Any number: listed → sale / reclaim (only the one it is closing by, if closing); unlisted → an ask field with quick asks.
    const q=anyInput.value.trim()?globalThis.ShnakasLookup.query(s,anyInput.value.trim()):null,anyId=q?.state==='found'?q.id:null,anyListed=anyId!==null&&offers.has(anyId);
-   anyPriceLabel.hidden=anyQuick.hidden=!anyId||anyListed;anySale.hidden=anyCancel.hidden=!anyListed;anyInfo.textContent=anyId?(anyListed?c.simListedAt(btc(offers.get(anyId))):`#${numberOf(s,anyId)} · ${R.formatWeight(R.evaluateSnapshot(s,anyId))}`):'';
+   anyPriceLabel.hidden=anyQuick.hidden=!anyId||anyListed;anySale.hidden=!anyListed||!canAssume(anyId,'sale');anyCancel.hidden=!anyListed||!canAssume(anyId,'cancel');
+   anyInfo.textContent=anyId?(anyListed?c.simListedAt(btc(offers.get(anyId)))+closingTag(anyId):`#${numberOf(s,anyId)} · ${R.formatWeight(R.evaluateSnapshot(s,anyId))}`):'';
    anySale.setAttribute('aria-pressed',String(state.anyAction==='sale'));anyCancel.setAttribute('aria-pressed',String(state.anyAction==='cancel'));
    if(anyId&&!anyListed)paintQuick(anyQuick,anyPrice,s,()=>{anyPriceField.sync();clearTimeout(anyTimer);render();});
    if(!anyId)anyOut.replaceChildren();
-   else if(anyListed)anyOut.replaceChildren(...(state.anyAction?[simResult(c,s,PL.simulate(s,{kind:state.anyAction,id:anyId},held),null)]:[]));
-   else{const text=anyPrice.value.trim(),p=sats(text);anyOut.replaceChildren(...(text===''?[]:p===null?[n('p','ws-pdown',c.simBad)]:[simResult(c,s,PL.simulate(s,{kind:'list',id:anyId,price:p},held),held.includes(anyId)?anyId:null)]));}
+   else if(anyListed)anyOut.replaceChildren(...(state.anyAction?[simResult(c,s,anyId,PL.simulate(s,{kind:state.anyAction,id:anyId},held),null)]:[]));
+   else{const text=anyPrice.value.trim(),p=sats(text);anyOut.replaceChildren(...(text===''?[]:p===null?[n('p','ws-pdown',c.simBad)]:[simResult(c,s,anyId,PL.simulate(s,{kind:'list',id:anyId,price:p},held),held.includes(anyId)?anyId:null)]));}
    // My holdings: one row each, built when the set or the language changes; typed asks are kept per piece.
    simHead.hidden=!held.length;simClearAll.disabled=![...state.simPrice.values()].some(v=>v!=='')&&!state.simAction.size;
    for(const id of [...state.simPrice.keys()])if(!held.includes(id))state.simPrice.delete(id);
@@ -527,12 +553,12 @@
     sale.addEventListener('click',()=>{state.simAction.set(id,'sale');render();});cancel.addEventListener('click',()=>{state.simAction.set(id,'cancel');render();});
     row.append(api.image(id,'sim'),info,label,quick,sale,cancel,out);simRows.set(id,{row,info,input,label,quick,sale,cancel,out,changed,f});return row;}));}
    for(const id of held){const r=simRows.get(id),listed=offers.has(id);
-    r.info.replaceChildren(n('strong','',`#${numberOf(s,id)}`),n('small','',listed?`${c.simListedSelf} · ${btc(offers.get(id))} BTC`:R.formatWeight(R.evaluateSnapshot(s,id))));
+    r.info.replaceChildren(n('strong','',`#${numberOf(s,id)}`),n('small','',listed?`${c.simListedSelf} · ${btc(offers.get(id))} BTC${closingTag(id)}`:R.formatWeight(R.evaluateSnapshot(s,id))));
     r.label.firstChild.textContent=c.simPrice;r.input.placeholder=c.simPricePlaceholder;r.f.x.title=c.clear;r.f.x.setAttribute('aria-label',c.clear);r.f.sync();r.sale.textContent=c.simSale;r.cancel.textContent=c.simCancel;
-    r.label.hidden=r.quick.hidden=listed;r.sale.hidden=r.cancel.hidden=!listed;r.row.classList.toggle('is-focus',state.focus===id);
+    r.label.hidden=r.quick.hidden=listed;r.sale.hidden=!listed||!canAssume(id,'sale');r.cancel.hidden=!listed||!canAssume(id,'cancel');r.row.classList.toggle('is-focus',state.focus===id);
     r.sale.setAttribute('aria-pressed',String(state.simAction.get(id)==='sale'));r.cancel.setAttribute('aria-pressed',String(state.simAction.get(id)==='cancel'));
-    if(listed){const action=state.simAction.get(id);r.out.replaceChildren(...(action?[simResult(c,s,PL.simulate(s,{kind:action,id},held),null)]:[]));}
-    else{paintQuick(r.quick,r.input,s,()=>{r.f.sync();r.changed();});const text=state.simPrice.get(id)??'',p=sats(text);r.out.replaceChildren(...(text===''?[]:p===null?[n('p','ws-pdown',c.simBad)]:[simResult(c,s,PL.simulate(s,{kind:'list',id,price:p},held),id),n('p','ws-pnote',c.simOtc)]));}
+    if(listed){const action=state.simAction.get(id);r.out.replaceChildren(...(action?[simResult(c,s,id,PL.simulate(s,{kind:action,id},held),null)]:[]));}
+    else{paintQuick(r.quick,r.input,s,()=>{r.f.sync();r.changed();});const text=state.simPrice.get(id)??'',p=sats(text);r.out.replaceChildren(...(text===''?[]:p===null?[n('p','ws-pdown',c.simBad)]:[simResult(c,s,id,PL.simulate(s,{kind:'list',id,price:p},held),id),n('p','ws-pnote',c.simOtc)]));}
    }
   }
 
@@ -542,6 +568,7 @@
    // it back by its key.
    const focused=section.contains(document.activeElement)?document.activeElement.dataset.focus:undefined;
    const c=C(),s=snap();title.textContent=c.title;basis.textContent=c.basis;goalText.textContent=c.goal[state.tab];howText.textContent=c.how[state.tab];
+   if(state.tab==='buy'){const rules=root.ShnakasRules,w=rules.startWeek(s.snapshot.height+1);if(w<rules.RULES.weeks){const n=String(w+1);howText.textContent=c.how.buy.includes('下周')?c.how.buy.replace('下周起','第 '+n+' 周起'):c.how.buy.replace('next week','week '+n);}}
    for(const [k,b] of tabButtons){b.textContent=c.tabs[k];b.setAttribute('aria-selected',String(k===state.tab));}
    for(const [k,p] of panels)p.hidden=k!==state.tab;
    ({buy:buyPanel,plan:planPanel,lock:lockPanel,sim:simPanel})[state.tab](c,s);
