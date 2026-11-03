@@ -27,7 +27,9 @@ test('Every listed candidate equals the shared sale engine and meets the selecte
  assert.equal(JSON.stringify(snap),original);
 });
 test('Comparison scenarios remain independent, including reverse evaluation order',()=>{
- const chosen=E.examples(snap,model);assert.equal(chosen.length,4);
+ // Four listings with four different after-sale weights, cheapest first.
+ const chosen=[];for(const e of E.candidates(snap,model))if(e.sale.state==='ready'&&!chosen.some(id=>model.get(id).result.lo.weight===e.result.lo.weight)){chosen.push(e.id);if(chosen.length===4)break;}
+ assert.equal(chosen.length,4);
  const expected=chosen.map(id=>E.entry(snap,P.create(snap),id));
  const shared=P.create(snap);chosen.slice().reverse().forEach(id=>shared.get(id));
  assert.deepEqual(chosen.map(id=>E.entry(snap,shared,id)),expected);

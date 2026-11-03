@@ -8,15 +8,15 @@
   full:'Compare already holds four Nakas. Remove one there to add another.',fullHere:'Four selected. Remove one above to add another.',
   addError:'Could not save. Try again.',
   lookup:'Add by Shielded number',find:'Add',placeholder:'Shielded number, e.g. 379',invalid:'Enter a valid Shielded number.',missing:'Not in the selected snapshot.',
-  remove:'Remove',clear:'Clear',count:n=>`${n} / 4 selected`,load:'Use example selection',
+  remove:'Remove',clear:'Clear',count:n=>`${n} / 4 selected`,load:'Use example selection',loadHint:'Best buy’s first four: the listings that add most to my week per BTC',loadNone:'No listing at this block adds to the weekly reward',
   empty:'Choose up to four Nakas to compare',emptyHint:'Use ＋ Add to Compare above, or ＋ Compare in a market inspection or the popup.',
   scroll:'Scroll sideways to see every column',preview:n=>`Enlarge Shielded #${n}`,
-  total:'Total weight',after:'After sale',holding:'Holding formula',before:'Before-sale formula',ask:'Ask · BTC',askNote:'Selected-block ask, excluding fees; not a live quote.',
+  total:'Total weight',after:'After sale',holding:'Holding formula',ask:'Ask · BTC',askNote:'Selected-block ask, excluding fees; not a live quote.',
   noFloor:'No collection floor after sale',unavailable:'Unavailable',number:'Number bonus',price:'BTC',
   traitGuide:'Trait bonuses',legend:'↑ Bonus rises · ↓ Bonus falls · ◆ Price basis changes',
   listed:'Listed',unlisted:'Unlisted',unknown:'Listing unknown',
-  independent:'Each column: one sale, other listings unchanged. Base 100% · cap 400%.',
-  limits:'Block weight, not accrued rewards. No rewards while listed.',unknownNote:'Ranges reflect missing evidence; the upper end is not guaranteed.',
+  independent:'Each column assumes only that sale; listings already selling or being reclaimed count as gone. Base 100% · cap 400%.',
+  limits:'Block weight, not accrued rewards. Listing forfeits that whole week; rewards resume the week after a reclaim.',unknownNote:'Ranges reflect missing evidence; the upper end is not guaranteed.',
   filter:'After sale ≥',any:'Any weight',filterNote:'Listed NFTs in this loaded view only. A range passes only if its lower bound meets the minimum.',
   shown:(n,t)=>`${n} / ${t} loaded`,noMatches:'No matches loaded. Browse all in Compare.',
   browse:'Market listings',browseNote:'Lowest ask first, fees excluded · hover a card for its weekly gain',
@@ -26,11 +26,14 @@
   holdings:'My holdings',holdingsNote:'Saved only on this device. You maintain it, and it can include Nakas held in other accounts.',
   
   holdingsEmpty:'Add your holdings to see your weekly allocation and how a purchase or delisting changes it.',
-  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,gainWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of each block's pool at current weights`,
+  sortLabel:'Sort',sortBy:{added:'Date added',number:'Number',weight:'Weight',week:'This week'},
+  sortHint:(by,dir)=>({added:{asc:'By date added: oldest first',desc:'By date added: newest first'},number:{asc:'Number, low to high: Sub 10, Sub 100 and Sub 1K come first',desc:'Number, high to low'},weight:{desc:'Total weight, high to low',asc:'Total weight, low to high'},week:{desc:'This week\'s SHNAKAS, most first; listed and waiting pieces come last',asc:'This week\'s SHNAKAS, least first'}})[by][dir],
+  sortReverse:' · select again to reverse',
+  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of each block's pool at current weights`,
   listedNoEarn:'Listed · earns nothing while listed',
   allocationBasis:'Official formula basis: 266,640 SHNAKAS a week shared by the weight units of all 3,333 pieces (100% = 4 units). Listed holdings earn nothing; a new holding counts from the next reward week. Not a payout guarantee.',
   boost:'Raise my weight',boostHint:'Listings that raise your weekly allocation if bought',boostEmpty:'Add holdings to use Raise my weight.',
-  forMe:'For my holdings',weeklyAfterBuy:'Weekly after buying',
+  forMe:'For my holdings · SHNAKAS / week',weeklyAfterBuy:'Weekly after buying · SHNAKAS',pieceWeek:'This NFT per week · SHNAKAS',pieceWeekHint:'What this piece earns each week once bought, at this block’s conditions; For my holdings also counts how the sale moves my other pieces',perMilli:'Per 0.001 BTC · SHNAKAS / week',perMilliHint:'For my holdings each week, per 0.001 BTC of the ask (fees excluded): the value Best buy ranks by',perMilliPieceHint:'This NFT per week, per 0.001 BTC of the ask (fees excluded): with no holdings, the value Best buy ranks by',
   affected:'Weight changes in your holdings',close:'Close',
   addHolding:'＋ My holdings',inHoldings:'✓ My holdings',holdingHint:'Add to My holdings (saved on this device)',holdingRemoveHint:'In My holdings. Select to remove it.',
   addVisible:n=>`＋ Add these ${n} Nakas to My holdings`,addRest:(n,k)=>`＋ Add the other ${n} (${k} already added)`,addedVisible:n=>`✓ All ${n} on this page are in My holdings`,openHoldings:'My holdings ↗',pieces:n=>`${n} ${n===1?'Naka':'Nakas'}`,
@@ -46,7 +49,7 @@
     ['Sell','Nobody earns that week for the piece','The seller keeps the full weeks before the listing week; the buyer starts next week','no'],
     ['Buy','Nothing, even when bought in a week’s last block','From next week','no'],
    ]},
-   {title:'Private actions · not in public records',rows:[
+   {title:'Private actions · public records cannot tell which piece',rows:[
     ['Send it to someone','Nothing','Full weeks before the send stay claimable','no'],
     ['Receive it privately','Nothing','From next week','no'],
     ['Send to yourself, or Add relay credits','Nothing: adding credits sends the piece to yourself','From next week, as before','no'],
@@ -71,9 +74,9 @@
   formulaWeek:'Weekly SHNAKAS = weight units × v × 1,008 ÷ 10⁸',formulaRate:'v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)',
   allocLines:['100% weight = 4 units; K is the units of all 3,333 catalog pieces, minted or not, listed pieces included','Weights are re-scored every block from the listings active after it; a week pays the sum of its 1,008 blocks','Matches the official weights endpoint block by block; not a payout promise'],
   rulesFormula:'Total weight = base 100% + every trait bonus + the highest number bonus, capped at 400%',traitTitle:'Trait bonus · trait floor ÷ collection floor',numberTitle:'Number bonus · highest tier only',
-  zeroRule:'A trait with no listing: at least 20 pieces +100%; fewer than 20 uses the median of its last 3 sales against the collection floor (two sales: their mean; one: that sale; none: +0%).',
+  zeroRule:'A trait with no listing: at least 20 pieces +100%; fewer than 20 takes the bonus the official data gives now (by sales, no sales or lastBlock). After an assumed sale it is worked out from the median of its last 3 sales against the collection floor (two sales: their mean; one: that sale; none: +0%); this matches the official data, but the exact method is not published.',
   scheduleRule:(start,blocks,weeks)=>`Rewards run from block ${start}, ${blocks} blocks a week for ${weeks} weeks.`,pieceRow:w=>`This Naka · ${w}`,pieceRowCancel:w=>`This Naka once delisted · ${w}`,othersRow:'Your other holdings',unchanged:'unchanged',totalRow:'Total',navRaise:'Raise weight',searchOpen:'Look up a number · Compare',subSearch:'Look up · Compare',navAbout:'About',safeTitle:'Read-only by design',forMeShort:v=>`For my holdings ${v} / week`,compareAddShort:'＋ Add',readOnlyTag:'Read-only, no signing',
-  raiseFull:'Full page ↗',raiseFullHint:'Open Raise weight on the extension page: every listing, every piece, combined plans',raiseBasis:h=>`Listings at block ${h} · fees excluded`,raiseScope:(n,list)=>`Includes ${n} added number${n===1?'':'s'}: ${list.join(', ')}${n>list.length?` and ${n-list.length} more`:''}`,raiseRunning:'Computing…',
+  raiseFull:'Full page ↗',raiseFullHint:'Open Raise weight on the extension page: every listing, every piece, combined plans',raiseBasis:h=>`Listings at block ${h} · fees excluded`,raiseScope:(n,list)=>`Includes ${n} added number${n===1?'':'s'}: ${list.join(', ')}${n>list.length?` and ${n-list.length} more`:''}`,raiseStageListings:(i,n)=>`listings ${i}/${n}`,raiseStagePlans:(i,n)=>`plans ${i}/${n}`,raiseStageTraits:(i,n)=>`traits ${i}/${n}`,
   raiseEmpty:'Add your holdings first: then this tab shows which listing to buy and how to reach 400%.',raiseEnded:'The reward period is over; no week is left to earn.',
   raiseBuyTitle:'Best buy',raisePlanTitle:'Reach 400%',raiseLockTitle:'Own a trait',raiseSimTitle:'Simulate',raiseAllBuys:n=>`All ${n} ↗`,raiseAllPlans:n=>`All ${n} ↗`,raiseAllTraits:n=>`All ${n} ↗`,
   raiseBuyNone:'No listing raises your weekly SHNAKAS right now.',raisePlanDone:'Nothing to take to 400%: every piece is there already or being sold.',raisePlanNone:'Current listings cannot take any piece to 400%.',raisePlanAuto:n=>`${n===1?'One piece reaches':`${n} pieces reach`} 400% once listings already closing close: nothing to do.`,
@@ -85,7 +88,7 @@
   compareEmptyPopup:'Nothing to compare yet',compareHowPopup:'Tap here to enter numbers (comma- or space-separated), or add from a market inspection.',compareOpen:'Full comparison with traits ↗',
   lookupHow:'Listed Nakas show their after-sale weight; unlisted ones show their holding weight.',blockChip:h=>`Block ${h}`,sharedTrait:n=>`Shared by ${n} held ${n===1?'Naka':'Nakas'}`,showAll:'Show all',zeroSupplement:'Zero-listing supplement',
   addHoldingTitle:'Add a holding',addCompareTitle:'Add to Compare',confirmAdd:'Add',cancel:'Cancel',
-  expandAll:n=>`Show all ${n}`,collapse:'Show less',networkTitle:'Block tab · network output',networkLines:['Full output: the week’s output if all 3,333 pieces earned — the official per-piece accruals summed, listed and unminted ones included. Its gap to the rule’s 266,640 a week is per-block rounding.','Earnable (≤): full output less forfeited, the most holders can claim.','Forfeited (≥): what listing, moving or not minting left unclaimable; never issued. A private move cannot be matched to a piece, so it is a lower bound; its share of the full output sits under it. The bar is earnable on the left, forfeited on the right.','Claimed: public claim receipts for that week. It shows once the week ends and can still grow; it is neither the claimable maximum nor an unclaimed balance.'],tileHint:n=>`Click to inspect #${n}`,tileWeekly:'Per week',tileRemaining:'Remaining',tileAccrued:'This week',tileOpen:'Click to inspect',noReward:'Not earning',blockLabel:'Block',floorBtc:'Floor · BTC',listingsShort:'Listings',rewardWeekShort:'Reward week',weeksOver:'Over',weeksBefore:'Not started',weekBlocksHint:'Blocks into this week / 1,008 a week',liveChecking:'Checking',livePausedShort:'Paused',weekOf:(w,n)=>`Week ${w} / ${n}`,floorLabel:'Floor',scheduleCard:'Reward schedule',weeksDoneShort:(a,b)=>`${a} / ${b} weeks done`,blocksInto:(a,b)=>`${a} / ${b} blocks`,per100Week:'100% · week',per100Hint:'What 100% weight earns in a full week at the current network weight.',listedShort:'Listed · not earning',
+  expandAll:n=>`Show all ${n}`,collapse:'Show less',networkTitle:'Block tab · network output',networkLines:['Full output: the week’s output if all 3,333 pieces earned — the official per-piece accruals summed, listed and unminted ones included. Its gap to the rule’s 266,640 a week is per-block rounding.','Earnable (≤): full output less forfeited, the most holders can claim.','Forfeited (≥): what listing, moving or not minting left unclaimable; it goes to no one else, and what becomes of it is not stated officially. A private move cannot be matched to a piece, so it is a lower bound; its share of the full output sits beside it. The bar is earnable on the left, forfeited on the right.','Claimed: public claim receipts for that week. It shows once the week ends and can still grow; it is neither the claimable maximum nor an unclaimed balance.'],tileHint:n=>`Click to inspect #${n}`,tileWeekly:'Per week',tileRemaining:'Remaining',tileAccrued:'This week',tileOpen:'Click to inspect',noReward:'Not earning',blockLabel:'Block',floorBtc:'Floor · BTC',listingsShort:'Listings',rewardWeekShort:'Reward week',weeksOver:'Over',weeksBefore:'Not started',weekBlocksHint:'Blocks into this week / 1,008 a week',liveChecking:'Checking',updating:'Updating',updatingTip:h=>`Reading block ${h}: the figures are current once it is in`,livePausedShort:'Paused',weekOf:(w,n)=>`Week ${w} / ${n}`,floorLabel:'Floor',scheduleCard:'Reward schedule',weeksDoneShort:(a,b)=>`${a} / ${b} weeks done`,blocksInto:(a,b)=>`${a} / ${b} blocks`,per100Week:'100% · week',per100Hint:'What 100% weight earns in a full week at the current network weight.',listedShort:'Listed · not earning',
   buyLead:n=>`If you buy #${n}`,
   tabListings:'Listings',aboutTitle:'About',aboutSafe:'Read-only and safe',aboutAlloc:'How the weekly figure is calculated',aboutRules:'Weight rules',aboutData:'Data and privacy',
   
@@ -96,7 +99,7 @@
   openSource:'Open source ↗',weekUnit:'SHNAKAS / week',
   manage:'Holdings ↗',manageHint:'Open My holdings on the full page. Add and remove stay on that page',listedTag:'Listed',blockBasis:h=>`Block ${h} · official weights basis`,
   copyAll:'Copy all numbers',copyAllDone:n=>`Copied ${n} number${n===1?'':'s'}`,copyAllFailed:'Copy failed',copyAllHint:'Numbers only, comma-separated: paste them into Add to import',
-  wantPrefix:'Want to buy',wantCopy:'Copy wanted post',wantCopied:n=>`Copied a wanted post for ${n}: paste it in the group`,wantHint:'“Want to buy” and the numbers, comma-separated: post it in the group; pasted into Add, the numbers import',tgWanted:'Post it in the Naka Telegram group ↗',tgJoin:'Join the Telegram group ↗',
+  wantPrefix:'Want to buy',wantCopy:'Copy wanted post',wantCopied:n=>`Copied a wanted post for ${n}: paste it in the group`,wantHint:'“Want to buy” and the numbers, comma-separated: post it in the group; pasted into Add, the numbers import',tgWanted:'Post it in the Naka Telegram Chinese group ↗',guideLink:'How SHORD works ↗',tgJoin:'Join the Naka Telegram Chinese group ↗',
   
   pageHoldings:'Held on this page',pageWeekly:n=>`${n} ${n===1?'Naka':'Nakas'} on this page`,myHoldingsLine:(n,v)=>`My holdings: ${n} · ${v} SHNAKAS / week`,
   avgWeight:(avg,now)=>`This week’s average weight ${avg}% (official accumulator) · now ${now}`,weightDetail:n=>`Weight breakdown of #${n}`,hoverWeight:'Hover the weight badge on a Naka for its breakdown, as on the market; select the rest of the card to simulate listing it.',
@@ -121,15 +124,15 @@
   full:'比较已满四枚，在比较页移除一枚后才能加入新的。',fullHere:'已选满四枚，移除上方一枚后可继续加入。',
   addError:'保存失败，请重试。',
   lookup:'输入 Shielded 编号加入比较',find:'加入比较',placeholder:'输入 Shielded 编号，如 379',invalid:'请输入有效的 Shielded 编号。',missing:'所选区块快照未收录该编号。',
-  remove:'移除',clear:'清空',count:n=>`已选 ${n} / 4`,load:'载入示例',
+  remove:'移除',clear:'清空',count:n=>`已选 ${n} / 4`,load:'载入示例',loadHint:'“买哪单划算”的前四单：每 BTC 给我的持仓每周加得最多的挂单',loadNone:'这个区块没有能增加每周奖励的挂单',
   empty:'选择至多四枚 Naka 进行比较',emptyHint:'点击上方“＋ 加入比较”输入编号，或在市场悬浮明细、插件弹窗中加入。',
   scroll:'横向滑动查看全部列',preview:n=>`放大 Shielded #${n}`,
-  total:'总权重',after:'成交后',holding:'持有公式值',before:'成交前公式值',ask:'挂单价格 · BTC',askNote:'所选区块挂单价格，不含费用；不是实时报价。',
+  total:'总权重',after:'成交后',holding:'持有公式值',ask:'挂单价格 · BTC',askNote:'所选区块挂单价格，不含费用；不是实时报价。',
   noFloor:'成交后集合地板不存在',unavailable:'无法计算',number:'编号加成',price:'BTC',
   traitGuide:'特征加成',legend:'↑ 加成上升 · ↓ 加成下降 · ◆ 价格依据变化',
   listed:'已挂单',unlisted:'未挂单',unknown:'挂单状态未知',
-  independent:'每列仅成交该挂单，其他挂单不变。含基础 100%，封顶 400%。',
-  limits:'区块权重，非累计奖励；挂单期间奖励为零。',unknownNote:'区间包含缺失的成交依据，不保证达到上限。',
+  independent:'每列只假设成交这一单；已在成交或撤单中的挂单按离开市场计算。含基础 100%，封顶 400%。',
+  limits:'区块权重，非累计奖励；挂单那一周整周没有奖励，撤单后下一周起恢复。',unknownNote:'区间包含缺失的成交依据，不保证达到上限。',
   filter:'成交后 ≥',any:'不限权重',filterNote:'仅筛选当前已加载的挂单 NFT；区间按下限判断是否达标。',
   shown:(n,t)=>`${n} / ${t} 已加载`,noMatches:'已加载项无匹配，请在比较页查看全部快照挂单。',
   browse:'市场挂单',browseNote:'挂价从低到高，不含手续费 · 悬停查看买入后的每周增量',
@@ -139,11 +142,14 @@
   holdings:'我的持仓',holdingsNote:'只保存在本机，由你手动维护，可以包含其他账号里的 NFT。',
   
   holdingsEmpty:'添加你的持仓，查看每周分配，以及买入或撤单后的变化。',
-  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,gainWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`按当前权重占每块奖池 ${v}`,
+  sortLabel:'排序',sortBy:{added:'加入时间',number:'编号',weight:'权重',week:'本周'},
+  sortHint:(by,dir)=>({added:{asc:'按加入持仓的时间：先加的在前',desc:'按加入持仓的时间：后加的在前'},number:{asc:'编号从小到大：Sub10、Sub100、Sub1K 排在最前',desc:'编号从大到小'},weight:{desc:'总权重从高到低',asc:'总权重从低到高'},week:{desc:'本周 SHNAKAS 从多到少，挂单中和还在等待的排在最后',asc:'本周 SHNAKAS 从少到多'}})[by][dir],
+  sortReverse:' · 再点一次反过来',
+  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`按当前权重占每块奖池 ${v}`,
   listedNoEarn:'挂单中 · 挂单期间没有奖励',
   allocationBasis:'按官方公式：每周 266,640 SHNAKAS 按全部 3,333 枚的权重单位分配（100% = 4 单位）。挂单中的持仓没有奖励；新买入的持仓从下一个奖励周开始有奖励。不构成发放承诺。',
   boost:'增加我的权重',boostHint:'买入后能增加你每周分配的挂单',boostEmpty:'先加入持仓，才能使用“增加我的权重”。',
-  forMe:'对我的持仓',weeklyAfterBuy:'买入后每周',
+  forMe:'对我的持仓 · SHNAKAS / 周',weeklyAfterBuy:'买入后每周 · SHNAKAS',pieceWeek:'该 NFT 每周产量 · SHNAKAS',pieceWeekHint:'买下后这一枚自己每周的产量，按这一区块的条件；“对我的持仓”还算上成交对我其他持仓的影响',perMilli:'每 0.001 BTC · SHNAKAS / 周',perMilliHint:'挂单价格每 0.001 BTC 换来的我的持仓每周增量（不含费用）：“买哪单划算”按它排序',perMilliPieceHint:'挂单价格每 0.001 BTC 换来的该 NFT 每周产量（不含费用）：没有持仓时“买哪单划算”按它排序',
   affected:'持仓中权重有变化的',close:'关闭',
   addHolding:'＋ 我的持仓',inHoldings:'✓ 我的持仓',holdingHint:'添加到我的持仓（只保存在本机）',holdingRemoveHint:'已在我的持仓中，点击移出。',
   addVisible:n=>`＋ 将本页 ${n} 枚添加到我的持仓`,addRest:(n,k)=>`＋ 添加其余 ${n} 枚（已添加 ${k} 枚）`,addedVisible:n=>`✓ 本页 ${n} 枚都在我的持仓`,openHoldings:'我的持仓 ↗',pieces:n=>`${n} 枚`,
@@ -159,7 +165,7 @@
     ['卖出','这一周这一枚谁都没有奖励','卖家保留挂单那一周之前完整周的奖励；买家下一周起有奖励','no'],
     ['买入','没有奖励，哪怕在一周的最后一块买入','下一周起有奖励','no'],
    ]},
-   {title:'私下操作 · 公开记录里看不到',rows:[
+   {title:'私下操作 · 公开记录认不出是哪一枚',rows:[
     ['私下转给别人','没有奖励','转出前完整的周仍可领取','no'],
     ['私下收到','没有奖励','下一周起有奖励','no'],
     ['转给自己、加中继额度（Add relay credits）','没有奖励：加中继额度会把这一枚转给自己','下一周起照常有奖励','no'],
@@ -184,9 +190,9 @@
   formulaWeek:'每周 SHNAKAS = 权重单位 × v × 1,008 ÷ 10⁸',formulaRate:'v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)',
   allocLines:['100% 权重 = 4 个权重单位；K 是全部 3,333 枚（含未铸造、含挂单中）的权重单位合计','权重逐块计算：每个区块按该块确认后的有效挂单重算，一周 1,008 块逐块累加','与官方权重接口逐块一致；不构成发放承诺'],
   rulesFormula:'总权重 = 基础 100% + 各特征加成 + 编号加成（只取最高一档），封顶 400%',traitTitle:'特征加成 · 特征地板价 ÷ 集合地板价',numberTitle:'编号加成 · 只取最高一档',
-  zeroRule:'特征没有挂单时：至少 20 件 +100%；不足 20 件按最近 3 笔成交价的中位数对比集合地板（两笔取平均、一笔取该笔、无成交 +0%）。',
+  zeroRule:'特征没有挂单时：至少 20 件 +100%；不足 20 件用官方当前给出的加成（按成交、无成交或 lastBlock）。假设成交之后，按最近 3 笔成交价的中位数对比集合地板推算（两笔取平均、一笔取该笔、无成交 +0%）；这一口径与官方数据一致，但官方没有公布具体算法。',
   scheduleRule:(start,blocks,weeks)=>`奖励自区块 ${start} 起，每周 ${blocks} 块，共 ${weeks} 周。`,pieceRow:w=>`这一枚 · ${w}`,pieceRowCancel:w=>`这一枚撤单后 · ${w}`,othersRow:'原有持仓',unchanged:'不变',totalRow:'合计',navRaise:'增加权重',searchOpen:'查询编号 · 比较',subSearch:'查询 · 比较',navAbout:'说明',safeTitle:'只读观察，天生安全',forMeShort:v=>`对我的持仓 每周 ${v}`,compareAddShort:'＋ 加入',readOnlyTag:'只读 · 无需登录、授权、签名',
-  raiseFull:'完整页 ↗',raiseFullHint:'在插件独立页打开“增加权重”：全部挂单、全部持仓、合并方案',raiseBasis:h=>`按区块 ${h} 的挂单计算 · 不含手续费`,raiseScope:(n,list)=>`含添加的编号 ${n} 枚：${list.join('、')}${n>list.length?' 等':''}`,raiseRunning:'计算中…',
+  raiseFull:'完整页 ↗',raiseFullHint:'在插件独立页打开“增加权重”：全部挂单、全部持仓、合并方案',raiseBasis:h=>`按区块 ${h} 的挂单计算 · 不含手续费`,raiseScope:(n,list)=>`含添加的编号 ${n} 枚：${list.join('、')}${n>list.length?' 等':''}`,raiseStageListings:(i,n)=>`挂单 ${i}/${n}`,raiseStagePlans:(i,n)=>`方案 ${i}/${n}`,raiseStageTraits:(i,n)=>`特征 ${i}/${n}`,
   raiseEmpty:'先添加持仓：这里会告诉你买哪单划算、怎么冲到 400%。',raiseEnded:'奖励期已结束，没有还能拿奖励的周。',
   raiseBuyTitle:'买哪单划算',raisePlanTitle:'冲 400%',raiseLockTitle:'垄断特征',raiseSimTitle:'模拟',raiseAllBuys:n=>`全部 ${n} 单 ↗`,raiseAllPlans:n=>`全部 ${n} 枚 ↗`,raiseAllTraits:n=>`全部 ${n} 个 ↗`,
   raiseBuyNone:'现在没有能让你每周增加的挂单。',raisePlanDone:'没有要冲 400% 的：持仓都已到 400%，或正在卖出。',raisePlanNone:'现有挂单不够把任何一枚冲到 400%。',raisePlanAuto:n=>`${n} 枚在已成交或撤单中的挂单关闭后会自动到 400%，无需操作。`,
@@ -198,7 +204,7 @@
   compareEmptyPopup:'还没有选择比较的 Naka',compareHowPopup:'点这里输入编号（多个用逗号或空格分隔），也可以在市场悬浮明细中加入。',compareOpen:'查看完整比较（含特征）↗',
   lookupHow:'已挂单显示成交后权重，未挂单显示持有权重。',blockChip:h=>`区块 ${h}`,sharedTrait:n=>`持仓中 ${n} 枚共享此特征`,showAll:'显示全部',zeroSupplement:'零挂单补充规则',
   addHoldingTitle:'添加持仓',addCompareTitle:'加入比较',confirmAdd:'添加',cancel:'取消',
-  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',networkTitle:'区块页 · 网络产出',networkLines:['满额产出：3,333 枚都有资格时这一周的产出，即官方逐枚累计之和（含挂单和未铸造的）；它和规则每周 266,640 的差额来自逐块取整。','可产出（≤）：满额产出减去流失，是持有人最多能领到的部分。','流失（≥）：因挂单、转移或未铸造而没人能领的部分，不会发行；私密转移认不出是哪一件，所以是下限，右边写它占满额产出的比例。色条左段是可产出，右段是流失。','已领取：公开领取回执里属于这一周的数量，周结束后才显示，之后还会增加；它不是可领取的上限，也不是未领取余额。'],tileHint:n=>`点击查看 #${n}`,tileWeekly:'每周',tileRemaining:'剩余',tileAccrued:'本周已产出',tileOpen:'点击查看',noReward:'没有奖励',blockLabel:'区块',floorBtc:'地板 · BTC',listingsShort:'挂单',rewardWeekShort:'奖励周',weeksOver:'已结束',weeksBefore:'未开始',weekBlocksHint:'本周已过的区块 / 每周 1,008 块',liveChecking:'检查中',livePausedShort:'已暂停',weekOf:(w,n)=>`第 ${w} / ${n} 周`,floorLabel:'集合地板',scheduleCard:'奖励时间表',weeksDoneShort:(a,b)=>`已完成 ${a} / ${b} 周`,blocksInto:(a,b)=>`${a} / ${b} 块`,per100Week:'100% 每周',per100Hint:'按当前全网权重，100% 权重一整周能分到的 SHNAKAS。',listedShort:'挂单中 · 没有奖励',
+  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',networkTitle:'区块页 · 网络产出',networkLines:['满额产出：3,333 枚都有资格时这一周的产出，即官方逐枚累计之和（含挂单和未铸造的）；它和规则每周 266,640 的差额来自逐块取整。','可产出（≤）：满额产出减去流失，是持有人最多能领到的部分。','流失（≥）：因挂单、转移或未铸造而没人能领的部分，也不分给别人，去向官方没有说明；私密转移认不出是哪一件，所以是下限，右边写它占满额产出的比例。色条左段是可产出，右段是流失。','已领取：公开领取回执里属于这一周的数量，周结束后才显示，之后还会增加；它不是可领取的上限，也不是未领取余额。'],tileHint:n=>`点击查看 #${n}`,tileWeekly:'每周',tileRemaining:'剩余',tileAccrued:'本周已产出',tileOpen:'点击查看',noReward:'没有奖励',blockLabel:'区块',floorBtc:'地板 · BTC',listingsShort:'挂单',rewardWeekShort:'奖励周',weeksOver:'已结束',weeksBefore:'未开始',weekBlocksHint:'本周已过的区块 / 每周 1,008 块',liveChecking:'检查中',updating:'更新中',updatingTip:h=>`正在读取区块 ${h}，读完后数字才是最新`,livePausedShort:'已暂停',weekOf:(w,n)=>`第 ${w} / ${n} 周`,floorLabel:'集合地板',scheduleCard:'奖励时间表',weeksDoneShort:(a,b)=>`已完成 ${a} / ${b} 周`,blocksInto:(a,b)=>`${a} / ${b} 块`,per100Week:'100% 每周',per100Hint:'按当前全网权重，100% 权重一整周能分到的 SHNAKAS。',listedShort:'挂单中 · 没有奖励',
   buyLead:n=>`如果买入 #${n}`,
   tabListings:'挂单',aboutTitle:'说明',aboutSafe:'只读与安全',aboutAlloc:'每周分配怎么算',aboutRules:'权重规则',aboutData:'数据与隐私',
   
@@ -209,7 +215,7 @@
   openSource:'开源代码 ↗',weekUnit:'SHNAKAS / 周',
   manage:'持仓页 ↗',manageHint:'打开独立页的我的持仓。添加和移出都在这一页',listedTag:'挂单中',blockBasis:h=>`区块 ${h} · 官方权重口径`,
   copyAll:'复制全部编号',copyAllDone:n=>`已复制 ${n} 个编号`,copyAllFailed:'复制失败',copyAllHint:'纯数字、逗号分隔；对方在“添加”里粘贴即可导入',
-  wantPrefix:'求购',wantCopy:'复制求购信息',wantCopied:n=>`已复制 ${n} 个编号的求购信息，进群粘贴即可`,wantHint:'“求购”加逗号分隔的编号：发到群里求购；粘贴进“添加”也能直接导入这些编号',tgWanted:'进入 Naka Telegram 群求购 ↗',tgJoin:'进入 Telegram 交流群 ↗',
+  wantPrefix:'求购',wantCopy:'复制求购信息',wantCopied:n=>`已复制 ${n} 个编号的求购信息，进群粘贴即可`,wantHint:'“求购”加逗号分隔的编号：发到群里求购；粘贴进“添加”也能直接导入这些编号',tgWanted:'到 Naka Telegram 中文交流群求购 ↗',guideLink:'协议原理图解 ↗',tgJoin:'进入 Naka Telegram 中文交流群 ↗',
   
   pageHoldings:'本页持仓',pageWeekly:n=>`本页 ${n} 枚`,myHoldingsLine:(n,v)=>`我的持仓 ${n} 枚 · 每周 ${v} SHNAKAS`,
   avgWeight:(avg,now)=>`本周平均权重 ${avg}%（官方累计表）· 当前 ${now}`,weightDetail:n=>`#${n} 的权重明细`,hoverWeight:'鼠标移到图片右下角的权重标签查看明细（与市场相同）；点卡片其它位置模拟挂单。',
@@ -230,6 +236,8 @@
  const GITHUB='https://github.com/ordinalser/naka-sigil';
  /** The Naka community group on Telegram: where wanted posts go, and the popup's About links to it. */
  const TELEGRAM='https://t.me/+fRT4yVcxZ6VlNTBl';
+ // The illustrated guide to the protocol (served from this repository's GitHub Pages), one page per language.
+ const GUIDE={zh:'https://ordinalser.github.io/naka-sigil/learn/shord/',en:'https://ordinalser.github.io/naka-sigil/learn/shord/en.html'};
  /** Official snapshot artwork, then legacy public art and the inscription. Failures are bounded per image. */
  function art(snap,id,fallbackClass){
   const img=document.createElement('img'),asset=snap.items[id][0]-snap.collection.numberStart;
@@ -255,7 +263,7 @@
    button.addEventListener('mouseleave',settle,{once:true});button.addEventListener('blur',settle,{once:true});
   }else if(state!=='selected')button.classList.remove('naka-select--fresh');
   button.dataset.compare=state;button.setAttribute('aria-pressed',String(state==='selected'));button.disabled=false;
-  if(state==='selected')button.replaceChildren(span('naka-select__on',c.inCompare),span('naka-select__off',c.removeCompare));
+  if(state==='selected'){const labels=span('naka-select__labels','');labels.append(span('naka-select__on',c.inCompare),span('naka-select__off',c.removeCompare));button.replaceChildren(labels);}
   else if(state==='full')button.replaceChildren(span('',c.fullShort));
   else if(state==='add')button.replaceChildren(span('',c.add));
   else throw new Error(`Unknown comparison state: ${state}`);
@@ -350,5 +358,5 @@
   * fails for a piece just bought).
   */
  function marketFind(snap,id){return `https://ord-dropz.xyz/secondary/collections/${snap.collection.slug}#naka-find=${snap.items[id][0]}`;}
- root.NakaExploreUI={pick,paintCompare,shn,trend,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM};
+ root.NakaExploreUI={pick,paintCompare,shn,trend,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM,GUIDE};
 })(globalThis);

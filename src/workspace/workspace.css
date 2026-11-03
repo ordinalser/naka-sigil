@@ -76,6 +76,14 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-copy-all:hover{color:var(--ink);text-decoration-color:currentColor}
 
 .ws-holding-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:0 0 12px}
+/* My holdings' sort: four choices above the tiles; the chosen one is lit and shows its direction. */
+.ws-hsort{display:flex;flex-wrap:wrap;align-items:center;gap:0;width:max-content;max-width:100%;margin:16px 0 12px;border:1px solid #56505c;font-size:11px}
+.ws-hsort-label{padding:0 10px;color:var(--muted)}
+.ws-hsort-btn{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 11px;background:#17181d;border:0;border-left:1px solid #2e2e36;color:#b9b2a7;font:inherit;cursor:pointer}
+.ws-hsort-btn:hover{color:var(--ink);background:#202128}
+.ws-hsort-btn[aria-pressed=true]{color:#ffd99c;background:#2a2519;box-shadow:inset 0 -2px 0 var(--gold)}
+.ws-hsort-btn:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.ws-hsort-dir{font-size:11px}
 .ws-holding{position:relative;display:flex;flex-direction:column;padding:0;background:var(--panel2);border:1px solid #2f3038;min-width:0;outline-offset:2px}
 .ws-holding:hover{border-color:#5d5241}
 .ws-holding-art{position:relative;aspect-ratio:1;background:#0d0e10;line-height:0}
@@ -380,9 +388,10 @@ html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:aut
 .ws-table td small{display:block;color:#86827c;font-size:10px;line-height:1.35;margin-top:2px}
 .ws-price td{font-size:19px;font-weight:700;color:#e9d3ac;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .ws-before td{font-size:12px;color:#9d9ba0}
-.ws-before .naka-weight{opacity:.75}
-.ws-gain td[data-change=up]{color:var(--mint)}
-.ws-gain td[data-change=down]{color:#efb29f}
+.ws-gain td[data-change=up],.ws-rate td[data-change=up]{color:var(--mint)}
+.ws-gain td[data-change=down],.ws-rate td[data-change=down]{color:#efb29f}
+.ws-rate td{font-size:13px;font-variant-numeric:tabular-nums}
+.ws-piece td{font-size:13px;color:#e7dccb;font-variant-numeric:tabular-nums}
 .ws-trait-guide th{font-size:10px;color:#948d80;background:#15161a;padding-top:7px;padding-bottom:7px}
 .ws-trait-name{display:block;color:#aaa59e;font-size:11px;margin-bottom:3px;line-height:1.35}
 .ws-bonus{font-size:13px;color:#d6cfc5;line-height:1.3;font-weight:600}
@@ -542,6 +551,7 @@ html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:aut
 .ws-listing-ask{margin:0;color:#ffd25e;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .ws-listing-ask span{color:#9e9991;font-size:10px;font-weight:600;letter-spacing:0}
 .ws-listing-gain b{color:var(--mint)}
+.ws-listing-gain span{text-wrap:balance}
 .ws-listing-gain[data-change=down] b{color:#efb29f}.ws-listing-gain[data-change=same] b{color:#a6a19b}.ws-listing-gain[data-change=unknown] b{color:#e8c58c}
 .ws-listing-gain[data-change=closing] b{color:#e8c58c;font-size:11px;font-weight:700;white-space:normal}
 .ws-listing .ws-holding-sub{min-height:14px}

@@ -40,7 +40,7 @@
   const SRC = globalThis.ShnakasSource;
   if (!BUNDLED || !R || !I || !TIER || !SRC) throw new Error('SHNAKAS：快照、规则、文案、分级或数据来源模块未加载（检查 manifest 的脚本顺序）');
   const K = SRC.KEYS, EXP=globalThis.NakaExplore;
-  const HOLD=globalThis.NakaPortfolio;let minerWeek,minerObserved,minerEvents;let holdings=[], boostOnly=false;const impactCache=new Map();
+  const HOLD=globalThis.NakaPortfolio;let minerWeek,minerObserved,minerEvents,minerLedger;let holdings=[], boostOnly=false;const impactCache=new Map();
   function portfolioImpact(id,action='sale'){const key=action+id;if(!impactCache.has(key))impactCache.set(key,HOLD.impact(SNAP,holdings,id,action,action==='cancel'?CANCELLATION:PURCHASE));return impactCache.get(key);}
   let comparisonIds=[], minimum=0, exploreLang='en', debugPinned=false;
   const exploreCopy=()=>globalThis.NakaExploreUI.pick(exploreLang);
@@ -142,22 +142,25 @@
   function inspectionFor(id,activity=false,action='sale') {
     const model=action==='cancel'?CANCELLATION:PURCHASE;
     const r=resultFor(id);if(!r)return el('p','shn-pop__missing',T.notInSnapshot);
-    const scenario=activity?null:model.get(id);
+    // Activity shows a piece as it stands at the shown block, as the market does: a listing still open is shown after a sale.
+    const scenario=model.get(id);
     const closing=CLOSING.has(id)?CLOSING.get(id):null;
     // What buying (or my reclaim) does to my holdings — not for a listing already bought: nobody can buy it, and one of mine
     // sells at the next block. My own reclaim under way is what happens, so it stays.
-    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I,{explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,action),closing,snap:SNAP,id});if(holdings.length&&closing!=='sale'){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
+    if(scenario?.state==='ready'){const panel=globalThis.NakaPurchase.render(model,id,T,I,{activity,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang,action),closing,snap:SNAP,id});if(holdings.length&&closing!=='sale'){const x=portfolioImpact(id,action);if(x.state==='ready')panel.append(globalThis.NakaExploreUI.holdingsLine(x,exploreCopy()));}return panel;}
     const notice=scenario?.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
-    const panel=globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,closing,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id),snap:SNAP,id});return panel;
+    const panel=globalThis.NakaPurchase.renderCurrent(r,SNAP.snapshot,T,I,{activity,notice,action,closing,explain:globalThis.NakaRewards.explainFor(SNAP,id,exploreLang),listing:globalThis.NakaPurchase.listingStatus(SNAP,id),credits:action==='cancel'?null:globalThis.NakaPurchase.relayCredits(SNAP,id),snap:SNAP,id,
+      // One of my holdings: its own status, as the popup reads it (wallet readings and recorded intervals included).
+      status:holdings.includes(id)?globalThis.NakaRewards.portfolio(SNAP,[id],minerWeek,minerObserved,minerEvents,minerLedger).rows[0]??null:null});return panel;
   }
   function inspectionHead(id,cls) {
     const head=el('div',cls),brand=el('span','shn-inspect-brand');brand.append(lockIcon('shn-badge__icon'),el('span','shn-eyebrow',T.title));
     head.append(brand);
     const r=resultFor(id);if(r){const number=el('span','shn-inspect-number',`#${r.number.value}`),tag=globalThis.NakaPurchase.numberBadge(r.number.value,T);head.append(number);if(tag)head.append(tag);}
     if(r){
-      const c=exploreCopy(),held=holdings.includes(id),own=el('button','shn-compare-add shn-holding-add',held?c.inHoldings:c.addHolding);
-      own.type='button';own.title=held?c.holdingRemoveHint:c.holdingHint;own.setAttribute('aria-pressed',String(held));
-      own.addEventListener('click',ev=>{ev.stopPropagation();ev.preventDefault();chrome.runtime.sendMessage({type:'shn-holdings',ids:[id],remove:held});});
+      const own=el('button','shn-compare-add shn-holding-add');own.type='button';own.dataset.id=id;paintHoldingButton(own);
+      // Reads the holdings at click time: the card stays open after a change, so a second click undoes the first.
+      own.addEventListener('click',ev=>{ev.stopPropagation();ev.preventDefault();chrome.runtime.sendMessage({type:'shn-holdings',ids:[id],remove:holdings.includes(id)});});
       const actions=el('span','shn-inspect-actions');actions.append(compareButton(id),own);head.append(actions);
     }
     return head;
@@ -166,9 +169,9 @@
   // ------------------------------------------------------------ 徽章（网格 / 列表）
 
   function fillBadge(b, id, kind, action='sale') {
-    const model=action==='cancel'?CANCELLATION:PURCHASE,afterLabel=action==='cancel'?T.cancelAfter:T.buyAfterShort;
+    const model=action==='cancel'?CANCELLATION:PURCHASE,afterLabel=action==='cancel'?T.cancelAfter:kind==='activity'?T.activityAfter:T.buyAfterShort;
     const r = resultFor(id);
-    const scenario=(kind==='grid' || kind==='list' || kind==='wallet'||kind==='vault'||kind==='listed') ? model.get(id) : null;
+    const scenario=(kind==='grid' || kind==='list' || kind==='activity' || kind==='wallet'||kind==='vault'||kind==='listed') ? model.get(id) : null;
     const primary=scenario?.state==='ready'?scenario.result:scenario?.state==='no-floor'?null:r;
     b.className = `shn-badge shn-badge--${kind} ${classesOf(primary)}`;
     b.dataset.shnId = id;
@@ -381,6 +384,17 @@
     const cur = anchor.nextElementSibling;
     if (cur && cur.classList.contains('shn-panel') && cur.dataset.shnMetric === DISPLAY_METRIC && cur.dataset.shnId === id && cur.dataset.shnGen === String(GEN)) return cur;
     const p = buildPanel(id, variant);
+    // Newer data for the same piece: the panel is swapped in place, with the folds the viewer opened (历史成交) and the
+    // control they were on, so a refresh never closes what they are reading.
+    if (cur && cur.classList.contains('shn-panel') && cur.dataset.shnId === id) {
+      const open = new Set([...cur.querySelectorAll('details[open]')].map((d) => d.className));
+      const active = cur.contains(document.activeElement) ? document.activeElement : null, cls = active && typeof active.className === 'string' && active.className.trim() ? '.' + active.className.trim().split(/\s+/).join('.') : null;
+      const at = cls ? [...cur.querySelectorAll(cls)].indexOf(active) : -1;
+      for (const d of p.querySelectorAll('details')) if (open.has(d.className)) d.open = true;
+      cur.replaceWith(p);
+      if (cls && at >= 0) p.querySelectorAll(cls)[at]?.focus({ preventScroll: true });
+      return p;
+    }
     anchor.after(p);
     return p;
   }
@@ -413,8 +427,11 @@
       existing.filter((n) => n !== current).forEach((n) => n.remove());
       return;
     }
-    existing.forEach((n) => n.remove());
-    const bar = el('aside', walletGrid ? 'shn-scope shn-scope--wallet' : 'shn-scope');
+    // Newer data or another language redraws the bar in place: its filter (in .shn-tools) is never detached, so a list the
+    // viewer has open, or the focus on it, survives the refresh.
+    existing.filter((n) => n !== current).forEach((n) => n.remove());
+    const bar = current ?? el('aside');
+    bar.className = walletGrid ? 'shn-scope shn-scope--wallet' : 'shn-scope';
     bar.dataset.shnGen = String(GEN);
     bar.dataset.shnMetric = DISPLAY_METRIC;
     bar.dataset.shnActivity = String(onActivity);bar.dataset.shnOwner=String(ownerContext);
@@ -428,13 +445,20 @@
     source.addEventListener('dblclick',ev=>{ev.preventDefault();ev.stopPropagation();debugPinned=!debugPinned;paintDebug(true);});
     line.append(lockIcon('shn-badge__icon'),el('span','shn-scope__brand',T.title),el('b','shn-scope__block',T.snapBlock(I.int(SNAP.snapshot.height))),el('span','shn-scope__age'),source);
     const detail=el('span','shn-sr-only shn-scope__detail');detail.id='shn-scope-details';
-    bar.append(line,el('p','shn-scope__note',onActivity?T.scopeActivity:T.scopeNote),detail);
+    for (const n of [...bar.children]) if (!n.classList.contains('shn-tools')) n.remove();
+    bar.prepend(line,el('p','shn-scope__note',onActivity?T.scopeActivity:T.scopeNote),detail);
     refreshScopeClock(bar);
+    if (current) return;
     if (walletGrid) anchor.before(bar); else anchor.after(bar);
   }
 
   // ------------------------------------------------------------ 比较选择：按钮、徽章标记与工具栏计数同步显示
 
+  /** ＋ / ✓ My holdings on an inspection, repainted in place whenever the holdings change (here or elsewhere). */
+  function paintHoldingButton(b){
+    const c=exploreCopy(),held=holdings.includes(b.dataset.id),text=held?c.inHoldings:c.addHolding;
+    if(b.textContent!==text)b.textContent=text;b.title=held?c.holdingRemoveHint:c.holdingHint;b.setAttribute('aria-pressed',String(held));
+  }
   /** Selection changed (here, in the popup or in Compare): repaint every control, badge marker and the count. */
   function updateCompare() {
     for(const b of document.querySelectorAll('.shn-compare-add')) paintCompareButton(b);
@@ -465,12 +489,16 @@
     b.addEventListener('click',async ev=>{
       ev.preventDefault();ev.stopPropagation();
       if(b.dataset.compare==='full'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'});return;}
-      b.disabled=true;
+      // Busy while saving, not disabled: a disabled button loses the focus, and with it the viewer's place (a hover card
+      // that held the focus would close, a keyboard user would be sent back to the page's start).
+      if(b.getAttribute('aria-busy')==='true')return;
+      b.setAttribute('aria-busy','true');
       try{
         const res=await chrome.runtime.sendMessage({type:'shn-compare',action:'toggle',id});if(!res?.ok)throw Error('save');
         comparisonIds=res.ids;updateCompare();
         if(res.state==='missing'){b.textContent=exploreCopy().missing;delete b.dataset.compare;}
-      }catch{b.textContent=exploreCopy().addError;b.disabled=false;delete b.dataset.compare;}
+      }catch{b.textContent=exploreCopy().addError;delete b.dataset.compare;}
+      finally{b.removeAttribute('aria-busy');}
     });return b;
   }
   function scanTools(onCollection,onActivity) {
@@ -478,13 +506,25 @@
     let tools=document.querySelector('.shn-tools');
     if(!active||!scope){tools?.remove();for(const n of document.querySelectorAll('.shn-filtered'))n.classList.remove('shn-filtered');return;}
     const c=exploreCopy();
-    if(!tools||tools.dataset.gen!==String(GEN)){
-      tools?.remove();tools=el('div','shn-tools');tools.dataset.gen=String(GEN);
-      const label=el('label','',c.filter),select=el('select','shn-tools__filter');
-      for(const v of [0,150,200,250,300,350,400]){const o=el('option','',v?`${v}%`:c.any);o.value=String(v);select.append(o);}const boost=el('option','',c.boost);boost.value='portfolio';boost.disabled=!holdings.length;boost.title=holdings.length?c.boostHint:c.boostEmpty;select.append(boost);select.value=boostOnly?'portfolio':String(minimum);select.title=c.filterNote;select.setAttribute('aria-label',c.filter);
-      select.addEventListener('change',()=>{boostOnly=select.value==='portfolio';minimum=boostOnly?0:Number(select.value);scan();});label.append(select);
-      const count=el('span','shn-tools__count'),open=el('button','shn-tools__open');open.type='button';open.title=c.open;
-      open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'}));tools.append(label,count,open);scope.append(tools);
+    // Built once and relabelled in place on newer data or another language, so the filter list the viewer has open stays
+    // open and focused through a refresh.
+    if(!tools){
+      tools=el('div','shn-tools');
+      const label=el('label'),caption=el('span','shn-tools__caption'),select=el('select','shn-tools__filter');
+      for(const v of [0,150,200,250,300,350,400]){const o=el('option');o.value=String(v);select.append(o);}const boost=el('option');boost.value='portfolio';select.append(boost);
+      select.addEventListener('change',()=>{boostOnly=select.value==='portfolio';minimum=boostOnly?0:Number(select.value);scan();});label.append(caption,select);
+      const count=el('span','shn-tools__count'),open=el('button','shn-tools__open');open.type='button';
+      open.addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'}));tools.append(label,count,open);
+    }
+    if(tools.parentElement!==scope)scope.append(tools);
+    if(tools.dataset.gen!==String(GEN)){
+      tools.dataset.gen=String(GEN);
+      const select=tools.querySelector('.shn-tools__filter'),boost=select.querySelector('option[value=portfolio]');
+      tools.querySelector('.shn-tools__caption').textContent=c.filter;
+      for(const o of select.options)if(o!==boost)o.textContent=o.value==='0'?c.any:`${o.value}%`;
+      boost.textContent=c.boost;boost.disabled=!holdings.length;boost.title=holdings.length?c.boostHint:c.boostEmpty;
+      if(document.activeElement!==select)select.value=boostOnly?'portfolio':String(minimum);
+      select.title=c.filterNote;select.setAttribute('aria-label',c.filter);tools.querySelector('.shn-tools__open').title=c.open;
     }
     const roots=new Set();let total=0,shown=0;
     for(const b of document.querySelectorAll('.shn-badge--grid,.shn-badge--list')){
@@ -717,8 +757,8 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS]).then((got) => {
-    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);minerWeek=got[NakaRewards.KEY];minerObserved=got[NakaRewards.OBSERVED];minerEvents=got[HOLD.EVENTS];
+  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS,NakaLedger.KEY]).then((got) => {
+    comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);minerWeek=got[NakaRewards.KEY];minerObserved=got[NakaRewards.OBSERVED];minerEvents=got[HOLD.EVENTS];minerLedger=got[NakaLedger.KEY];
     useLang(got[I.STORAGE_KEY]);
     stored.live = got[K.live];
     stored.closing = got[K.closing];
@@ -734,14 +774,15 @@
     const has = (k) => Object.prototype.hasOwnProperty.call(changes, k);
     const dataChanged = has(K.live) || has(K.closing);
     if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
-    if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();}
-    const mineChanged=has(NakaRewards.KEY)||has(NakaRewards.OBSERVED)||has(HOLD.EVENTS);if(has(NakaRewards.KEY))minerWeek=changes[NakaRewards.KEY].newValue;if(has(NakaRewards.OBSERVED))minerObserved=changes[NakaRewards.OBSERVED].newValue;if(has(HOLD.EVENTS))minerEvents=changes[HOLD.EVENTS].newValue;if(mineChanged)refresh();
+    if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();for(const b of document.querySelectorAll('.shn-holding-add[data-id]'))paintHoldingButton(b);}
+    const mineChanged=has(NakaRewards.KEY)||has(NakaRewards.OBSERVED)||has(HOLD.EVENTS)||has(NakaLedger.KEY);if(has(NakaRewards.KEY))minerWeek=changes[NakaRewards.KEY].newValue;if(has(NakaRewards.OBSERVED))minerObserved=changes[NakaRewards.OBSERVED].newValue;if(has(HOLD.EVENTS))minerEvents=changes[HOLD.EVENTS].newValue;if(has(NakaLedger.KEY))minerLedger=changes[NakaLedger.KEY].newValue;if(mineChanged)refresh();
     if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)&&!mineChanged) return;
     if (has(I.STORAGE_KEY)) useLang(changes[I.STORAGE_KEY].newValue);
     if (has(K.live)) stored.live = changes[K.live].newValue;
     if (has(K.closing)) stored.closing = changes[K.closing].newValue;
     if (dataChanged) useData();
-    popover.hide();
+    // scan() ends with popover.validate(): a clicked card stays (offering to refresh to the new data) and a preview follows
+    // its piece. Closing it here would drop a card the viewer is reading, or just clicked in (＋ My holdings writes storage).
     scan();
   });
 

@@ -141,7 +141,7 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 /* Compact decision tools; separate workspace keeps the market inspection small. */
 .shn-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 12px;padding:6px 10px;background:#171819;color:#c1bdb2;font:12px/1.4 ui-monospace,monospace;border-left:3px solid #ffb347}
 .shn-tools label{display:flex;align-items:center;gap:8px}.shn-tools select,.shn-tools button,.shn-compare-add{font:inherit;color:#f3debc;background:#28241e;border:1px solid #77664d;padding:4px 8px;border-radius:0;cursor:pointer}.shn-tools select:focus-visible,.shn-tools button:focus-visible,.shn-compare-add:focus-visible{outline:2px solid #ffb347;outline-offset:2px}.shn-tools__open{margin-left:auto}.shn-tools__count{color:#aaa49b;font-size:11px}.shn-filtered{display:none!important}
-.shn-compare-add{font:10px/1.4 ui-monospace,monospace;white-space:nowrap;margin-left:6px}.shn-compare-add[aria-pressed=true]{color:#9ce0bc;border-color:#58866b;background:#183125}.shn-compare-add:disabled{opacity:.5;cursor:default}.shn-pop__head{gap:7px}.shn-inspect-brand{min-width:0}.shn-pop__head .shn-eyebrow{font-size:12px}.shn-pop__head .shn-inspect-number{font-size:11px}
+.shn-compare-add{font:10px/1.4 ui-monospace,monospace;white-space:nowrap;margin-left:6px}.shn-compare-add[aria-pressed=true]{color:#9ce0bc;border-color:#58866b;background:#183125}.shn-compare-add:disabled,.shn-compare-add[aria-busy=true]{opacity:.5;cursor:default}.shn-pop__head{gap:7px}.shn-inspect-brand{min-width:0}.shn-pop__head .shn-eyebrow{font-size:12px}.shn-pop__head .shn-inspect-number{font-size:11px}
 
 /* One integrated context/action bar; narrow screens use two rows. */
 .shn-scope{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:5px 10px;margin:6px 0}.shn-scope__head{flex:1;min-width:220px;height:28px}.shn-scope .shn-scope__note{display:none}.shn-scope .shn-tools{margin:0;padding:0;border:0;background:none;gap:10px;flex-wrap:nowrap;font-size:11px}.shn-scope .shn-tools__open{margin-left:6px;white-space:nowrap}.shn-scope .shn-tools label{white-space:nowrap;gap:6px}.shn-scope .shn-tools select,.shn-scope .shn-tools button{padding:3px 6px}.shn-scope__source{margin-left:8px}@media(max-width:700px){.shn-scope{gap:2px 8px}.shn-scope .shn-tools{width:100%}.shn-scope .shn-tools__open{margin-left:auto}.shn-scope__source{margin-left:auto}}@media(max-width:480px){.shn-scope .shn-tools__count{display:none}}
@@ -232,7 +232,6 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-pop__tools button{font:inherit;border:0;background:transparent;color:#f4d39b;cursor:pointer;padding:2px 3px}
 .shn-pop__tools button:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
 .shn-pop__close{margin-left:auto;white-space:nowrap}.shn-pop__gone{font-size:9px}
-.shn-pop__tools .shn-pop__refresh{margin:0;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent}
 /* Opt-in only (?shn-debug=1 or #shn-debug). Absent from the page otherwise. */
 .shn-recognize{position:fixed;right:8px;bottom:8px;z-index:2147483646;width:min(320px,calc(100vw - 16px));margin:0;padding:6px 8px;background:#1c1916;color:#e6dccb;border:1px solid #6d5b42;font:10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;pointer-events:auto}
 .shn-recognize strong{display:block;color:#f4d39b;font-size:10px}
@@ -242,4 +241,10 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-pop__tools{display:contents}
 .shn-pop__tools .shn-pop__close{position:absolute;right:5px;top:5px;z-index:2;width:22px;height:22px;padding:0;background:#24201b;border:1px solid #796345;font-size:15px;line-height:20px}
 
-.shn-pop--pinned .shn-pop__head{padding-right:24px}
+/* The close button's place is kept in every state, so a preview becoming a clicked sheet (a press inside it) moves nothing. */
+.shn-pop .shn-pop__head{padding-right:24px}
+/* Data-updated and left-the-list notices: last in the sheet, held at its bottom edge, so nothing above them moves. */
+.shn-pop__notice{position:sticky;bottom:-12px;z-index:1;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:10px -12px -12px;padding:5px 12px;background:#24201b;border-top:1px solid #796345;color:#e0cfb7;font:10px/1.5 ui-monospace,monospace}
+.shn-pop__notice .shn-pop__refresh{margin:0 0 0 auto;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent;color:#f4d39b;font:inherit;cursor:pointer}
+.shn-pop__notice .shn-pop__refresh:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
+@media(max-height:620px){.shn-pop__notice{bottom:-9px;margin:8px -9px -9px;padding:5px 9px}}

@@ -19,12 +19,15 @@
     closing: 'liveClosing',      // 同一区块内重读 /listings 得到的成交确认中 / 撤单中挂单 {height, rows}
   });
   const SESSION_VISIBLE = 'visibleAt'; // chrome.storage.session：最近一次有 ord-dropz 页面可见的时间
+  // chrome.storage.session: the block the worker is reading now, {height}, from the read of a new block until its records
+  // are in; absent otherwise. Pages show "updating" while it is there: the figures they show are about to change.
+  const SESSION_UPDATING = 'nakaLiveUpdating';
 
   /** This code's version (package.json; the build refuses a mismatch). The worker runs its upgrade step once per version.
    * After the folder's files are replaced, Chrome loads the new pages at once but keeps running the previous worker until
    * the extension is reloaded: a page asks the worker which version it runs (shn-build), and a worker from before this
    * check does not answer at all. */
-  const BUILD = '0.13.0';
+  const BUILD = '0.13.1';
   // Kept in the worker handshake beside BUILD; one release, one value.
   const REVISION = BUILD;
   /** Whether the worker runs this code, from its answer to shn-build (undefined when it sent none). */
@@ -228,5 +231,5 @@
     return 'network';
   }
 
-  return { KEYS, SESSION_VISIBLE, BUILD, REVISION, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, retryMinutes, classify };
+  return { KEYS, SESSION_VISIBLE, SESSION_UPDATING, BUILD, REVISION, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, retryMinutes, classify };
 });

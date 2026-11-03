@@ -18,7 +18,7 @@ function at(height){const s=clone(BUNDLED);if(height!==s.snapshot.height)delete 
  */
 function harness(initial={},overrides={}){
   // This code already ran its upgrade step unless the test says otherwise (nakaBuild undefined: a first start).
-  const local=clone({nakaBuild:SRC.BUILD,...initial}),session={visibleAt:Date.now()},listeners={change:[],installed:[],startup:[],message:[],alarm:[]},alarms=new Map();
+  const local=clone({nakaBuild:SRC.BUILD,...initial}),session={visibleAt:Date.now(),...overrides.session},listeners={change:[],installed:[],startup:[],message:[],alarm:[]},alarms=new Map();
   const event=name=>({addListener:fn=>listeners[name].push(fn)});
   const area=(data,name)=>({
     get:async keys=>{const list=keys===undefined?Object.keys(data):Array.isArray(keys)?keys:[keys];return Object.fromEntries(list.filter(k=>data[k]!==undefined).map(k=>[k,clone(data[k])]));},
@@ -56,6 +56,24 @@ test('The extension page opens at a section, a Raise weight tab, or one number�
     assert.equal(h.created().url,'chrome-extension://test/workspace/index.html'+(section===undefined?'':'#'+section));
   }
   for(const section of ['planner-team','plan-','plan-123456','#planner','planner-lock2']){const res=await h.send({type:'shn-open-compare',section},POPUP);assert.equal(res.ok,false);assert.equal(res.error,'bad-section');}
+});
+test('Pages are told a new block is being read until its records are in; a failed read, a same-block check and a restart leave no mark',async()=>{
+  const K=SRC.SESSION_UPDATING,seen={};
+  // A new block: the mark names it while the block is built, and is still there when the block is stored (its holdings and
+  // reward records follow).
+  const h=harness({},{core:{generateLive:async()=>{seen.build=clone(h.session[K]);return {snapshot:at(BUNDLED.snapshot.height),records:[]};}},failSet:values=>{if(values.liveSnapshot)seen.stored=clone(h.session[K]);return false;}});
+  await flush();await h.tick();
+  assert.deepEqual(seen.build,{height:BUNDLED.snapshot.height});assert.deepEqual(seen.stored,{height:BUNDLED.snapshot.height});
+  assert.equal(h.session[K],undefined);assert.equal(h.local.liveStatus.state,'ok');
+  // The same block again: only /listings is re-read, with no mark.
+  const quiet=harness({},{listings:rows=>{seen.listings=quiet.session[K]===undefined?'none':'marked';return rows;}});await flush();await quiet.tick();await quiet.tick();
+  assert.equal(seen.listings,'none');assert.equal(quiet.session[K],undefined);
+  // A failed read ends the mark and says why.
+  const failing=harness({},{core:{generateLive:async()=>{throw Object.assign(new Error('offline'),{isFetch:true,status:null});}}});await flush();await failing.tick();
+  assert.equal(failing.session[K],undefined);assert.equal(failing.local.liveStatus.state,'error');
+  // A worker that starts reads nothing yet: a mark left by one stopped mid-read goes.
+  const restart=harness({},{session:{[K]:{height:BUNDLED.snapshot.height+1}}});await flush();
+  assert.equal(restart.session[K],undefined);
 });
 test('Concurrent alarm and heartbeat ticks claim the lock before any storage await',async()=>{
   let resolve;const gate=new Promise(r=>resolve=r);let generated=0;
@@ -421,6 +439,28 @@ test('Unsupported holding ledgers, malformed/future intervals and quota failures
 test('Network history caches completed vectors and public records, rejects content-page/future queries, deduplicates in-flight reads',async()=>{const A=require('../src/lib/rewards'),L=require('../src/lib/ledger'),R=require('../src/lib/rules'),S=R.RULES.startBlock,live=at(S+1009),row=A.normalize({w:0,height:S,blocks:1008,complete:true,base:'100000000',pieces:Array(3333).fill('200000000')});let reads=0;const h=harness({liveSnapshot:live,liveStatus:{state:'ok',epoch:'qa',checkedAt:Date.now()},[A.WEEKS]:{format:1,weeks:{0:row},unknown:'keep'}},{core:{listingRecords:()=>[],fetchJson:async url=>{assert.match(url,/state\?since=/);reads++;await new Promise(setImmediate);return {lastHeight:live.snapshot.height,listings:[],rewards:{lots:[]}};}}});await flush();assert.equal((await h.send({type:'shn-ledger',scope:'network',week:0},PAGE)).ok,false);const [a,b]=await Promise.all([h.send({type:'shn-ledger',scope:'network',week:0},POPUP),h.send({type:'shn-ledger',scope:'network',week:0},POPUP)]);assert.equal(a.ok,true);assert.equal(b.report.theoretical,6666);assert.equal(reads,1);assert.equal((await h.send({type:'shn-ledger',scope:'network',week:0},POPUP)).ok,true);assert.equal(reads,1);assert.equal(h.local[A.WEEKS].unknown,'keep');assert.equal((await h.send({type:'shn-ledger',scope:'network',week:2},POPUP)).ok,false);});
 test('Own workspace task URLs retain privileges across hash/query routes, external pages and other extension IDs do not',async()=>{const h=harness();await flush();for(const tail of ['#network','#holdings','?test=1#planner-plan'])assert.equal((await h.send({type:'shn-ledger',scope:'network',week:0},{id:'test',url:'chrome-extension://test/workspace/index.html'+tail})).report.state,'before');for(const sender of [{id:'other',url:POPUP.url},{id:'test',url:'https://example.invalid/workspace/index.html#network'},{id:'test',url:'chrome-extension://test/workspace/index.html.extra'}])assert.notEqual((await h.send({type:'shn-ledger',scope:'network',week:0},sender))?.ok,true);});
 test('A same-height epoch change refreshes public records and never reuses the prior epoch current vector',async()=>{const A=require('../src/lib/rewards'),R=require('../src/lib/rules'),S=R.RULES.startBlock,H=S+1,raw={w:0,height:S,blocks:1,complete:false,base:'100000000',pieces:Array(3333).fill('200000000')};let states=0,vectors=0;const h=harness({liveSnapshot:at(H),liveStatus:{state:'ok',epoch:'new',checkedAt:Date.now()},[A.KEY]:{...A.normalize({...raw,pieces:Array(3333).fill('100000000')}),epoch:'old'}},{core:{listingRecords:()=>[],fetchJson:async url=>{if(url.includes('/weights/0')){vectors++;return raw;}if(url.includes('/state?')){states++;return {lastHeight:H,listings:[],rewards:{lotCount:0,lots:[]}};}throw Error('offline');}}});await flush();const first=await h.send({type:'shn-ledger',scope:'network',week:0,height:H},POPUP);assert.equal(first.ok,true);assert.equal(first.report.theoretical,6666);assert.equal(vectors,1);h.local.liveStatus.epoch='newer';const second=await h.send({type:'shn-ledger',scope:'network',week:0,height:H},POPUP);assert.equal(second.ok,true);assert.equal(vectors,2);assert.equal(states,2);});
+
+test('A new chain epoch reads every completed week again: the earlier epoch’s rows are replaced, not kept',async()=>{
+ const A=require('../src/lib/rewards'),R=require('../src/lib/rules'),S=R.RULES.startBlock,W=R.RULES.weekBlocks,H=S+W+5,reads=[];
+ const raw=(w,value,complete)=>({w,height:S+w*W,blocks:complete?W:H-S-w*W,complete,base:'100000000',pieces:Array(3333).fill(value)});
+ const h=harness({liveSnapshot:at(H),liveStatus:{state:'ok',epoch:'old',checkedAt:Date.now()-61000},[A.WEEKS]:{format:1,weeks:{0:{...A.normalize(raw(0,'100000000',true)),epoch:'old'}}}},
+  {pulse:{lastHeight:H,epoch:'new'},core:{generateLive:async()=>({snapshot:at(H),records:[]})},weights:async url=>{reads.push(url);if(url.endsWith('/weights/0'))return raw(0,'200000000',true);if(url.endsWith('/weights/1'))return raw(1,'100000000',false);throw Error('offline');}});
+ await flush();await h.tick();
+ const week=h.local[A.WEEKS].weeks[0];assert.equal(week.epoch,'new');assert.equal(A.piece(week,0),2,'the new epoch’s amount, not the cached one');
+ const before=reads.filter(u=>u.endsWith('/weights/0')).length;assert.equal(before,1);
+ await h.tick();assert.equal(reads.filter(u=>u.endsWith('/weights/0')).length,before,'the same epoch does not read a completed week twice');
+});
+
+test('Sales asked at a later block never take a shared read that stops at an earlier block',async()=>{
+ const H=971704,id=unlisted[0],reads=[];
+ const h=harness({liveSnapshot:at(H)},{weights:url=>{assert.match(url,/state\?since=999999999$/);return new Promise(resolve=>reads.push(resolve));},core:{listingRecords:require('../src/lib/snapshot-core').listingRecords}});await flush();
+ const first=h.send({type:'shn-sales',id,height:H},PAGE);await flush();
+ h.local.liveSnapshot=at(H+1);const second=h.send({type:'shn-sales',id,height:H+1},PAGE);await flush();
+ assert.equal(reads.length,1,'one read in flight is shared');
+ reads[0]({lastHeight:H,listings:[]});await flush();
+ assert.equal(reads.length,2,'the later block reads once more');reads[1]({lastHeight:H+1,listings:[]});
+ const [a,b]=await Promise.all([first,second]);assert.equal(a.ok,true);assert.equal(b.ok,true);assert.equal(h.session.nakaRecords.height,H+1);
+});
 
 test('Sanitized per-height public cache survives worker restart and invalidates on epoch change',async()=>{
  const A=require('../src/lib/rewards'),R=require('../src/lib/rules'),H=R.RULES.startBlock+1009,row=A.normalize({w:0,height:R.RULES.startBlock,blocks:1008,complete:true,base:'100000000',pieces:Array(3333).fill('200000000')}),initial={liveSnapshot:at(H),liveStatus:{state:'ok',epoch:'qa',checkedAt:Date.now()},[A.WEEKS]:{format:1,weeks:{0:row}}};let reads=0;

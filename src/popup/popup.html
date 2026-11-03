@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="head">
-    <div id="sigil" class="sigil-frame" aria-hidden="true"></div>
+    <div id="sigil" class="sigil-frame naka-alive" aria-hidden="true"></div>
     <div class="brand"><h1 id="title"></h1><p id="tagline" class="sub"></p></div>
     <button id="searchOpen" class="head-search" type="button" aria-controls="sheet" aria-expanded="false"></button>
     <div id="langSwitch" class="segmented" role="group" aria-label="Language / 语言">
@@ -42,6 +42,7 @@
     </section>
     <section id="holdingsList" class="holdings-list">
       <div class="list-head"><h3 id="tilesTitle"></h3><span class="list-actions"><button id="holdingsCopy" class="list-link" type="button"></button><button id="holdingsManage" class="list-link" type="button"></button><button id="holdingsAdd" class="list-add" type="button"></button></span></div>
+      <div id="holdingsSort" class="hc-sort" role="group" hidden></div>
       <div id="holdingsNotes" class="hc-notes"></div>
       <div id="holdingsTiles" class="hc-tiles"></div>
       <button id="holdingsMore" class="hc-more" type="button" hidden></button>
@@ -50,7 +51,7 @@
 
   <section id="viewRaise" class="view view-raise" hidden>
     <div class="raise-head"><h2 id="raiseTitle" class="px-title"></h2><button id="raiseFull" class="list-link" type="button"></button></div>
-    <p id="raiseBasis" class="raise-basis"></p>
+    <p id="raiseBasis" class="raise-basis"><span id="raiseBasisText"></span></p>
     <p id="raiseScope" class="raise-scope" hidden></p>
     <div id="raiseBody" class="raise-body"></div>
   </section>
@@ -74,7 +75,7 @@
       <details class="about-fold"><summary><h2 id="rulesTitle"></h2></summary><div class="about-body"><div id="aboutRules"></div><p id="listedNote"></p><p id="measureNote" role="note"></p></div></details>
       <details class="about-fold"><summary><h2 id="dataTitle"></h2></summary><div class="about-body"><div id="aboutData"></div><p class="about-links"><a id="open" target="_blank" rel="noopener noreferrer"></a></p></div></details>
     </div>
-    <p class="about-tg"><a id="tgJoin" target="_blank" rel="noopener noreferrer"></a></p>
+    <p class="about-tg"><a id="guideLink" target="_blank" rel="noopener noreferrer"></a><a id="tgJoin" target="_blank" rel="noopener noreferrer"></a></p>
   </section>
   </main>
 

@@ -12,7 +12,7 @@ Original stepped shield/crown/violet gaze, graphite surfaces and restrained ambe
 
 Every primary figure is **total holding-formula weight including the 100% base**, across grid/list, Activity, Vault, details and queries. Only contribution rows use `+N%`. A formula value does not establish rewards or eligibility. One block/header-age basis accompanies every inspection; the block-weight/accrued-reward distinction stays visible.
 
-Listed grid/list NFTs show **After sale**. The inspection has one large simulated-sale total and a smaller **Before-sale formula** reference. Its amber listing strip says **No rewards while listed**. Unlisted pieces show their selected-block formula, with eligibility unverified. Missing offer data explicitly means status unknown. Activity uses the synced block, without simulating a sale or implying sale-time history.
+Listed grid/list NFTs show **After sale**. The inspection has one large simulated-sale total and a smaller **Before-sale formula** reference. Its amber listing strip says **No rewards while listed**. Unlisted pieces show their selected-block formula, with eligibility unverified. Missing offer data explicitly means status unknown. Activity uses the synced block as things stand, the same as the market: a listing still open shows its weight if bought now, under its own label; the weight at a past sale opens from that sale's block under Past sales.
 
 The market has one integrated desktop context/action row: block, actual header age, source, minimum filter and Compare. Narrow screens use two rows; optional detailed reward scope, assumptions and start planning stay in native hover and focus-accessible descriptions. No separate banner/toolbar stack or launch card.
 
@@ -77,7 +77,7 @@ The implementation is based on the publicly served wallet components inspected o
 
 The current endpoint previews block-specific formulas and the on-chain programme defines 1,008-block reward weeks. Quarterly snapshot heights and their relationship to the preview remain unconfirmed. Same-height official `/rewards/weights/now` trait units are accepted only when their floor, named traits, canonical supply and every known piece total agree with the independent threshold/number/cap engine. A successful but inconsistent response fails synchronization; transport failure preserves valid floor data with explicit rare-trait uncertainty, never inherited stale units. Current zero-listed rare weights use official evidence; a hypothetical sale cannot simply reuse the pre-sale units. The public programme says three recent sales but does not define their aggregation in the published reference source. Unverified rare after-sale cases therefore show bounds.
 
-Relay credits appear as a separate utility row when captured in an active listing, with zero distinct from unavailable. They do not change weight. Comparison columns can compare these balances next to asks. The wallet's own credit display is not duplicated or extracted from private storage. API-art identities are supported only on the new `/wallet` route, from the two official origins, with exact collection ID and an existing local asset-to-inscription mapping. Original collection-grid/list/Vault slot rules stay intact; pending wallet market tiles are excluded.
+Relay credits appear as a separate utility row when captured in an active listing, with zero distinct from unavailable. A known balance shows even when it is zero; an unavailable one shows nothing. They do not change weight. Comparison columns can compare these balances next to asks. The wallet's own credit display is not duplicated or extracted from private storage. API-art identities are supported only on the new `/wallet` route, from the two official origins, with exact collection ID and an existing local asset-to-inscription mapping. Original collection-grid/list/Vault slot rules stay intact; pending wallet market tiles are excluded.
 
 
 ## Owner delisting context (v0.11.0)
@@ -359,7 +359,7 @@ v0.13.0 follows the published v0.12.5. The work had three aims: answer the three
 
 - **Hero.** The block in amber pixels with its age and live state, the reward week and how far into it the block is, then three figures of that block: collection floor, listings, and what a 100% weight earns in a full week (the unit every listing's weekly gain is measured in).
 - **Schedule.** This week's end, the last rewarded block and the claim deadline: the exact blocks left first, the estimated local date beside them.
-- **Network output.** Read top down as one sum: **full output** (the week's output if all 3,333 pieces earned) on one line; a 1 px split under it; **earnable ≤** under its left half and **forfeited ≥** under its right, with its share (lost to listing, moving or not minting; never issued). **Claimed** comes from the public claim receipts, a separate fact, so it has its own line under a dotted rule. An earlier layout put claimed beside full output above the split, where it read as half of the line.
+- **Network output.** Read top down as one sum: **full output** (the week's output if all 3,333 pieces earned) on one line; a 1 px split under it; **earnable ≤** under its left half and **forfeited ≥** under its right, with its share (lost to listing, moving or not minting; nobody else receives it, and what becomes of it is not stated officially). **Claimed** comes from the public claim receipts, a separate fact, so it has its own line under a dotted rule. An earlier layout put claimed beside full output above the split, where it read as half of the line.
 - The tab fits the popup without scrolling, in both languages and for any week, and loads when it is shown.
 
 ### Details cards (market popover, look-up, extension page)
@@ -402,13 +402,13 @@ v0.13.0 接在已发布的 v0.12.5 之后。目标有三个：回答持有人和
 
 - **主卡片。** 橙色像素字的区块号，旁边是区块时间和实时状态；奖励周和本周进度；再是这一区块的三个数字：集合地板、挂单数、权重 100% 一整周的产出（衡量每单周增量的单位）。
 - **奖励时间表。** 本周结束、最后有奖励的区块、领取截止：先写准确的剩余块数，旁边是估计的本地日期。
-- **网络产出。** 从上往下读成一道加法：**满额产出**（3,333 枚都有资格时这一周的产出）一行；下面一条 1 像素分隔线；左半段下面是**可产出 ≤**，右半段下面是**流失 ≥** 和它的占比（因挂单、转移或未铸造而失去，不会发行）。**已领取**来自公开领取回执，是另一回事，所以单独一行、用虚线隔开。早先的版面把已领取和满额产出并排放在线条上方，读起来像是线条的一段。
+- **网络产出。** 从上往下读成一道加法：**满额产出**（3,333 枚都有资格时这一周的产出）一行；下面一条 1 像素分隔线；左半段下面是**可产出 ≤**，右半段下面是**流失 ≥** 和它的占比（因挂单、转移或未铸造而没人能领，也不分给别人，去向官方没有说明）。**已领取**来自公开领取回执，是另一回事，所以单独一行、用虚线隔开。早先的版面把已领取和满额产出并排放在线条上方，读起来像是线条的一段。
 - 中英文、任何一周，这一页在弹窗里都不用滚动；切到这一页时才读取。
 
 ### 详情卡片（市场浮层、查询、独立页）
 
 - 左边大头像。右边依次是一词状态、所有数字所依据的区块、权重及一行说明（是哪种情形、第几周起，如“成交后 · 第 3 周起”），再是带单位 SHNAKAS 的每周和剩余。文字靠左、数字靠右，和特征表一致。
-- 中继额度和集合地板放在特征表下的两格；比值公式和隐私领取规则合成一行小字；历史成交点开才读，每个区块只读一次。
+- 集合地板放在特征表下（挂单读到中继额度时在它旁边，0 也显示）；比值公式和隐私领取规则合成一行小字；历史成交点开才读，每个区块只读一次。
 - 已被买下、等待确认的挂单写“成交中”，说明为什么买不了，仍显示买家下单前看到的每周和剩余；不进连买，也不算我的持仓变化。撤单中的挂单会回到卖家手里，不显示成交数字。
 - 一个标签只开一个浮层；在市场页点开历史成交不再把浮层固定住。
 
@@ -420,3 +420,156 @@ v0.13.0 接在已发布的 v0.12.5 之后。目标有三个：回答持有人和
 ### 用词
 
 用直白的名字代替记账术语：**满额产出**、**可产出**、**流失**、**已领取**。每个数字带单位；每条悬停提示只有一句。
+
+## v0.13.1 — what changed since v0.13.0 / 相对 v0.13.0 的变化
+
+v0.13.1 follows the published v0.13.0 and gathers six rounds of work, each below with what prompted it: a review of v0.13.0; cards that moved or closed while in use; hover cards that stayed open, and the way from a badge to its card; saying what is still on its way, a living sigil, and Compare by value; Activity reading like the market, and My holdings sorted four ways; and relay credits at zero shown again, with the start week said against this week.
+
+中文：v0.13.1 接在已发布的 v0.13.0 之后，合并了六轮工作，下面每节写明起因：v0.13.0 的审查意见；卡片在使用中移位或消失；悬停卡片不关闭，以及从标签到卡片的路；说清还在路上的数据、会动的标志、按性价比比较；动态页与市场页同一口径、我的持仓可排序；中继额度 0 也显示、起算周对着当前周说。
+
+### One reading of each holding, pages that follow their data, honest wording / 每枚持仓只有一种读法、页面跟着数据更新、用词有依据
+
+From a review of v0.13.0, each point checked against the code before changing it.
+
+- **One status per holding.** The details card (look-up, extension page, market popover) read a holding's eligibility from the public records alone, while the holdings hero also used the wallet's readings and recorded intervals. A holding recorded as received this week showed the hero's "from week 3" but the card's remaining included the rest of this week. Every card now takes the same status as the hero, and a change in it rebuilds the card.
+- **History page.** It was painted once; switching language, a new block, a holding or a recorded interval left it as it was. It now repaints when any of them changes, on the week that was selected.
+- **Chain epoch.** Completed weeks read in an earlier epoch are read again by the automatic sync and are left out of the past total meanwhile, as the history reader already did; one test (`weeksAt`) serves all three.
+- **Shared public-record read.** Each caller checks the read reaches its own block; a read started for an earlier block is followed by one more, and an older set never replaces a newer one.
+- **Open week.** Its range says where the figures stop ("Blocks 972,709 – 973,161 so far"; Chinese, with more room, keeps the full range and adds "累计至 973,161"); the full output's tooltip says "so far".
+- **Past total** says "· reference" when it includes public-record estimates, as the history page does.
+- **Page tiles.** A holding that starts later shows "Week 3+" where this week's figure would be, as the popup tile does.
+- **Dates** in the schedule are marked approximate ("~"); the tooltip says they assume about 10 minutes a block.
+- **Words with a basis.** What nobody can claim "goes to no one else; what becomes of it is not stated officially" (the rules audit), not "never issued". Private moves are public events whose piece cannot be told. The zero-listing rule separates the official bonus now from the inferred median after an assumed sale. Compare says closing listings count as gone; listing forfeits the whole week and rewards resume the week after a reclaim. Remaining starts at the week a piece starts earning. A week's last block reads "final block", as the hero still calls it this week.
+- **Totals** in the holdings line wrap instead of running past a narrow card.
+
+Not taken: renaming the short labels (per week, remaining, full output, earnable, forfeited) to longer ones, a smaller block hero and the layout suggestions; they reverse choices made in the earlier rounds.
+
+中文：
+- **每枚持仓只有一种读法**：详情卡片（查询、独立页、市场浮层）以前只按公开记录判断持仓资格，持仓主面板却还用了钱包读数和补录区间。补录为“本周收到”的持仓，主面板写“第 3 周起”，卡片的剩余却把本周剩下的部分也算进去。现在所有卡片和主面板用同一份状态，状态变了卡片也会重建。
+- **持仓历史页**：以前只画一次，切换语言、新区块、持仓或补录变了都不更新；现在任一变化都会重画，并停在原来选的周。
+- **链 epoch**：自动同步会重新读取旧 epoch 读到的已结束周，期间历史累计不计入这些周，和历史页原来的做法一致；三处共用同一个判断（`weeksAt`）。
+- **公开记录共用一次读取**：每个调用者各自检查读到的区块够不够；为较早区块发起的读取不够时再读一次，旧数据不会覆盖新数据。
+- **进行中的周**：范围后面写明累计到哪一块（“· 累计至 973,161”）；满额产出的提示写“到目前为止”。
+- **历史累计**含按公开记录推算的部分时写“· 参考”，和持仓历史页一致。
+- **独立页卡片**：下周才开始的持仓，在本周数字的位置写“第 3 周起”，和弹窗卡片一致。
+- **时间表日期**前加“约”，悬停说明按每块约 10 分钟估算。
+- **用词有依据**：没人能领的部分写“也不分给别人，去向官方没有说明”（规则审计的结论），不再写“不会发行”；私下转移是公开事件，只是认不出是哪一枚；零挂单规则分开写当前的官方加成和假设成交后的推算中位数；比较页写明成交中或撤单中的挂单按离开市场计算；挂单那一周整周没有奖励，撤单后下一周起恢复；剩余从开始有奖励的那周算起；一周的最后一块写“最后一块”，和主面板仍称“本周”一致。
+- **持仓合计**一行放不下时换行，不再超出卡片。
+
+未采纳：把“每周、剩余、满额产出、可产出、流失”改成更长的名字、缩小区块主卡片，以及其它版式建议；这些和前几轮定下的设计相反。
+
+
+### A card stays where it is while you use it / 在卡片里操作，卡片不动、不消失
+
+Reported: on the market's Activity tab, a card opened by hovering a badge moved when 历史成交 was clicked, and closed because the pointer was no longer over its new place. Reproduced with the real mouse on the real Activity tab, and on a stand-in market page at three viewport sizes and eight badge positions. The same causes reached every hover card, and a search for the same kind of fault (what the viewer is pointing at, reading or typing into moving away or vanishing) found more.
+
+- **A press inside a hover card no longer moves it.** Opening a fold was the one press that left a card a hover preview; the rows arriving made it grow and, short of room on its side, flip to another side, away from the pointer. A press now keeps the card where it is and leaves it a hover card (next section).
+- **Pinning moves nothing.** The close button's room was made only on pinning, so ＋ Compare and ＋ My holdings moved 24 px between press and release; on a phone the button wrapped to the next line and the click was lost. The room is kept in every state.
+- **A hover card keeps its side** while its content changes size (artwork decoding, rows arriving).
+- **A data refresh no longer closes cards.** On the market, any data write (a new block, reward readings, a holdings change) closed the open card, clicked or not, so ＋ My holdings closed the card it was pressed in. A clicked card stays and offers "Data updated · refresh this card"; a hover card stays with its piece when the page redraws the badge in place. That notice and "No longer in this list" sit at the card's bottom edge instead of pushing its content down. ＋ My holdings repaints itself, and a second press undoes the first.
+- **A clicked card survives the window losing focus** (switching apps, a link opened in a new tab).
+- **Card buttons show what they did.** On the extension page, ＋ Compare and ✓ My holdings on a holding's card kept their label after a press (the card is not rebuilt), so a second press repeated the first instead of undoing it. Every redraw now repaints the buttons of the open card from the current selection and holdings, on the holdings and the listing cards alike.
+- **Compare button width.** "✓ In Compare" became "✕ Remove" under the pointer, 24 px narrower, so near its edge the two labels swapped back and forth. Both labels now share one cell.
+- **What is being read or typed into survives a refresh**: the market's filter list (relabelled, not rebuilt), the item page's panel (redrawn in place with its open fold and focus), the extension page's history (read off-screen and swapped in with the chosen week, the open weeks, the scroll place and the focus) and the popup's historical block list (not rebuilt while it is being chosen in).
+
+中文：
+- **在悬停卡片里按下不再让卡片移位**：以前只有展开折叠这一下不会固定，成交记录读回来后卡片变高，原来那一侧放不下就换到另一侧，离开了鼠标。现在按下后卡片原地不动，仍是悬停卡片（见下一节）。
+- **固定时不挪动任何东西**：关闭按钮的位置以前只在固定时才让出，“＋ 加入比较”“＋ 我的持仓”在按下和松开之间左移 24 像素；手机宽度下按钮换到下一行，点击落空。现在任何状态都预留这个位置。
+- **悬停卡片内容变化时保持在原来那一侧**（作品图解码、成交记录读回）。
+- **数据刷新不再关闭卡片**：市场页以前每次写入数据（新区块、奖励读数、持仓变化）都会关闭打开的卡片，不论是否已固定，所以在卡片里点“＋ 我的持仓”会把这张卡关掉。现在固定的卡片保留，并提供“数据已更新 · 刷新此卡”；徽章在原位重画时，悬停卡片跟着同一枚继续显示。这条提示和“已离开当前列表”放在卡片底边，不再把内容往下推。“＋ 我的持仓”会立即更新按钮，再点一次就撤销。
+- **切到别的程序或在新标签打开链接，固定的卡片不关闭。**
+- **卡片按钮显示操作结果**：独立页持仓卡片上的“＋ 加入比较”“✓ 我的持仓”按下后文字不变（卡片不会重建），再按一次是重复操作而不是撤销。现在每次重画都按当前的比较和持仓重画打开的卡片上的按钮，持仓卡片和挂单卡片一样。
+- **“加入比较”按钮宽度不变**：“✓ 已加入比较”在鼠标下换成“✕ 移出比较”，变窄 24 像素，鼠标在边缘时两种文字来回切换。现在两种文字共用同一宽度。
+- **正在看或正在输入的东西不被刷新冲掉**：市场页的筛选下拉（只改文字，不重建）、详情页的面板（原位重画，保留展开的折叠和焦点）、独立页的持仓历史（后台读完再整体替换，保留所选周、展开的周、滚动位置和焦点）、弹窗历史区块查询的区块下拉（正在选时不重建）。
+
+### A hover card is for a look, a clicked card is kept / 悬停是看一眼，点击才留下
+
+Reported on a test build of this release (one that pinned a card on any press inside it): once 历史成交 had been opened in a hover card, the card no longer closed when the pointer left it and no other badge opened its card, which 0.13.0 had fixed once already ("opening 历史成交 no longer pins the card"). Also reported: a far button in the card could only be reached by first crossing the edge the card shares with its badge; cutting across beside the badge closed the card on the way.
+
+- **Using a hover card does not keep it.** A press, an opened fold, a button, the focus inside: the card stays a hover card. It closes once the pointer has left both the card and its badge, and the next badge the pointer reaches opens its own card. Only clicking the badge itself (or Enter or Space on it) keeps a card until ×, Escape or a click outside.
+- **The card the pointer is on does not move.** From the moment the pointer is on the card (or a press or the focus is in it) it keeps its place: a fold opening, rows arriving, a button relabelled, the page redrawing its list or newer data change its content, never its place. It grows downward, so what was clicked stays under the pointer, and only once its content grows: reaching a card changes nothing about it. Newer data waits behind "Data updated · refresh this card" at its bottom edge instead of replacing what is being read. The tail goes once the card no longer meets its badge as it did.
+- **The way from the badge to the card.** Nothing static was added. A longer shared edge (the card wrapping more of the badge) covers the badge being read and its neighbours; an invisible bridge around the card keeps it open when the pointer leaves sideways and covers neighbouring badges; a close delay makes every leave lag (0.13.0 removed one for that reason) and still loses a slow or long way. Instead, as Radix Tooltip (its grace area) and Floating UI (`safePolygon`) do: when the pointer leaves the badge other than onto the card, the card stays while the pointer is inside the corridor from where it left to the card, the convex hull of that exit point, widened 5 px along the badge's edge, and the card. Heading anywhere else closes the card at once, so leaving never lags; resting on the way for 100 ms closes it (Floating UI closes after 40 ms at rest, Radix never while inside). A badge the pointer passes over on its way does not open; one it stops on opens after those 100 ms. The corridor starts where the pointer crossed the badge's edge, found from its last place inside the badge, since the leave event's point lies already one move further.
+- **The focus counts as holding a card only while it is there.** The focus leaving a hover card closes it, unless the pointer is still on the card or its badge. On the market, ＋ Compare disabled itself while saving, which took the focus away and closed the card it was pressed in; it is marked busy instead and keeps the focus, for keyboard users too.
+
+中文：
+- **用悬停卡片不会把它留住**：在卡片里按下、展开折叠、点按钮、焦点在卡片里，卡片都还是悬停卡片。鼠标离开卡片和标签就关闭，鼠标到达的下一个标签照常弹出它自己的卡片。只有点标签本身（或在标签上按 Enter、空格）才把卡片留住，直到点 ×、按 Esc 或点卡片外。
+- **鼠标所在的卡片不移动**：鼠标一进卡片（或在卡片里按下、焦点进入），卡片就停在原位。展开折叠、成交记录读回、按钮改字、页面重画列表、数据更新，都只改内容，不改位置。卡片向下长，点过的地方留在鼠标下；只在内容真的变多时才长，鼠标进入本身不改变卡片。新数据放在底边“数据已更新 · 刷新此卡”后面，不替换正在看的内容。卡片不再贴着原来的标签时，去掉指向标签的小尾巴。
+- **从标签到卡片的路**：不加任何静态区域。加长贴合边（卡片多包住标签）会挡住正在看的标签和相邻标签；卡片周围加透明桥，鼠标往旁边离开时卡片也不关，还会挡住相邻标签；延迟消失让每次离开都慢半拍（0.13.0 正是因此去掉的），走得慢或路长时照样会丢。改用 Radix Tooltip（宽限区）和 Floating UI（`safePolygon`）的做法：鼠标离开标签但没进卡片时，只要还在“离开点到卡片”的通道里，卡片就保持打开。通道是离开点（沿标签边缘左右各放宽 5 像素）和卡片的凸包。往其他方向走，卡片立即关闭，所以离开从不拖延；在通道里停住 100 毫秒，卡片关闭（Floating UI 停住 40 毫秒就关，Radix 只要在通道内就不关）。去卡片的路上经过的其他标签不会弹出；停在它上面，100 毫秒后弹出它的卡片。通道起点取鼠标真正穿过标签边缘的位置（由它在标签内的最后位置算出），因为离开事件的坐标已经多走了一步。
+- **焦点只在卡片里时才算“在用”**：焦点离开悬停卡片时卡片关闭，但鼠标还在卡片或标签上时不关。市场页“＋ 加入比较”保存期间会把自己设为禁用，焦点因此丢失，按下它的卡片随之关闭；现在改为“忙碌中”标记，焦点留在按钮上，键盘用户同样受益。
+
+### Saying what is still on its way, a living sigil, and Compare by value / 说清还在路上的数据、会动的标志、按性价比比较
+
+Asked for while testing this release: while the popup's block data is being updated, a small animation after the last update's time, so it is clear the figures are not the latest until it finishes; the same for the Block tab's network output and for Raise weight while it computes; the sigil beside the name animated in the popup and on the extension page (then a turn of the head, both ways, with the two sides told apart); relay credits left out at zero; Compare's example selection taken from Best buy, the before-sale formula row reconsidered, and the piece's own weekly output added above For my holdings and the value per 0.001 BTC beside it.
+
+- **"Updating" means a newer block is being read.** The worker marks the block it reads (session storage) from the read of a new block until that block's holdings and reward records are in; a failed read ends the mark and says why, and a worker that starts clears a mark left by one that stopped mid-read. Three pixels lit in turn, then the word, follow the block's age: the popup's Home line, the Block tab's hero and the extension page's header; after Raise weight's basis line the pixels alone. Their title names the block being read. The once-a-minute check that finds the same block shows nothing: the figures already are the latest, and a blink every minute would only say "not current" when they are. On the Home line the word shows only while the whole line fits; otherwise the pixels stay alone, and when even that is short of room the data's label gives way, never the age.
+- **The network output says it is reading.** Pixels follow the card's title while the selected week is read. Its figures stay where they are, dimmed, and the line under the title keeps the blocks they cover while the same week is read again (a newer block); it says it is reading when another week is chosen or when there are no figures yet. The pixels appear only if the read takes over a quarter of a second, so a week read from memory does not flicker.
+- **Raise weight: every answer waits in its own card.** Before any answers, three cards with their titles and blank rows (shapes where the answer goes, breathing) take their places at once, so nothing moves when the answers come. Pixels after a waiting card's title say it is on its way and how far its own answer has come (listings 8/115, plans 4/5, traits 8/21); each card is replaced as soon as its answer is ready. On a newer block the cards on screen stay, their rows dimmed, until each replacement is ready. This also fixes a fault found while checking, present in the released 0.13.0: a refresh while the tab was shown replaced the cards halfway and then wrote the answers into the cards it had taken away, leaving Reach 400% empty and Own a trait at "计算中…" until the popup was reopened.
+- **The sigil is alive.** In the popup's header and on the extension page's brand its eyes switch on as the page opens and glance left, then right; the head turns to the right, holds its profile a moment and turns back; a blink, the eyes glance left, and the head turns to the left the same way (about 3.7 s and 6.7 s after opening; then once every 30 s, never in quick succession). The turns are drawn as a character turns its head in a flat cartoon, in the logo's own two colours: the head keeps its outline, the face (its hole, the goggles and the mouth) slides round it like a label round a cylinder and narrows toward the edge, the goggles stand a little forward so at the profile they show past the outline like a nose, the chin follows the face, the crest's spikes ride round on a smaller ring, and the goggles' strap runs round the head. Each side has its own mark, so the two profiles differ: a square earpiece on the side the right turn shows, a cross-shaped bolt on the side the left turn shows (one mark a side; two side by side read as a second pair of eyes). Four views to each profile (22.5° steps), 65–90 ms each, the profile held 380 ms, about 0.8 s a turn; the sigil hops one unit as it sets off and as it comes back. The views come from scripts/gen-sigil-turn.js (a test checks pixel.js holds its output); the front view stays the original artwork. Tried and dropped: squeezing the flat front about the upright axis (a sheet of paper flipping); a shaded 3D helmet turned a full round (its outline twisted and its mottled shading and spiky crest read as a pineapple being wrenched round, a little unsettling); going on to the back (the plainest view, and a logo turning its back on the user). While a newer block is read the eyes scan from side to side and the head does not turn; once the block is in, the look-round plays again, which says the update has finished. The eyes move in whole pixels only: held steps and moves of one grid unit.
+- **Relay credits.** This round left the line out at zero; the last round of this release put it back (below), so, as in v0.13.0, every known balance shows, zero included.
+- **Compare by value.** The example selection is Best buy's first four: the listings that add most to my week per BTC (with no holdings, the pieces that earn most on their own per BTC); the demo's first visit compares the first three for its example holdings. The before-sale formula row is gone: the official current-weight endpoint reports a formula for a listed piece, but a listed piece earns nothing (the official wallet: "A listed piece earns nothing from that block on"), so it was a figure no one earns, and what the sale changes in the piece's own weight is in the trait rows. Above For my holdings, **This NFT per week**: what the piece earns on its own once bought; the two differ by what the sale does to my other pieces. Under For my holdings, the figure it divides, **Per 0.001 BTC**: my weekly gain per 0.001 BTC of the ask (Best buy's measure); with no holdings it follows This NFT per week and divides that. Each of these rows names its unit in its label (SHNAKAS, per week), so the cells hold the figures alone.
+
+中文：
+- **“更新中”表示正在读取更新的区块**：后台读取新区块时在会话存储里标出它，从开始读取一直到这一区块的持仓和奖励记录读完；读取失败也结束标记并说明原因，后台重新启动时清掉上一次中途停下留下的标记。区块时间后面跟三个依次点亮的像素点和“更新中”：弹窗首页状态行、区块页主卡片、独立页顶部；增加权重的依据行后面只有像素点。悬停说明写着正在读取哪个区块。每分钟一次、发现还是同一区块的检查不显示：这时数字已经是最新的，每分钟闪一下只会误导。首页状态行放得下才显示“更新中”这个词，放不下只留像素点；再不够时先省略数据标签，时间始终完整。
+- **网络产出说明正在读取**：读取所选周时，卡片标题后面出现像素点。数字留在原位变暗；同一周重新读取（新区块）时标题下的区块范围不变，换了周或还没有数字时写“正在读取…”。读取超过四分之一秒才出现像素点，从内存读出的周不会闪。
+- **增加权重：每个答案在自己的卡片里等**：还没有答案时，三张卡片带着标题和空白行（答案位置上的占位块，轻微呼吸）立刻就位，答案到了也不挪动。等待中的卡片标题后面有像素点和各自的进度（挂单 8/115、方案 4/5、特征 8/21），哪张算好就换哪张。新区块时屏幕上的卡片保留、行变暗，各自算好再替换。检查时还发现并修好一个已发布的 0.13.0 就有的问题：这一页开着时遇到刷新，会中途替换卡片，最后把结果写进已经被换掉的旧卡片，“冲 400%”变成空卡，“垄断特征”一直停在“计算中…”，直到重新打开弹窗。
+- **标志会动**：弹窗顶部和独立页左上角的标志，打开时眼睛“开机”亮起，先往左看再往右看；头向右转，在侧面停一下再转回来；眨一下眼、眼睛往左看，头再向左转一次（打开后约 3.7 秒和 6.7 秒；之后每 30 秒一轮，不会频繁连转）。转头按扁平卡通角色扭头来画，只用标志原有的两种颜色：头型轮廓不变，脸（开口、护目镜、嘴）像贴在圆柱上的标签一样滑向一侧并逐渐变窄；护目镜略微凸出，转到正侧面时伸出轮廓，像鼻梁；下巴跟着脸走，头顶的刺在小一圈的环上跟着转，护目镜带子绕头一圈。左右两侧各有自己的标记，所以两个侧面不同：右转露出的一侧是方形耳扣，左转露出的一侧是十字螺栓（每侧只放一个，两个并排会被看成第二双眼睛）。每边 4 个视角（每 22.5° 一个），每帧 65–90 毫秒，侧面停 380 毫秒，一次转头约 0.8 秒；出发和回来时各轻跳 1 像素。视角由 scripts/gen-sigil-turn.js 生成（测试核对 pixel.js 里就是它的输出），正面仍是原图。试过并放弃的做法：把正面图沿竖轴压扁（像纸片翻转）；带明暗的 3D 头盔转整圈（轮廓被扭曲，斑驳的阴影加上尖刺像菠萝被强行扭转，有点吓人）；转到背面（最单调的一面，像标志背对用户）。读取新区块时眼睛左右扫动、不转头；读完后再完整做一遍，表示更新完成。眼睛只用整像素：逐格跳变、每次移动一个网格单位。
+- **中继额度**：这一轮曾改成额度为 0 时不显示；本版最后一轮又改回（见下文），和 v0.13.0 一样，读到的余额 0 也显示。
+- **按性价比比较**：“载入示例”取“买哪单划算”的前四单，即每 BTC 给我的持仓每周加得最多的挂单（没有持仓时，按这一枚自己每 BTC 的每周产量）；演示页第一次打开比较示例持仓下的前三单。去掉“成交前公式值”：官方当前权重接口对挂单中的藏品也给出公式值，但挂单中的藏品没有奖励（官方钱包原文：“A listed piece earns nothing from that block on”），这是一个谁也拿不到的数字；成交对这一枚自身权重的改变，下面各特征行已逐项写出。“对我的持仓”上方新增 **该 NFT 每周产量**（买下后这一枚自己每周的产量），两者的差额是成交对我其他持仓的影响；“对我的持仓”下方紧跟由它算出的 **每 0.001 BTC**（挂单价格每 0.001 BTC 换来的我的持仓每周增量，即“买哪单划算”的排序依据）；没有持仓时这一行紧跟“该 NFT 每周产量”，按这一枚自己的产量算。这几行的单位（SHNAKAS、每周）写在行标题里，单元格只写数字。
+
+### Activity shows a piece as it stands, the same as the market / 动态页按现状显示，和市场页一样
+
+Reported: one piece at one block showed two figures. A piece sold earlier and listed again carried, in Activity, its formula value as listed (no rewards while listed); on the market it carried its weight after a sale. Side by side they read as two answers to one question, and neither was the weight at the row's own sale.
+
+- Activity now asks the market's question. A listing still open is shown as if bought now, the same figure and the same card as on the market at the same block, under its own label, **If bought now**: the row is a past event, and "After sale" beside it read as after that sale. Everything else shows its total weight now.
+- The weight at a past sale is a separate question, answered on request. Under **Past sales** on any details card, a sale's block opens the block lookup for that piece at that block: in place on the extension page and in the popup; from the market, the worker opens the extension page with the lookup, which runs it and drops the address parameters.
+- The bar and the card's note say the figures are the shown block as things stand, not the time of the row.
+
+中文：起因是同一枚、同一区块出现了两个数。一枚卖出后又挂出的作品，动态页显示它挂着时的公式值（挂单期间没有奖励），市场页显示成交后的权重；放在一起像是同一个问题的两个答案，而且哪个都不是那条记录成交当时的权重。现在动态页问的和市场页一样：还在挂单的按“现在买入”显示，数字和卡片与同一区块的市场页相同，标签写 **现在买入后**（这一行是过去的事，旁边写“成交后”会被读成那笔成交之后）；其余显示现在的总权重。某笔成交当时的权重另外查：任何详情卡的 **历史成交** 里点那一笔的区块，就按那一块还原这一枚（扩展页和弹窗里就地打开；在市场页点，会打开扩展页自动查询，然后去掉地址里的参数）。顶部条和卡片底部都写明这是所示区块的现状，不是记录当时。
+
+### My holdings sorts four ways / 我的持仓四种排序
+
+Asked for: switching the order of My holdings quickly, by the order added, weight, this week's output and Sub 1K.
+
+- Four choices above the tiles: **Added**, **Number**, **Weight**, **This week**; the lit one shows its direction, and selecting it again reverses it. Sub 1K is not a separate sort: Number from low already puts Sub 10, Sub 100 and Sub 1K first, in that order, and also finds a piece by its number.
+- Weight is the figure on the tile's badge (after delisting, for a listed holding). This week is the tile's large figure; listed and waiting pieces earn nothing this week and go last. Ties go to the lower number; a figure not read yet goes after the rest.
+- The choice stays on this device (localStorage `nakaHoldingsSort`; no stored key is changed or removed).
+- A new block re-sorts only while the pointer is away from the holdings and their card. While it is on them the order shown holds and a new piece joins at the end; the new order follows once the pointer leaves. A sort the viewer chooses applies at once and keeps the focus; the arrow keys move between the choices.
+
+中文：用户要求“我的持仓”能快捷切换排序。卡片上方四个选项：**添加**、**编号**、**权重**、**本周**，选中的显示方向，再点一次反过来。Sub1K 不单列：编号从小到大，Sub10、Sub100、Sub1K 本来就依次排在最前，还能按编号找某一枚。权重按卡片徽章上的数（挂单中的按撤单后）；本周按卡片上的大数字，挂单中和还在等待的本周没有奖励，排在最后；相同时编号小的在前，还没读到数字的排在最后。选择存在本机（localStorage `nakaHoldingsSort`，不改动、不删除任何已有数据）。新区块只在鼠标不在持仓区、也没开着持仓卡片时重排；鼠标在上面时保持现有顺序，新加的排在末尾，鼠标离开后再按新顺序排。自己点的排序立即生效并保留焦点，左右方向键可在选项间移动。
+
+### Relay credits at zero show again / 中继额度为 0 也显示
+
+Reported: a listing with no credits left showed no credits line at all, which reads as a fault; the figure still tells a buyer what comes with the piece. Every known balance shows again, zero included, on the details card, the Listings tiles and the Compare row; a balance the data doesn't have shows nothing.
+
+中文：起因是没有中继额度的挂单整行不显示，看起来像出错了；这个数对买家仍有用。现在详情卡、挂单卡片和比较表里，读到的余额 0 也显示；数据里没有的不显示。
+
+### The week it starts earning, said against this week / 起算周对着当前周说
+
+Reported: "After sale · from week 4" read as three weeks of waiting, when week 4 was next week. The caption now says **from next week (week 4)** / **下周起（第 4 周）**, and a later week carries the current one beside it, **from week 5 (now week 3)** / **第 5 周起（现在第 3 周）**; hovering the caption gives the week's first block and how many blocks and days away it is. Listings' note and Raise weight's buy note say it the same way (Raise weight used to turn "next week" into "week 4"), and a holding tile waiting for next week says **Next week** / **下周起**.
+
+中文：起因是“成交后 · 第 4 周起”会被读成要等三周，而第 4 周就是下周。卡片标题改成 **下周起（第 4 周）**；更晚的周带上现在第几周，如 **第 5 周起（现在第 3 周）**；悬停标题可以看到那一周从哪一块开始、还差多少块、约几天。挂单区的说明和增加权重页“买哪单划算”的说明同样这样写（原来会把“下周起”换成“第 4 周起”）；持仓卡片里下一周开始有奖励的写 **下周起**。
+
+### The illustrated guide, linked from About / 说明页链接原理图解
+
+Asked for: Naka Sigil shows the figures, the illustrated guide explains the protocol behind them, and each should point to the other. About's last line now carries **How SHORD works ↗** / **协议原理图解 ↗** beside the Telegram link, kept to a link so the tab stays short; it follows the popup's language (the Chinese page, or `en.html`) on this repository's GitHub Pages, `learn/shord/`. The guide links back to Naka Sigil beside its QR code and in its common questions on mining. The group is named the same everywhere, **Naka Telegram Chinese group** / **Naka Telegram 中文交流群**: About, the wanted-post button, Own a trait's note, the README, and a second QR code on the guide's last page.
+
+中文：用户要求插件和原理图解互相引流：一个看数值，一个讲原理。“说明”页最后一行在 Telegram 链接旁加 **协议原理图解 ↗**，只放链接、不加介绍，页面保持简短；链接跟着弹窗语言走（中文页或 `en.html`），地址在本仓库 GitHub Pages 的 `learn/shord/`。原理图解在二维码旁的说明和常见问题的挖矿一组里链回 Naka Sigil。这个群各处统一叫 **Naka Telegram 中文交流群**：说明页、求购按钮、垄断特征的说明、README，以及原理图解结尾页的第二个二维码。
+
+### Network output reads again by itself; one caption for per week; the sort shared with the popup / 网络产出自己重读、每周只有一个标题、排序和弹窗共用
+
+Reported: Network output kept saying the block had changed, and Retry, pressed again and again, failed the same way. The panel asked the worker for the week at the block it was drawn with; the worker answers only at the block it holds, and a newer block or chain epoch (an indexer resyncing) during the read ends it the same way. Retry asked again at the same old block.
+
+- A changed block is not shown as a failure. The panel reads again at the block the worker holds now, up to three times, then says the indexer is updating and that it reads again on the next block (which the popup's own refresh does); Retry reads at the latest block too. The line under the title says Not read yet instead of Loading after a failure.
+- The holdings figures have one caption each, **Per week** / **预计每周** and **Network share** / **全网占比**, whether or not some pieces start next week; they always counted every holding that earns now or from a later week (listed ones not, since a listing earns nothing and reclaiming is the owner's choice), and the hints now say so.
+- The sort's first choice is **Date added** / **加入时间**: "Added" read as a button to add a piece. The choice is one setting for the extension page and the popup (NakaPortfolio sortChoice/sortFacts/sortIds, this extension's localStorage). The popup has the same choices above its tiles (at first a small menu, since a row of buttons, see the next section); a choice made in either reaches the other. Both sort by the same figures: weight after delisting for a listed holding, this week's SHNAKAS so far (0 for listed or waiting pieces). A refresh while the pointer is on the tiles keeps the order shown until it leaves.
+
+中文：起因是“网络产出”一直显示“区块已更新”，连点重试也一样失败。面板按自己画出时的区块向后台要这一周，后台只按它手里的区块回答，读取中途来了新块或索引器换了 epoch（索引器在重同步）也会这样结束；重试仍用那个旧区块去要。现在区块变了不当作失败：面板按后台当前的区块重读，最多三次，还不行就说明索引器正在更新、新区块到了会自动重读（弹窗自己刷新时就会重读），重试也按最新区块读；失败后标题下面写“暂未读到”，不再写“正在读取”。持仓汇总的两个数各只用一个标题：**预计每周**、**全网占比**，不再因为有作品下周才开始而改成“开始后…”；口径本来就是持有的都算（下周才开始有奖励的也算），挂单中的不算，提示里写明。排序的第一项改叫**加入时间**（“添加”像是要添加作品的按钮）。排序是独立页和弹窗共用的一个设置：弹窗卡片上方也有这几个选项（起初是一个小菜单，后来改成一排按钮，见下一节）；在哪一边改，另一边都跟着变。两边按同样的数排：挂单中的按撤单后的权重，本周按本周已产出（挂单中、等待中的为 0）。鼠标停在卡片上时，刷新不打乱顺序，离开后再排。
+
+### The popup's sort as a row of buttons / 弹窗排序改成一排按钮
+
+Reported: the popup's sort menu opened the system's own list, long and in another style, over the tiles, and the menu sat alone at the right of its row, out of line with the rest of the popup.
+
+- The popup now has the extension page's four buttons, in one row as wide as the tiles: **Sort** · **Date added** · **Number** · **Weight** · **This week**. The lit one carries its direction, pressing it again reverses it, and each button's hint says the order. The row fits the popup in both languages with nothing cut.
+- The row is built once per language and only restated after, so a refresh leaves it alone and the button just pressed keeps the focus; the arrow keys move between the buttons. The choice is still the one setting shared with the extension page.
+
+中文：起因是弹窗的排序菜单一打开就是系统自己的长列表，样式和弹窗不一样，还盖在卡片上；菜单本身单独占一行、靠右，和弹窗的版面对不齐。现在弹窗也用独立页那四个按钮，排成一行、和卡片一样宽：**排序** · **加入时间** · **编号** · **权重** · **本周**。选中的亮起并显示方向，再点一次反过来，每个按钮的悬停提示写明顺序；中英文在弹窗宽度下都放得下，不截字。按钮每种语言只建一次，之后只改状态，刷新不重建，刚点的按钮保留焦点；左右方向键在按钮间移动。选择仍是和独立页共用的那一个设置。

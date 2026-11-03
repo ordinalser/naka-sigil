@@ -1,0 +1,569 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>资料与复核 · SHORD：持有私密，证明公开</title><meta name="description" content="给比特币上的数字藏品（Ordinals）加隐私：作品公开可见，持有人记在加密的票据里"><meta name="site-url" content="https://ordinalser.github.io/naka-sigil/learn/shord/"><link rel="canonical" href="https://ordinalser.github.io/naka-sigil/learn/shord/sources.html"><link rel="alternate" hreflang="zh-CN" href="https://ordinalser.github.io/naka-sigil/learn/shord/sources.html"><link rel="alternate" hreflang="en" href="https://ordinalser.github.io/naka-sigil/learn/shord/sources-en.html"><meta property="og:type" content="article"><meta property="og:title" content="资料与复核 · SHORD：持有私密，证明公开"><meta property="og:description" content="给比特币上的数字藏品（Ordinals）加隐私：作品公开可见，持有人记在加密的票据里"><meta property="og:url" content="https://ordinalser.github.io/naka-sigil/learn/shord/sources.html"><meta property="og:image" content="https://ordinalser.github.io/naka-sigil/learn/shord/share.png"><meta name="twitter:card" content="summary_large_image"><link rel="alternate" type="application/pdf" href="shord-guide-zh.pdf"><link rel="icon" type="image/png" href="icon-72.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><style>/* SHORD 图解指南 / SHORD illustrated guide: one file for the screen and for print. The story is a run of 3:2 sheets
+   (297 mm by 223 mm, 4:3: at 100% in a browser's PDF viewer one page fills one screen), each exactly one page in print: the cover (the town, with the chapters as flags), one sheet a
+   chapter in two equal halves split at the page's centre line (the words for a newcomer; the plate with its technical
+   card right under it and the short technical note under the card, as one column centred in its half, as wide as the
+   page's height allows; the halves change sides each chapter) and a closing checklist in the same two halves. The
+   appendix after them is plain reference pages in one column. On a wide screen the sheets keep their printed layout
+   and are zoomed to the window, a page to a screen, and scroll freely: those rules are written once, between
+   paged:begin and paged:end, and build_book.py sets them for print and for that deck. No frames around the
+   pictures: they sit on the paper. Colour comes from the pictures and from each chapter's own colour. */
+:root {
+  --ink: #1c1b22; --muted: #5b5a66; --line: #e5e0d6; --paper: #fbf8f2; --desk: #e8e4da; --cream: #fff6e8;
+  --btc: #f7931a; --link: #6a2bd1; --sky: #7ccffb;
+  --font: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+html[lang="en"] { --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif; }
+* { box-sizing: border-box; }
+html { background: var(--desk); -webkit-print-color-adjust: exact; print-color-adjust: exact; scroll-padding-top: 56px; }
+body { margin: 0; color: var(--ink); font: 16px/1.8 var(--font); -webkit-font-smoothing: antialiased; }
+html[lang="en"] body { line-height: 1.62; }
+a { color: var(--link); text-underline-offset: 3px; }
+p, li, td, th { overflow-wrap: anywhere; text-wrap: pretty; }
+td.digits { white-space: nowrap; }   /* a number never breaks between its digits, even in a narrow column */
+h1, h2, .h1-line, .subtitle { text-wrap: balance; }
+code { font: .9em var(--mono); background: rgba(28, 27, 34, .07); padding: 0 3px; overflow-wrap: anywhere; }
+.appendix a, .table a { overflow-wrap: anywhere; }   /* a full address as link text breaks rather than overflows on a phone */
+h1, h2, h3 { line-height: 1.25; }
+svg { display: block; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.print-only { display: none; }
+.nobr { white-space: nowrap; }
+
+/* ---------------------------------------------------------------- the bar on screen */
+.bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 6px 16px;
+  padding: 9px 20px; background: #16151b; color: #fff; font-size: 14px; }
+.bar a { color: #fff; text-decoration: none; font-weight: 700; white-space: nowrap; }
+.bar-title { letter-spacing: .02em; }
+.bar-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+.bar-links a:not(.bar-dl):not(.lang) { color: #d6d3dd; }
+.bar .lang { padding: 1px 9px; border: 1.5px solid #5d5a68; border-radius: 3px; font-weight: 600; }
+.bar .bar-dl { padding: 3px 12px; background: var(--btc); color: var(--ink); border: 2px solid var(--ink); }
+.btn { display: inline-block; padding: 7px 18px; background: var(--btc); color: var(--ink); border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink); font-weight: 800; text-decoration: none; }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.plain-link { font-size: 14px; font-weight: 600; }
+
+/* ---------------------------------------------------------------- sheets, flowing on narrower screens */
+.book { padding: 28px 0 64px; }
+.sheet { position: relative; max-width: 1180px; margin: 0 auto 28px; padding: 44px 48px 48px; overflow: hidden;
+  background: var(--paper); box-shadow: 0 2px 14px rgba(28, 27, 34, .06); }
+.sheet, .appendix h1, .appendix h2 { scroll-margin-top: 64px; }
+.folio { position: absolute; right: 24px; bottom: 16px; font: 700 12px var(--mono); color: #9a96a6; letter-spacing: .08em; }
+.chapter { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 44px; align-items: start; }
+.chapter.flip .art { grid-column: 1; grid-row: 1; }
+.chapter.flip .words { grid-column: 2; grid-row: 1; }
+.ending { display: grid; grid-template-columns: 1fr 40%; gap: 44px; align-items: stretch; }   /* both sides from the top */
+.qa { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 44px; align-items: start; }
+.qa h2 { margin: 0 0 14px; font-size: 30px; font-weight: 900; }
+.qa .lead { margin-bottom: 18px; }
+.qa { counter-reset: qa; }
+.qa .callout { margin-top: 12px; background: #fff; border: 1.5px solid var(--ink); border-radius: 0; box-shadow: 3px 3px 0 #e3dccf; counter-increment: qa; }
+.qa .callout p { padding: 11px 16px; }
+.qa .callout p + p { border-top: 1px solid #ebe5da; }
+.flowsheet .callout { background: rgba(255, 255, 255, .72); border: 0; border-radius: 4px; box-shadow: none; }   /* a flow page's myth box looks like a chapter's, not like the answers' */
+.flowsheet .callout p + p { border-top: 1px dashed #cfcad9; }
+.qa .q b::after { content: " " counter(qa, decimal-leading-zero); font-family: var(--mono); }
+.qa .q span { font-size: 15.5px; font-weight: 700; }
+.qa .a { background: #fffaf1; }
+.qa .a span { color: #3d3c48; }
+#answers { display: block; }   /* one flow in two balanced columns: the heading and lead head the first, the answers follow */
+#answers .words { column-count: 2; column-gap: 44px; }
+#answers .words > * { break-inside: avoid; }
+.flowsheet .table { margin-top: 14px; }
+.flowsheet table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.5; }
+.flowsheet th, .flowsheet td { padding: 7px 9px; border-bottom: 1px solid #e3dccf; vertical-align: top; text-align: left; }
+.flowsheet th { font-size: 12px; letter-spacing: .06em; color: var(--muted); }
+.flowsheet td:first-child { font-weight: 700; white-space: nowrap; }
+.flowsheet .art h3 { margin: 0 0 8px; font-size: 16px; font-weight: 800; }
+.flowsheet .kicker { margin: 0 0 6px; color: var(--cx); font: 800 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; }   /* the chapter this page goes on from */
+html:lang(zh) .flowsheet .kicker { font-family: inherit; letter-spacing: .08em; }
+.flowsheet .flowfig { margin: 14px 0 0; }
+.flowsheet .art > .flowfig:first-child { margin-top: 0; }
+.flowsheet .art .flowfig + h3 { margin-top: 18px; }
+.art { position: relative; display: flex; flex-direction: column; gap: 18px; margin: 0; min-width: 0; }
+
+/* ---------------------------------------------------------------- the cover: the town, the title in its sky
+   The title (the series, the word mark, the line under it, tight together) and, a clear gap below, one line placing
+   it. Nothing to press: the chapters are the signs in the picture, the bar carries the PDF. One ink for all the type;
+   the pixel face only for the word mark; no monospace but the series' capitals. */
+.cover { padding: 0; background: var(--sky); }
+.cover-title { position: relative; z-index: 1; padding: 40px 44px 10px; background: linear-gradient(var(--sky), var(--sky-crop)); }   /* down to the colour where the picture starts */
+.kicker { margin: 0 0 14px; color: var(--ink); font-size: 14px; font-weight: 600; line-height: 1.4; }
+.kicker-series { font: 700 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.kicker-sep { margin: 0 .55em; }
+.kicker-kind { letter-spacing: .04em; }
+.cover h1 { margin: 0; font-weight: 700; }
+.cover .mark { height: 64px; fill: var(--ink); }
+.cover .mark .under { fill: #fff; }
+.h1-line { display: block; margin-top: 12px; font-size: 34px; line-height: 1.22; letter-spacing: .01em; }
+html[lang="en"] .h1-line { letter-spacing: -.01em; }
+.subtitle { margin: 18px 0 0; color: var(--ink); font-size: 18px; line-height: 1.6; font-weight: 500; }
+.cover-scene { position: relative; overflow: hidden; }
+/* the picture starts under the title, its top rows of plain sky left out (--crop: their share of its width, set by
+   build_book.py from gen_naka_figures.py; no cloud there) */
+.scene { margin-top: calc(-100% * var(--crop)); }
+.scene { position: relative; }
+.cover-art { margin: 0; }
+.cover-svg { width: 100%; height: auto; }
+.swipe-hint { display: none; }
+.cover-toc { margin: 0; padding: 0; list-style: none; }
+.cover-toc li { position: absolute; z-index: 2; transform: translateX(-50%); }   /* the post it stands on is drawn in the picture */
+.cover-toc a { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 2px; background: #fff; color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--c, var(--ink)); font-size: 14px; font-weight: 800; line-height: 1.4;
+  text-decoration: none; white-space: nowrap; }
+.cover-toc b { padding: 0 5px; background: var(--c, var(--ink)); color: var(--ct, #fff); font: 800 12px/18px var(--mono); }   /* --ct: the digit's colour on this chapter's colour (brown on gold) */
+.cover-toc a:hover { transform: translate(-1px, -1px); }
+
+/* ---------------------------------------------------------------- the plate and its card, on the paper with no frame */
+.plate { position: relative; margin: 0; }
+.plate-svg { width: 100%; height: auto; border-radius: 4px; }
+.card { margin: 0; line-height: 0; }
+.card-svg { width: 100%; height: auto; }
+.card-full { display: none; margin: -8px 0 0; font-size: 13px; font-weight: 700; text-align: right; }
+.tech { margin: 0; color: #3d3c48; font-size: 14px; line-height: 1.7; }
+.tech b { margin-right: 8px; color: var(--cx); font: 800 11.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+.tech .more { font-weight: 700; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- words */
+.words { min-width: 0; }
+.chapter-head { display: flex; align-items: center; gap: 16px; margin: 0 0 18px; }
+.chapter-head .num { flex: none; height: 44px; fill: var(--c); }
+.chapter-head .num .under { fill: var(--ink); }
+.chapter-head h2, .ending h2 { margin: 0; font-size: 30px; font-weight: 900; }
+.chapter-head .sep, .flowsheet h2 .sep { color: transparent; }   /* only for the PDF outline, between a title and its subtitle */
+.flowsheet h2 .sub { display: block; margin-top: 4px; color: var(--muted); font-size: 16px; font-weight: 700; }
+.chapter-head .sub { display: block; margin-top: 4px; color: var(--muted); font-size: 16px; font-weight: 700; }
+.words > p { margin: 0 0 14px; }
+.lead { padding-left: 14px; border-left: 4px solid var(--c); font-size: 17px; font-weight: 600; line-height: 1.75; }
+.legend { margin: 0 0 16px; padding: 10px 14px 8px; background: rgba(255, 255, 255, .72); border-radius: 4px; }
+.legend .lh { margin: 0 0 6px; color: var(--cx); font: 800 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+html:lang(zh) .legend .lh, html:lang(zh) .tech b { font-family: inherit; letter-spacing: .08em; }   /* Chinese small headings in the text face, not the mono face */
+.legend ol { margin: 0; padding: 0; list-style: none; }
+.legend li { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 5px; font-size: 15px; line-height: 1.6; }
+.legend .mk { flex: none; width: 19px; height: 19px; margin-top: 2px; }
+.words .table { margin: 0 0 14px; }
+.words table { background: #fff; font-size: 14px; }
+.callout { margin: 18px 0 0; background: rgba(255, 255, 255, .72); border-radius: 4px; }
+.callout p { display: flex; gap: 12px; margin: 0; padding: 10px 14px; line-height: 1.65; }
+.callout p + p { border-top: 1px dashed #cfcad9; }
+.callout b { flex: none; align-self: flex-start; padding: 0 7px; font-size: 12px; line-height: 21px; font-weight: 800; color: #fff; }
+.myth-q b { background: #6b6878; }   /* white small capitals on it at 5.4:1 */
+.myth-q span { color: var(--muted); }
+.myth-a b { background: #15803d; }   /* white at 5.0:1 */
+.myth-a span { font-weight: 600; }
+.q b { background: var(--ink); }
+.q span { font-weight: 600; }
+.a b { background: var(--btc); color: var(--ink); }
+.warn { background: #fff4ec; }
+.warn b { background: #c2410c; }
+
+/* ---------------------------------------------------------------- the closing sheet */
+.ending h2 { margin-bottom: 18px; }
+.checklist { margin: 0; padding: 0; list-style: none; }
+.checklist { counter-reset: tip; }
+.checklist li { position: relative; margin: 0 0 10px; padding: 11px 16px 11px 50px; background: #fff; border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 #e3dccf; line-height: 1.65; counter-increment: tip; }
+.checklist li::before { content: counter(tip, decimal-leading-zero); position: absolute; left: 14px; top: 12px; padding: 0 6px; background: var(--ink); color: #fff; font: 800 11px/20px var(--mono); }
+.share { display: flex; flex-direction: column; gap: 14px; padding: 16px; background: #fff; border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 #e3dccf; }   /* framed like the checklist beside it */
+.share-row { display: flex; align-items: center; gap: 18px; }
+.share-tg { padding-top: 14px; border-top: 1px dashed #d9d1c4; }
+.qr { flex: none; width: 118px; height: 118px; }
+.share-text p { margin: 0 0 6px; font-size: 14px; line-height: 1.6; }
+.share-text p:last-child { margin: 10px 0 0; }
+.share-text p.note { margin: 0; }   /* the note's short lines sit together, as one block */
+.share .url { font: 700 13px var(--mono); }
+.url-part { white-space: nowrap; }
+.share .btn { padding: 4px 14px; box-shadow: 3px 3px 0 var(--ink); }
+.share .plain-link { margin-left: 16px; font-size: 13px; }
+.colophon { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.75; }
+.ending .art { justify-content: space-between; }   /* the cast at the top, the colophon at the foot, the codes between: what height is left goes evenly into the two gaps */
+.cast { margin: 0; }
+.cast figcaption { margin: 8px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+#answers, #recap { --c: var(--btc); }   /* the closing pages' one accent: the lead's bar, as a chapter's takes its colour */
+.cast-svg { width: 100%; height: auto; }
+
+/* ---------------------------------------------------------------- appendix and sources */
+@media screen { .appendix::after { content: ""; display: block; height: 45vh; }   /* room under the last section, so its anchor can reach the top */ }
+.appendix { max-width: 880px; margin: 40px auto 0; padding: 40px 44px; background: var(--paper); box-shadow: 0 2px 14px rgba(28, 27, 34, .06); font-size: 14.5px; line-height: 1.8; }
+html[lang="en"] .appendix { line-height: 1.65; }
+.appendix-title { margin: 0 0 12px; font-size: 30px; }
+.appendix h2 { margin: 28px 0 10px; font-size: 19px; }
+.appendix-index { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 0 0 18px; font-size: 13.5px; line-height: 1.5; }
+.appendix-index a { padding: 2px 8px; background: #fff; border: 1.5px solid var(--ink); color: var(--ink); text-decoration: none; }
+.appendix-index a b { margin-right: 6px; color: var(--btc-d, #b45309); font-family: var(--mono); }
+.appendix-index a:hover { box-shadow: 2px 2px 0 var(--ink); }
+.appendix h2::before { content: ""; display: inline-block; width: .5em; height: .5em; margin: 0 .45em .12em 0; background: var(--btc); box-shadow: .12em .12em 0 var(--ink); }
+.appendix h3 { margin: 30px 0 8px; padding-top: 14px; border-top: 1px dashed #d9d1c4; font-size: 17px; scroll-margin-top: 64px; }   /* a chapter's notes, a topic of questions: set apart, and clear of the bar when a link lands on it */
+.appendix .faq { margin: 16px 0 0; }   /* a question on its own line, its answer under it */
+.appendix h3 + .faq { margin-top: 6px; }
+.appendix .faq-q { margin: 0 0 3px; font-size: 15px; font-weight: 800; line-height: 1.6; }
+.appendix .faq-a { margin: 0; }
+.table { overflow-x: auto; margin: 8px 0 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.6; }
+.appendix table { table-layout: fixed; }   /* the first column stays narrow, the middle one of three gets its share */
+.appendix th:first-child { width: 22%; }   /* wide enough that a row's name sits on one or two lines */
+.appendix th:nth-child(2):nth-last-child(2) { width: 38%; }
+.appendix th:first-child:nth-last-child(2) { width: 24%; }
+th, td { padding: 5px 8px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: #f6efe1; font-weight: 700; }
+pre { overflow-x: auto; padding: 10px 12px; background: #f6f2ea; border: 2px solid var(--ink); font-size: 12.5px; line-height: 1.55; }
+.appendix ul, .appendix ol { padding-left: 20px; }
+
+/* ---------------------------------------------------------------- narrower screens: one column */
+@media screen and (max-width: 960px) {
+  .book { padding: 0 0 40px; }
+  .sheet { margin: 0 0 14px; padding: 32px 20px 40px; border-width: 0 0 1px; box-shadow: none; }
+  .cover { padding: 0; }
+  .chapter, .ending, .qa { display: block; }
+  #answers .words { column-count: 1; }
+  .art { margin: 24px 0 28px; }
+  .cover-title { padding: 30px 20px 6px; }
+  .cover .mark { height: 52px; }
+  .h1-line { font-size: 28px; }
+  .appendix { margin: 0; padding: 28px 18px; border-width: 1px 0 0; }
+  .appendix table { min-width: 620px; }   /* a phone scrolls the table sideways instead of squeezing every cell to a few characters */
+  .appendix .table::before { content: "← 左右滑动看整张表 →"; display: block; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+  html[lang="en"] .appendix .table::before { content: "← swipe to see the whole table →"; }
+}
+@media screen and (max-width: 640px) {
+  body { font-size: 15.5px; }
+  .cover-scene { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
+  .scene { margin-top: calc(-820px * var(--crop)); }   /* the same rows of the 820 px wide picture */
+  .cover-toc a { position: relative; }
+  .cover-toc a::after { content: ""; position: absolute; inset: -9px -5px; }   /* a bigger target for a finger */
+  .scene { width: 820px; }
+  .swipe-hint { display: block; margin: 0; padding: 6px 20px 8px; background: var(--sky-crop); color: var(--ink); font-size: 12.5px; font-weight: 600; text-align: center; }   /* the sky's colour where the picture starts */
+  .bar { padding: 7px 12px; font-size: 13.5px; }
+  .bar-rest, .bar-links a:not(.bar-dl):not(.lang):not([href="#contents"]) { display: none; }
+  .kicker { font-size: 13px; }
+  .kicker-series { font-size: 11px; letter-spacing: .1em; }
+  .subtitle { font-size: 16px; }
+  .bar-links { gap: 10px; flex-wrap: nowrap; }
+  .chapter { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .chapter .art, .chapter .words { display: contents; }
+  .chapter .words > * { order: 2; }
+  .chapter .words > .chapter-head { order: 0; }
+  /* the lead (the chapter's answer) first, then its plate: the picture shows what the words just said */
+  .chapter .words > .lead { order: 1; }
+  .chapter .plate { order: 1; margin: 14px 0 22px; }
+  .chapter .card { order: 3; margin-top: 22px; }
+  .chapter .card-full { order: 3; display: block; margin: 6px 0 0; }
+  .chapter .tech { order: 3; margin-top: 12px; }
+  .card { min-width: 0; overflow-x: auto; }
+  .card-svg { min-width: 540px; }
+  .flowsheet .art { gap: 0; }   /* a flow page's right side on a phone: its own margins space it, a heading stays with what it heads */
+  .flowsheet .art > * + h3 { margin-top: 26px; }
+  .card::before { content: attr(data-swipe); display: block; padding: 0 0 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+  .chapter-head h2, .ending h2 { font-size: 25px; }
+  .chapter-head .num { height: 36px; }
+  .lead { font-size: 16px; }
+  .share-row { flex-direction: column; align-items: flex-start; }
+}
+
+@media print {
+  .book { padding: 0; }
+  .sheet { width: 297mm; height: 223mm; max-width: none; margin: 0; padding: 12mm 14mm 11mm; font-size: 10.5pt; line-height: 1.55; }
+  html[lang="en"] .sheet { font-size: 10pt; line-height: 1.45; }
+  .chapter { gap: 10mm; grid-template-columns: 1fr 1fr; }
+  .chapter .art, .chapter .words, .ending .art, .ending .words, .qa .art, .qa .words { justify-self: center; width: 114mm; }
+  /* both columns run from the top edge to the bottom edge. The room left over in the words goes to the three breaks
+     between its parts (lead | legend | body | the last box), evenly, and never between the heading and the lead or
+     between the body's paragraphs: what belongs together stays together, and the last box (myth and fact, or the
+     overview's reminder) ends on the bottom edge, as the technical note does */
+  .chapter { align-items: stretch; }
+  .chapter .words { display: flex; flex-direction: column; }
+  .chapter .words > .legend, .chapter .words > .legend + p, .chapter .words > .callout:last-child { margin-top: auto; }
+  .chapter .words > :has(+ .callout:last-child) { margin-bottom: 6mm; }   /* the least gap above the last box, as before: 2.6 + 3.4 mm */
+  .chapter .art > .tech { margin-top: auto; }
+  .sheet .words a, .sheet .tech a { white-space: nowrap; }   /* a link on a page stays on one line, like a cross-reference */
+  .ending, .qa { gap: 10mm; grid-template-columns: 1fr 1fr; }
+  #answers .words { width: auto; margin: 0 7.75mm; column-gap: 25.5mm; }   /* two 114 mm columns where the other pages have theirs */
+  .qa h2 { margin-bottom: 3mm; font-size: 19pt; }
+  .qa .lead { margin-bottom: 4mm; }
+  .qa .callout { margin-top: 2.2mm; }
+  .qa .callout p { padding: 1.4mm 3mm; }
+  html[lang="en"] .qa .callout p { font-size: 9.2pt; line-height: 1.38; }
+  html:lang(zh) #answers .callout { margin-top: 3mm; }   /* the Chinese answers have the room for the body's size */
+  html:lang(zh) #answers .callout p { padding: 1.8mm 3.5mm; font-size: 10.2pt; line-height: 1.55; }
+  .flowsheet .callout p { padding: 1.8mm 3.5mm; }
+  html[lang="en"] .flowsheet .callout p { font-size: 9.6pt; line-height: 1.42; }
+  .flowsheet .table { margin-top: 3mm; }
+  .flowsheet table { font-size: 9pt; line-height: 1.4; }
+  html[lang="en"] .flowsheet table { font-size: 8pt; line-height: 1.3; }
+  .flowsheet th:nth-child(3) { width: 25%; }   /* a column of numbers: narrow, the words beside it get the room */
+  /* a table of words (who | how | what follows): the outcome column gets the room its longer answers need; a table with
+     a column of numbers keeps the narrow last column above */
+  .flowsheet table:not(:has(td.digits)) { table-layout: fixed; }
+  .flowsheet table:not(:has(td.digits)) th:nth-child(1) { width: 17%; }   /* wide enough for “Platform” in one piece */
+  .flowsheet table:not(:has(td.digits)) th:nth-child(3) { width: 40%; }
+  html:lang(zh) .flowsheet table { font-size: 9.6pt; }   /* the Chinese tables have the room for a size nearer the body's */
+  html[lang="en"] .flowsheet th:first-child { width: 20%; }
+  html[lang="en"] .flowsheet td:first-child { white-space: normal; }   /* English names wrap, leaving the middle column its room */
+  .flowsheet th, .flowsheet td { padding: 1.3mm 1.8mm; }
+  .flowsheet th { font-size: 7.5pt; }
+  .flowsheet .art h3 { margin: 0 0 2mm; font-size: 11.5pt; }
+  .flowsheet .flowfig { margin-top: 3mm; }
+  .flowsheet .art .flowfig + h3 { margin-top: 0; padding-top: 4mm; }   /* both sides run down from the top, as the mining page does: no gaps spread to fill */
+  .flowsheet .art > :last-child { margin-bottom: 0; }   /* nothing follows the last block: its bottom margin would only push the page */
+  .flowsheet .art > p { margin: 0; }   /* paragraphs under a heading on the chart side: the body's spacing (gap 2 mm + .6 mm) */
+  .flowsheet .art > p + p { margin-top: .6mm; }
+  .flowsheet .kicker { font-size: 7.5pt; margin: 0 0 1mm; }
+  .flowsheet .words > p:not(.lead):not(.kicker) { margin: 2mm 0 0; }   /* a paragraph after the lead, before the first chart */
+  .flowsheet .lead { font-size: 9.8pt; line-height: 1.5; }
+  html[lang="en"] .flowsheet .lead { font-size: 9.2pt; line-height: 1.42; }
+  .art { gap: 2mm; }
+  .folio { right: 9mm; bottom: 6mm; font-size: 7.5pt; }
+
+  .cover { padding: 0; }
+  /* the title centred in the sky over the street, in the room the clouds leave it */
+  .cover-title { position: absolute; left: 15%; top: 7%; width: 70%; padding: 0; text-align: center; background: none; }
+  .kicker { margin-bottom: 2.4mm; font-size: 9.5pt; }
+  .kicker-series { font-size: 8.4pt; }
+  .cover .mark { height: 15mm; margin: 0 auto; }
+  .h1-line { margin-top: 3.2mm; font-size: 23pt; }
+  .subtitle { margin-top: 5.5mm; font-size: 12.5pt; line-height: 1.55; }
+  .cover-foot { position: absolute; z-index: 1; left: 0; right: 0; bottom: 3.4mm; margin: 0; color: #4a4756; font-size: 7.8pt; text-align: center; }
+  .cover-foot a { color: inherit; }
+  .cover-scene { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; }
+  .cover-art { position: absolute; inset: 0; }
+  .cover-svg { width: 100%; height: 100%; }
+  .cover-toc a { gap: 1.4mm; padding: .3mm 2.2mm .3mm .3mm; border-width: .55mm; box-shadow: .9mm .9mm 0 var(--c, var(--ink)); font-size: 9pt; }
+  .cover-toc b { padding: 0 1.3mm; font-size: 7.6pt; line-height: 4.6mm; }
+  .cover-scene { overflow: visible; }
+  .scene { margin-top: 0; }
+
+  .card-full { margin: -2.2mm 0 0; font-size: 8.5pt; }
+  .chapter-head { margin-bottom: 3.4mm; gap: 4mm; }
+  .chapter-head .num { height: 11mm; }
+  .chapter-head h2, .ending h2 { font-size: 19pt; }
+  .chapter-head .sub { font-size: 10.5pt; margin-top: 1mm; }
+  .flowsheet h2 .sub { font-size: 10.5pt; margin-top: 1mm; }
+  .words > p { margin-bottom: 2.6mm; }
+  .lead { font-size: 10.8pt; line-height: 1.6; padding-left: 3.5mm; border-left-width: 1.2mm; }
+  html[lang="en"] .lead { font-size: 10.5pt; line-height: 1.45; }
+  .legend { margin-bottom: 3mm; padding: 2.2mm 3.5mm 1.6mm; }
+  .legend .lh { font-size: 7.5pt; margin-bottom: 1.2mm; }
+  .legend li { font-size: 9.6pt; gap: 2.5mm; margin-bottom: .8mm; line-height: 1.45; }
+  html[lang="en"] .legend li { font-size: 9.2pt; line-height: 1.4; }
+  .legend .mk { width: 4.4mm; height: 4.4mm; margin-top: .3mm; }
+  .words .table { margin-bottom: 2.6mm; }
+  .words table { font-size: 8.8pt; }
+  .tech { font-size: 8.6pt; line-height: 1.55; }
+  html[lang="en"] .tech { font-size: 8.8pt; line-height: 1.45; }
+  .tech b { margin-right: 2mm; font-size: 7pt; }
+  .callout { margin-top: 3.4mm; }
+  .callout p { padding: 1.8mm 3.5mm; gap: 3mm; font-size: 9.8pt; line-height: 1.5; }
+  html[lang="en"] .callout p { font-size: 9.6pt; line-height: 1.42; }
+  .callout b { font-size: 7.5pt; line-height: 13pt; padding: 0 1.6mm; }
+
+  /* the opening sheet (00) has five blocks where a chapter has six or seven: its type is set larger rather than
+     its blocks drifting apart, the lead in a lighter weight at the larger size */
+  .chapter.intro .lead { font-size: 12.6pt; line-height: 1.62; font-weight: 500; }
+  html[lang="en"] .chapter.intro .lead { font-size: 11.4pt; line-height: 1.48; }
+  html:lang(zh) .chapter.intro .words > p:not(.lead) { font-size: 10.8pt; line-height: 1.58; }
+  html:lang(zh) .chapter.intro .legend li { font-size: 10pt; line-height: 1.45; }
+  html:lang(zh) .chapter.intro .words table { font-size: 9.4pt; }
+  html:lang(zh) .chapter.intro .callout p { font-size: 10pt; }
+  .checklist li { margin-bottom: 1.8mm; padding: 1.8mm 4mm 1.8mm 12mm; font-size: 10.2pt; line-height: 1.5; }
+  html[lang="en"] .checklist li { font-size: 9.5pt; line-height: 1.42; }
+  html:lang(zh) .ending .checklist li { line-height: 1.7; }   /* the Chinese list, more open, fills its side down to the colophon's foot */
+  .checklist li::before { left: 3.5mm; top: 2mm; padding: 0 1.4mm; font-size: 7.5pt; line-height: 5mm; }
+  .share { padding: 4mm; gap: 3mm; }
+  .share-row { gap: 5mm; }
+  .share-tg { padding-top: 3mm; }
+  .qr { width: 27mm; height: 27mm; }
+  .share-text p { font-size: 9.5pt; margin-bottom: 1.4mm; }
+  .share .url { font-size: 7.9pt; }   /* the site's address on one line beside its code, the group's at the same size */
+  .colophon { font-size: 8pt; line-height: 1.6; }
+  .cast-svg { width: 88%; margin-inline: auto; }   /* the faces centred; the caption under them spans the column, its edge with the codes' frame and the colophon */
+  .cast figcaption { margin-top: 1.6mm; font-size: 8pt; line-height: 1.55; }
+}
+@media screen and (min-width: 1100px) and (min-height: 830px) {
+  .book { padding: 0; }
+  .sheet { width: 297mm; height: 223mm; max-width: none; margin: 0; padding: 12mm 14mm 11mm; font-size: 10.5pt; line-height: 1.55; }
+  html[lang="en"] .sheet { font-size: 10pt; line-height: 1.45; }
+  .chapter { gap: 10mm; grid-template-columns: 1fr 1fr; }
+  .chapter .art, .chapter .words, .ending .art, .ending .words, .qa .art, .qa .words { justify-self: center; width: 114mm; }
+  /* both columns run from the top edge to the bottom edge. The room left over in the words goes to the three breaks
+     between its parts (lead | legend | body | the last box), evenly, and never between the heading and the lead or
+     between the body's paragraphs: what belongs together stays together, and the last box (myth and fact, or the
+     overview's reminder) ends on the bottom edge, as the technical note does */
+  .chapter { align-items: stretch; }
+  .chapter .words { display: flex; flex-direction: column; }
+  .chapter .words > .legend, .chapter .words > .legend + p, .chapter .words > .callout:last-child { margin-top: auto; }
+  .chapter .words > :has(+ .callout:last-child) { margin-bottom: 6mm; }   /* the least gap above the last box, as before: 2.6 + 3.4 mm */
+  .chapter .art > .tech { margin-top: auto; }
+  .sheet .words a, .sheet .tech a { white-space: nowrap; }   /* a link on a page stays on one line, like a cross-reference */
+  .ending, .qa { gap: 10mm; grid-template-columns: 1fr 1fr; }
+  #answers .words { width: auto; margin: 0 7.75mm; column-gap: 25.5mm; }   /* two 114 mm columns where the other pages have theirs */
+  .qa h2 { margin-bottom: 3mm; font-size: 19pt; }
+  .qa .lead { margin-bottom: 4mm; }
+  .qa .callout { margin-top: 2.2mm; }
+  .qa .callout p { padding: 1.4mm 3mm; }
+  html[lang="en"] .qa .callout p { font-size: 9.2pt; line-height: 1.38; }
+  html:lang(zh) #answers .callout { margin-top: 3mm; }   /* the Chinese answers have the room for the body's size */
+  html:lang(zh) #answers .callout p { padding: 1.8mm 3.5mm; font-size: 10.2pt; line-height: 1.55; }
+  .flowsheet .callout p { padding: 1.8mm 3.5mm; }
+  html[lang="en"] .flowsheet .callout p { font-size: 9.6pt; line-height: 1.42; }
+  .flowsheet .table { margin-top: 3mm; }
+  .flowsheet table { font-size: 9pt; line-height: 1.4; }
+  html[lang="en"] .flowsheet table { font-size: 8pt; line-height: 1.3; }
+  .flowsheet th:nth-child(3) { width: 25%; }   /* a column of numbers: narrow, the words beside it get the room */
+  /* a table of words (who | how | what follows): the outcome column gets the room its longer answers need; a table with
+     a column of numbers keeps the narrow last column above */
+  .flowsheet table:not(:has(td.digits)) { table-layout: fixed; }
+  .flowsheet table:not(:has(td.digits)) th:nth-child(1) { width: 17%; }   /* wide enough for “Platform” in one piece */
+  .flowsheet table:not(:has(td.digits)) th:nth-child(3) { width: 40%; }
+  html:lang(zh) .flowsheet table { font-size: 9.6pt; }   /* the Chinese tables have the room for a size nearer the body's */
+  html[lang="en"] .flowsheet th:first-child { width: 20%; }
+  html[lang="en"] .flowsheet td:first-child { white-space: normal; }   /* English names wrap, leaving the middle column its room */
+  .flowsheet th, .flowsheet td { padding: 1.3mm 1.8mm; }
+  .flowsheet th { font-size: 7.5pt; }
+  .flowsheet .art h3 { margin: 0 0 2mm; font-size: 11.5pt; }
+  .flowsheet .flowfig { margin-top: 3mm; }
+  .flowsheet .art .flowfig + h3 { margin-top: 0; padding-top: 4mm; }   /* both sides run down from the top, as the mining page does: no gaps spread to fill */
+  .flowsheet .art > :last-child { margin-bottom: 0; }   /* nothing follows the last block: its bottom margin would only push the page */
+  .flowsheet .art > p { margin: 0; }   /* paragraphs under a heading on the chart side: the body's spacing (gap 2 mm + .6 mm) */
+  .flowsheet .art > p + p { margin-top: .6mm; }
+  .flowsheet .kicker { font-size: 7.5pt; margin: 0 0 1mm; }
+  .flowsheet .words > p:not(.lead):not(.kicker) { margin: 2mm 0 0; }   /* a paragraph after the lead, before the first chart */
+  .flowsheet .lead { font-size: 9.8pt; line-height: 1.5; }
+  html[lang="en"] .flowsheet .lead { font-size: 9.2pt; line-height: 1.42; }
+  .art { gap: 2mm; }
+  .folio { right: 9mm; bottom: 6mm; font-size: 7.5pt; }
+
+  .cover { padding: 0; }
+  /* the title centred in the sky over the street, in the room the clouds leave it */
+  .cover-title { position: absolute; left: 15%; top: 7%; width: 70%; padding: 0; text-align: center; background: none; }
+  .kicker { margin-bottom: 2.4mm; font-size: 9.5pt; }
+  .kicker-series { font-size: 8.4pt; }
+  .cover .mark { height: 15mm; margin: 0 auto; }
+  .h1-line { margin-top: 3.2mm; font-size: 23pt; }
+  .subtitle { margin-top: 5.5mm; font-size: 12.5pt; line-height: 1.55; }
+  .cover-foot { position: absolute; z-index: 1; left: 0; right: 0; bottom: 3.4mm; margin: 0; color: #4a4756; font-size: 7.8pt; text-align: center; }
+  .cover-foot a { color: inherit; }
+  .cover-scene { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; }
+  .cover-art { position: absolute; inset: 0; }
+  .cover-svg { width: 100%; height: 100%; }
+  .cover-toc a { gap: 1.4mm; padding: .3mm 2.2mm .3mm .3mm; border-width: .55mm; box-shadow: .9mm .9mm 0 var(--c, var(--ink)); font-size: 9pt; }
+  .cover-toc b { padding: 0 1.3mm; font-size: 7.6pt; line-height: 4.6mm; }
+  .cover-scene { overflow: visible; }
+  .scene { margin-top: 0; }
+
+  .card-full { margin: -2.2mm 0 0; font-size: 8.5pt; }
+  .chapter-head { margin-bottom: 3.4mm; gap: 4mm; }
+  .chapter-head .num { height: 11mm; }
+  .chapter-head h2, .ending h2 { font-size: 19pt; }
+  .chapter-head .sub { font-size: 10.5pt; margin-top: 1mm; }
+  .flowsheet h2 .sub { font-size: 10.5pt; margin-top: 1mm; }
+  .words > p { margin-bottom: 2.6mm; }
+  .lead { font-size: 10.8pt; line-height: 1.6; padding-left: 3.5mm; border-left-width: 1.2mm; }
+  html[lang="en"] .lead { font-size: 10.5pt; line-height: 1.45; }
+  .legend { margin-bottom: 3mm; padding: 2.2mm 3.5mm 1.6mm; }
+  .legend .lh { font-size: 7.5pt; margin-bottom: 1.2mm; }
+  .legend li { font-size: 9.6pt; gap: 2.5mm; margin-bottom: .8mm; line-height: 1.45; }
+  html[lang="en"] .legend li { font-size: 9.2pt; line-height: 1.4; }
+  .legend .mk { width: 4.4mm; height: 4.4mm; margin-top: .3mm; }
+  .words .table { margin-bottom: 2.6mm; }
+  .words table { font-size: 8.8pt; }
+  .tech { font-size: 8.6pt; line-height: 1.55; }
+  html[lang="en"] .tech { font-size: 8.8pt; line-height: 1.45; }
+  .tech b { margin-right: 2mm; font-size: 7pt; }
+  .callout { margin-top: 3.4mm; }
+  .callout p { padding: 1.8mm 3.5mm; gap: 3mm; font-size: 9.8pt; line-height: 1.5; }
+  html[lang="en"] .callout p { font-size: 9.6pt; line-height: 1.42; }
+  .callout b { font-size: 7.5pt; line-height: 13pt; padding: 0 1.6mm; }
+
+  /* the opening sheet (00) has five blocks where a chapter has six or seven: its type is set larger rather than
+     its blocks drifting apart, the lead in a lighter weight at the larger size */
+  .chapter.intro .lead { font-size: 12.6pt; line-height: 1.62; font-weight: 500; }
+  html[lang="en"] .chapter.intro .lead { font-size: 11.4pt; line-height: 1.48; }
+  html:lang(zh) .chapter.intro .words > p:not(.lead) { font-size: 10.8pt; line-height: 1.58; }
+  html:lang(zh) .chapter.intro .legend li { font-size: 10pt; line-height: 1.45; }
+  html:lang(zh) .chapter.intro .words table { font-size: 9.4pt; }
+  html:lang(zh) .chapter.intro .callout p { font-size: 10pt; }
+  .checklist li { margin-bottom: 1.8mm; padding: 1.8mm 4mm 1.8mm 12mm; font-size: 10.2pt; line-height: 1.5; }
+  html[lang="en"] .checklist li { font-size: 9.5pt; line-height: 1.42; }
+  html:lang(zh) .ending .checklist li { line-height: 1.7; }   /* the Chinese list, more open, fills its side down to the colophon's foot */
+  .checklist li::before { left: 3.5mm; top: 2mm; padding: 0 1.4mm; font-size: 7.5pt; line-height: 5mm; }
+  .share { padding: 4mm; gap: 3mm; }
+  .share-row { gap: 5mm; }
+  .share-tg { padding-top: 3mm; }
+  .qr { width: 27mm; height: 27mm; }
+  .share-text p { font-size: 9.5pt; margin-bottom: 1.4mm; }
+  .share .url { font-size: 7.9pt; }   /* the site's address on one line beside its code, the group's at the same size */
+  .colophon { font-size: 8pt; line-height: 1.6; }
+  .cast-svg { width: 88%; margin-inline: auto; }   /* the faces centred; the caption under them spans the column, its edge with the codes' frame and the colophon */
+  .cast figcaption { margin-top: 1.6mm; font-size: 8pt; line-height: 1.55; }
+}
+
+
+/* ---------------------------------------------------------------- the deck: a page to a screen on a wide window */
+@media screen and (min-width: 1100px) and (min-height: 830px) {
+  :root { --deck: 1; --bar: 47px; }
+  /* a sheet that a link brings up starts 12 px under the bar, the one before it behind the bar; scrolling is free,
+     with no snapping to sheet tops */
+  html { scroll-padding-top: calc(var(--bar) + 12px); }
+  .book { padding: 12px 0 48px; }
+  .sheet { zoom: var(--deck); margin: 0 auto 22px; scroll-margin-top: 0; box-shadow: 0 2px 14px rgba(28, 27, 34, .06); }
+}
+
+/* ---------------------------------------------------------------- print: 297 mm by 223 mm, a sheet a page; the appendix stays on the web */
+@page { size: 297mm 223mm; margin: 0; }
+@page reference { size: 297mm 223mm; margin: 13mm 21.75mm 14mm;   /* the same side edges as a chapter's two blocks */
+  @bottom-right { content: counter(page); font: 7.5pt var(--mono); color: #8a8794; } }
+@page reference { @bottom-left { font: 7.5pt var(--font); color: #8a8794; } }
+@media print {
+  .appendix { display: none; }   /* the PDF carries the story; the reference pages stay on the web */
+  .screen-only, .bar { display: none !important; }
+  .print-only { display: block; }
+  /* the plain print: white paper, the cover's sky too (the town and its people keep their colours) */
+  html.plain .cover { background: #fff; }
+  html.plain .cover-svg path.sky { fill: #fff; }
+  html { background: #fff; }
+  a { text-decoration: none; }
+  .sheet { box-shadow: none; break-after: page; }
+  .appendix { page: reference; max-width: none; margin: 0; padding: 0; box-shadow: none; background: none; font-size: 9.4pt; line-height: 1.7; }
+  html[lang="en"] .appendix { line-height: 1.55; }
+  .appendix-title { font-size: 18pt; }
+  .appendix h2 { font-size: 12pt; margin: 5mm 0 2mm; break-after: avoid; }
+  .appendix h3, .appendix h2 + p, .appendix h3 + p { break-after: avoid; }   /* a heading and its first paragraph stay with what follows */
+  .appendix pre, .appendix .table { break-before: avoid; }
+  .appendix p { orphans: 3; widows: 3; }
+  .appendix p, .appendix li { break-inside: avoid; }
+  .appendix th:first-child, .appendix td:first-child { overflow-wrap: normal; }   /* no breaks inside the words of a row's name */
+  table { font-size: 8.2pt; }
+  tr, pre { break-inside: avoid; }
+}
+
+/* the plain print (book.mjs adds class "plain" for the print version): white pages; the pictures keep their colours */
+html.plain .sheet { background: #fff; }
+@page reference { @bottom-left { content: "SHORD 原理图解 · 附录 · ordinalser.github.io/naka-sigil/learn/shord"; } }</style></head><body><nav class="bar screen-only"><a class="bar-title" href="index.html">← 回到指南</a><span class="bar-links"><a href="index.html#appendix">附录</a><a href="https://github.com/ordinalser/naka-sigil/tree/main/learn/shord">GitHub</a><a class="lang" href="sources-en.html" data-lang="en" hreflang="en" lang="en">English</a><a class="bar-dl" href="shord-guide-zh.pdf" download>下载 PDF</a></span></nav><main class="book"><div class="appendix"><h1 class="appendix-title" id="sources">资料与复核</h1>
+<p>指南里每一条说法，都能在下面这些公开材料里找到出处。资料是 2026 年 10 月 28 日北京时间上午 9:28 到 9:32 之间读的，当时官网报的区块高度是 973,478。改稿时又在区块 973,511 复查了一次合集信息，NAKA 的链下挂单仍未开启。</p>
+<h2 id="版本记录">版本记录</h2>
+<p>SHORD 还在快速迭代。每一版写明依据的数据和代码，读的时候先对一下这里的日期；以后的版本加在表的最上面。</p>
+<div class="table"><table><thead><tr><th>版本</th><th>线上数据</th><th>代码依据</th><th>变化</th></tr></thead><tbody><tr><td>2026-11-03</td><td>同上一版；项目方 10 月 27 日、11 月 2 日的两条帖子 11 月 2 日读，官网 /shielded 页面脚本 11 月 3 日下载</td><td>同上一版，另加官网页面脚本 9a2884728479369d.js 和中文文案 624a1b6e0181a28a.js（存档 site-2026-11-03）</td><td>按项目方新帖改：NAKA 不改链下挂单（<span class="nobr">第 05 章</span>、<a class="nobr" href="index.html#notes-07">附录 I07</a>、K、术语表），SHNAKAS 领到的是钱袋，可拆分、私密转账，11 月 6 日开钱袋市场，可烧成 Snickets 换 GTD 名额、投票（第 06、07 章、隐私表、<a class="nobr" href="index.html#notes-07">附录 I07</a>）。按 Grok 审阅改：第 01、02、07 章删掉和图例、技术卡、附录重复的细节，流程表把矿工单列一行，流程图的滑动提示改成“流程图”，<span class="nobr">图版 01</span> 假招牌上不同的那个 0 涂红，隐私表“没有藏的部分”改成“这一步全部公开”，版本说明只留日期和依据，问答里的中继分钟数去掉（<a class="nobr" href="index.html#notes-04">附录 I04</a> 已写）。<a class="nobr" href="index.html#appendix-K">附录 K</a> 的“开口值”改成“票据明细”。全文换掉自造或直译的词：恢复词改“助记词”、粉尘线改“粉尘限额”、刻印改“蚀刻”（照官网中文界面），返回密钥改“取回密钥”，逃生改“超时取回”，锚点改“引用的树根高度”，共签改“多签”，链尖、封口、游标、原像、证明钥这些改成平常说法；“奖励批次”“固定批次”写明是钱袋（规则里开头 <span class="nobr">3 个</span>钱袋各 <span class="nobr">80 枚</span>），链下挂单的 <span class="nobr">4,032 块</span>写明是挂单最长有效期。同日用测试金库逐页核对官网金库、市场和游戏：更正投票的隐私（服务公开每票的标记，标记由作废码算出，票据花掉后谁都能对上，挂过单的连编号都对得上，见<span class="nobr">第 06 章</span>、隐私表、<a class="nobr" href="index.html#appendix-B">附录 B</a>、I06）和领加成会公开什么（领到的钱袋一直和这件绑在一起），补上官网的提醒（收作品和收 BTC 是两个地址、自己付费的交易上链前别用同一钱包再发、搬金库的二维码和链接就是金库、别打开别人发来的金库链接）、Shielded Vault 的安装和 PIN、Staking（质押）页、全局编号 Shielded #、钱袋即时挂单和 11 月 6 日前只给测试者交易、Snickets 和 GTD 码的细节、Naka Lounge，额度现状更新到 11 月 3 日。同日按 Grok、Codex 的审阅改<span class="nobr">第 01 章</span>：重建条件照官网导入页写成同一钱包、同一账户、同一地址类型，换了是另一个空金库；票据要用查看密钥和花费密钥一起扫（没有密文的领奖票据靠作废码推出）；取回密钥和卖出收款都按挂单算，技术卡 01 按派生方式分组。 同日<span class="nobr">第 08 章</span>改题为“账是谁记的，能不能自己核”，隐私边界页移进<a class="nobr" href="index.html#appendix-B">附录 B</a>，PDF 变为 14 页。 快问快答按由浅到深重排、两栏按实际高度平衡，交易和保管提醒加导语，第 7 条按官网收款页的说法改正。 11 月 4 日附录去掉重复、统一隐私地址的写法（<span class="nobr">128 个</span>十六进制字符），<a class="nobr" href="index.html#appendix-H">附录 H</a>、K 重排了几个标题和问题。</td></tr><tr><td>2026-11-02</td><td>中继状态和链上记录 11 月 2 日复核（区块 974,196），其余同上一版</td><td>同上一版；官网客户端 11 月 2 日复核未变</td><td>按一次外部审阅逐条对代码核过后改正：去重标记按作品算、地址里是持有人公钥、技术卡 00 加密用查看公钥、<span class="nobr">330 sats</span> 是官方中继建锁的金额而不是协议上限、中继窗口写明出处、抢同一单要另有平台签名、取回密钥每笔挂单一把、摘要内容和检查顺序、名字查询和保留名、粉尘限额；中继 10 月 29 日换了代发钱包；<a class="nobr" href="index.html#appendix-K">附录 K</a> 新增五问（提回普通钱包、转错地址、多久到账、一个地址收多个合集、开发者能做到哪一步）。审阅里“转出方跟不上之后的领奖和转账”一条不成立，见<a class="nobr" href="index.html#appendix-K">附录 K</a>。同日又补两问（托管接口的密钥、引擎和证明密钥的下载），<a class="nobr" href="index.html#appendix-D">附录 D</a> 写明官网证明密钥里只记一次贡献，<a class="nobr" href="index.html#appendix-H">附录 H</a> 写明证明密钥要提前存一份。同日第二遍：通读去重复，快问快答换三条（转错地址、多久到、设置秘密），隐私边界页两组卡片合并，金色标记改深色数字；英文<span class="nobr">第 08 章</span>把中继的 5,517 笔交易误写成代发信封数，已改正，其余事实和数字没有变</td></tr><tr><td>2026-11-01</td><td>10 月 28 日读取（区块 973,478），挂单、中继、隐私名字在 10 月 29 日到 31 日补核，见下面各行</td><td>公开仓库提交 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/commit/3cdbdfdf87221e41824eca19c20c2b41a546de31" target="_blank" rel="noopener noreferrer">3cdbdfdf</a>（10 月 12 日，11 月 1 日仍是最新）；官网客户端 SHA-256 <code>57457629…1dc</code>（10 月 28 日读取，11 月 1 日复核未变）</td><td>第一版</td></tr></tbody></table></div>
+<h2 id="1-读了哪些线上材料">1　读了哪些线上材料</h2>
+<div class="table"><table><thead><tr><th>材料</th><th>地址</th><th>用来核对什么</th></tr></thead><tbody><tr><td>合集信息</td><td><a href="https://shielded-api.ord-dropz.xyz/api/shielded/collection" target="_blank" rel="noopener noreferrer">collection</a></td><td>NAKA 的规则、费用、挂单方式，以及子作品怎么对应</td></tr><tr><td>当前状态</td><td><a href="https://shielded-api.ord-dropz.xyz/api/shielded/status" target="_blank" rel="noopener noreferrer">status</a></td><td>当时的高度 973,478，票据 9,947 张</td></tr><tr><td>公开状态记录</td><td><a href="https://shielded-api.ord-dropz.xyz/api/shielded/state?since=999999999" target="_blank" rel="noopener noreferrer">state</a></td><td>公开字段、挂单锁、订单状态、奖励记录</td></tr><tr><td>奖励</td><td><a href="https://shielded-api.ord-dropz.xyz/api/shielded/rewards" target="_blank" rel="noopener noreferrer">rewards</a></td><td>奖励计划、每一周的情况、基础和加成各领了多少</td></tr><tr><td>官网客户端</td><td><a href="https://shielded-api.ord-dropz.xyz/api/shielded/engine/shielded-browser.js" target="_blank" rel="noopener noreferrer">shielded-browser.js</a></td><td>签名怎么派生钥匙、收件扫描、证明和交易怎么构建、奖励资格、拆分</td></tr><tr><td>预挖交易</td><td><a href="https://mempool.space/tx/92ff6274e9ad61751f751e1694a7df0229244043ae8de6d91f9f25da186d2def" target="_blank" rel="noopener noreferrer">mempool.space</a></td><td>SHNAKAS 预挖的数量、精度、指向哪个输出、花没花掉</td></tr><tr><td>共同地址</td><td><a href="https://mempool.space/address/bc1prykz5vxt6lgr2tu56np35slhvlc77s7hlajr3qucsrkqwhvp48mq5grvgr" target="_blank" rel="noopener noreferrer">mempool.space</a></td><td>作品和预挖停放的 NUMS 地址</td></tr><tr><td>中继地址</td><td><a href="https://mempool.space/address/bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy" target="_blank" rel="noopener noreferrer">mempool.space</a></td><td>官方中继收费和代发信封的地址，交易形状和笔数</td></tr></tbody></table></div>
+<p>读到的客户端文件有 <span class="nobr">567,545 字节</span>，SHA-256 是 <code>57457629898f529fa3ff8050509620d05202adb50fdfc5318375eca0381c61dc</code>。只读了代码，没有运行它，也没碰过任何人的密钥。每一份响应连同读取时间、HTTP 状态和 SHA-256 都存了档，中间有一次 status 请求超时，也照样留了记录。</p>
+<h2 id="2-正文的说法是怎么核对的">2　正文的说法是怎么核对的</h2>
+<div class="table"><table><thead><tr><th>说法</th><th>依据，以及它管到哪儿</th></tr></thead><tbody><tr><td>NAKA 已铭刻的作品都停在同一个 NUMS 地址</td><td>按 BIP341 的办法重算了 NUMS 点。NAKA 全部 26 笔子铭文创建交易，每一笔打到这个地址的输出数都等于交易里的铭文数，加起来 <span class="nobr">3,327 件</span>。父铭文不算在内，核对的是输出个数，没有做完整的 Ordinals 重放</td></tr><tr><td>2,100 万枚 SHNAKAS 预挖停在同一个地址</td><td>预挖交易的 Runestone 写的是 Pointer=1、Premine=2100000000000000、Divisibility=8。输出 1 就是这个 NUMS 地址，读的时候还没花。字段的意思对照了 <a href="https://docs.ordinals.com/runes/specification.html" target="_blank" rel="noopener noreferrer">Runes 规范</a></td></tr><tr><td>解锁签名泄露，别人就能重建金库，也能动金库里的 BTC</td><td>官网客户端里写着这段固定消息和派生代码：seed = SHA-256(&quot;shord/seed/v1&quot; ‖ sig)，再派生 shord/spend、shord/view、shord/return、shord/payout、shord/btc、shord/listing、shord/bonus。金库提取 BTC 的函数用 shord/btc 和 shord/payout 派生的私钥签名，所以签名泄露，金库自己的 BTC 也在内。钱包原来地址的私钥不在其中</td></tr><tr><td>BTC 到账不等于协议收货</td><td>比特币脚本和 SHORD 验收是两层规则。协议文档写明，付款不对的 BUY 会被拒收，花掉的锁同时把挂单关掉</td></tr><tr><td>平台能关掉挂单，拿不走票据和货款</td><td>NAKA 没有多签，挂单锁的内部公钥 lockKey 是平台的钥匙（<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/scripts.mjs" target="_blank" rel="noopener noreferrer">scripts.mjs</a>、PROTOCOL-v1.md 的 Listing lock：平台花掉锁就是关掉挂单）。取回票据要卖家用取回密钥签的 CLAIM，货款付到卖家的收款脚本。<span class="nobr">1,008 块</span>的相对时间锁从锁那笔输出确认时算起</td></tr><tr><td>作品地址没人花得动</td><td>地址的公钥是 BIP341 的 NUMS 点，没有脚本树（重算后与链上脚本一致）。“没人知道私钥”依赖通常的密码学假设</td></tr><tr><td>自己转给自己也会断掉当周</td><td>客户端里算每张票据从哪一周起算、算到哪一周（见技术卡 07）。领奖励产生的票据按所在那一周起算，所以正常领取不会断</td></tr><tr><td>领基础奖励不公开编号，领加成要公开</td><td>客户端里构建基础领取和加成领取的代码，加成那一笔会带上编号</td></tr><tr><td>隐私藏品不等于隐私 BTC</td><td>金库收款、提取用的都是普通的比特币输出。一次性地址算不上隐私币池</td></tr><tr><td>平台费 <span class="nobr">20,000 sats</span> 那个例子</td><td>collection 里写着 saleFeeBps=200、saleFeeMin=1000。这只是算术示例，和行情无关</td></tr><tr><td>NAKA 还在用旧式挂单</td><td>collection 里 NAKA 的 listings3.active=false，state 里 NAKA 的挂单锁都是 <span class="nobr">330 sats</span>。Trollbox 和 COMMEMORATIVE COINS 已经开了 LIST3，平台费 1%、版税 1%</td></tr><tr><td>权重怎么算</td><td><a href="https://github.com/ordinalser/naka-sigil/blob/main/docs/RULES_AUDIT.md" target="_blank" rel="noopener noreferrer">naka-sigil 的规则审计</a>：100% 起算，属性地板价对合集地板价 1.25、1.5、2、3 倍分别加 25%、50%、75%、100%，编号加成，400% 封顶，每个区块重新打分，和官方权重接口逐件对过。私下领取只拿基础 100%，亮出编号拿全部权重</td></tr><tr><td>手机金库的 <span class="nobr">24 个</span>词就是金库种子</td><td>官网金库页的脚本（存档见 sources/site-2026-10-28/）：把 <span class="nobr">32 字节</span>的金库密钥加一字节校验，编成 <span class="nobr">24 个</span>词，界面写着 “They are not the seed phrase of any other wallet.”。忘记 PIN 的说明写着可以用 <span class="nobr">24 个</span>词，或者从 UniSat、Xverse 再导入一次，把金库找回来。恢复入口写着 “The 24 words of a Shielded Vault”，安全提示写着 “On a phone, use your browser&#x27;s Add to Home Screen to keep this wallet as an app”：Shielded Vault 在手机和浏览器里都能开，<span class="nobr">24 个</span>词在哪里输入都是同一个金库</td></tr><tr><td>线上投票</td><td>官网金库页脚本（存档 sources/site-2026-10-28/f8c37337f94602c5.js，含 <code>ordz-vote-v1</code>、<code>ordz-vote-tag-v1</code>）：取这一轮快照高度的树根，用花费电路生成证明，公开输入含作废码，主题、轮次、选项哈希成 hbody，提交到 backend-vote-production.up.railway.app/api/vote 的 /topics/{主题}/ballots，前端会处理 “already counted” 的返回。2026-10-29 只读访问 /topics：一个开放主题“下一个上线的是哪个合集”，第 1 轮快照高度 972,645，已收 1,399 票（存档 vote-topics-20261029.json）。服务端的资格、去重、计票没有复现</td></tr><tr><td>持有证明挡不住卖掉作品的人</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/circuits/holder.circom" target="_blank" rel="noopener noreferrer">holder.circom</a> 只查叶子在树里，<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/tree.mjs" target="_blank" rel="noopener noreferrer">tree.mjs</a> 的记录树只增不删，旧叶子一直在。协议文档里“只剩 <span class="nobr">6 块</span>边界”的说法与实现不符，指南没有采用</td></tr><tr><td>摘要覆盖哪些部分</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a> 的 stateDigest（digest v1）：树根、叶子数、作废码集合、已铸编号、挂单的编号、状态、额度和价格</td></tr><tr><td>票据不用备份，有钥匙就能扫回来</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/envelope.mjs" target="_blank" rel="noopener noreferrer">envelope.mjs</a> 的信封格式：铸造、转账、购买、取回都带临时公钥和 <span class="nobr">88 字节</span>密文，明文是编号、额度和两个随机数（<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/core.mjs" target="_blank" rel="noopener noreferrer">core.mjs</a>）。官网客户端扫描票据时，有密文就用查看密钥解开，没有密文的批量奖励票据用上一张票据推出随机数，再核对承诺。客户端是一个计算库，里面没找到把金库传到服务器的代码；官网页面本身存不存东西，这次没看</td></tr><tr><td>密文写错，收款人认不出票据</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a> 的 “Still open” 一节：电路不检查转账的密文；付钱的流程都由收款人自己生成新票据</td></tr><tr><td>公开代码重算不出完整的线上账本</td><td>公开代码的消息类型只到 6（MINTN），别的类型解析时直接报错；线上客户端还有奖励 7–10、LIST3 11、SPLIT 12。区块 973,352 上，官网 /status 报 9,882 张票据，用公开代码自己跑到同一高度是 8,678 张，摘要不同。差在哪几笔，没有逐条核对</td></tr><tr><td>规则相同时两台索引器一致</td><td>公开仓库的 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/STATUS.md" target="_blank" rel="noopener noreferrer">docs/STATUS.md</a>：验收不用时钟、随机数和服务器数据；2026 年 10 月 11 日的一次独立重放，在区块 970,879 与官网摘要一致</td></tr><tr><td>同一个钱包总是打开同一个金库</td><td>官网金库页的脚本：UniSat 调 <code>signMessage(消息, &quot;ecdsa&quot;)</code>，Xverse 用 <code>protocol: &quot;ECDSA&quot;</code>，都用连接时的付款地址签名，换了地址会报错。界面原文 “The same wallet always opens the same vault.”。存档和 SHA-256 见 sources/site-2026-10-28/SHA256SUMS</td></tr><tr><td>中继额度的 BTC 付给规则里的中继收款地址</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a>：relayerPayoutScript 收额度费和铭刻费，“to the wallet that spends them, so the relayer/inscriber funds itself”。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a> 验收时要求付 buy × ticketPrice 到这个脚本。NAKA <a href="https://ordinals.com/inscription/896803ff66162b1956ccaa3a15723e9c3acd3cbfd81acadbc94812c3ad4fb3cci0" target="_blank" rel="noopener noreferrer">父铭文</a>的 relayerPayoutScript 是 <code>5120be2563233bb4feb149c3a6111f67a2ec5061991921d97406c78ca48614fefe43</code>，即 <a href="https://mempool.space/address/bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy" target="_blank" rel="noopener noreferrer">bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy</a>，ticketPrice 2,500。公开代码的六类消息里没有把额度换回 BTC 的</td></tr><tr><td>承诺由谁算</td><td>PROTOCOL-v1.md 的 Notes 一节：铸造、购买、取回的票据由收的人自己构建，只公开 inner 和密文，“the indexer computes cm from the public assetId and ticket count”。私密转账的 cmOut 由转出方的金库算好写进信封，电路证明它和公开输入一致</td></tr><tr><td>索引器存什么，私密转账后不知道是哪件</td><td>indexer.mjs 的引擎字段：记录树、作废码集合、每块的树根和叶子数、票据列表（位置、承诺、epk、密文）、铸造、挂单、锁的位置。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/checkpoint.mjs" target="_blank" rel="noopener noreferrer">checkpoint.mjs</a> 开头写明检查点读回来的引擎和从起点重放的逐字段相同。私密转账（mode 0）的公开输入里 assetIdPub 是 0，索引器只拿到 cmOut</td></tr><tr><td>挂单期间作品绑在锁上，锁的两条花法</td><td>PROTOCOL-v1.md 的 Listing lock 一节：锁是 <code>P2TR(internal = lockKey, leaf = &quot;&lt;1008&gt; CSV DROP &lt;returnKey&gt; CHECKSIG&quot;)</code>，平台只为付款正确的交易联合签名，撤单在同一笔里带上卖家的 CLAIM，锁被花掉而没有有效 BUY 就关闭挂单，<span class="nobr">1,008 块</span>后卖家可以自己花锁。关闭以后卖家随时能单独发 CLAIM，不用再等：文档原文 “A lock spent with neither leaves it CLOSED until the seller publishes CLAIM”，indexer.mjs 的 CLAIM 接受 listing CLOSED，或 ACTIVE 且这笔交易花了锁。LIST 必须在同一笔交易里建锁（否则 “listing lock output missing”），锁里多少聪索引器不查。一笔交易可以带几封信封：文档 Relay batches 一节说中继把一段时间里的信封合进一笔交易（<span class="nobr">第 05 章</span>第二页的导语因此不写“每一步一笔交易一封信封”）</td></tr><tr><td>卖出所得收在新地址，能扫回来</td><td>官网客户端：卖家收款脚本由 shord/payout 加挂单作废码派生，金库逐条比对已成交挂单的收款脚本找回自己的成交</td></tr><tr><td>挂单的收款地址不限 bc1p，bc1q、3 开头的也收</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md#L55" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a> 给 LIST 信封算长度时举的是 P2WPKH <span class="nobr">381 字节</span>与 P2TR <span class="nobr">393 字节</span>；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/envelope.mjs" target="_blank" rel="noopener noreferrer">envelope.mjs</a> 卖家脚本 1–<span class="nobr">80 字节</span>；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a> 只查标价不低于 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/rules.mjs" target="_blank" rel="noopener noreferrer">rules.mjs</a> 的 dustFor（P2TR 330、见证 v0 294、其它 546）；官网挂单页“其他地址”经节点 validate-address 换成 scriptPubKey（存档 site-2026-10-28/f8c37337f94602c5.js 的 s5 → scriptOf，62ebc8185a14617d.js 的 ez）；官网 state（2026-10-29，高度 973,703，统计见 sources/review-2026-10-29/listing-seller-scripts.json）<span class="nobr">5,233 个</span>挂单：5120 开头 4,622、a914 开头 311、0014 开头 300，三类都有 SOLD；链上例子 <a href="https://mempool.space/tx/5b54a01b9cc7e6fbfdf3382738758aa99f6e6906f955d04926067cff9deb2c18" target="_blank" rel="noopener noreferrer">5b54a01b…2c18</a>：一笔里两封 LIST，卖家脚本一封 a914、一封 5120</td></tr><tr><td>项目方 10 月 27 日、11 月 2 日的两条帖子（2026-11-02 查）</td><td><a href="https://x.com/Ob1_Wan_Satoshi/status/2114992625027858746" target="_blank" rel="noopener noreferrer">10 月 27 日</a>：“Every Shielded collection except Nakas lists, reprices and cancels instantly. Nakas stay exactly as they are.”；钱袋（POUCHES）能拆分、私密转账、挂单购买，11 月 6 日周五对所有人开放。<a href="https://x.com/Ob1_Wan_Satoshi/status/2117089954094530719" target="_blank" rel="noopener noreferrer">11 月 2 日</a>：“Break any SHNAKAS pouch into up to 16 smaller pouches in one transaction. Send exactly the amount you want to any vault.”；SHNAKAS 一比一烧成 Snickets，烧掉的 “gone for good”，两个区块后到账；Snickets 换 GTD 名额，也能投票（可投反对，没有 NAKA 也能投）；11 月 6 日钱袋市场开放，挂单、购买，一次最多扫 <span class="nobr">10 个</span>钱袋。用在第 05、06、07 章，<a class="nobr" href="index.html#notes-07">附录 I07</a>、K 和术语表。联合接口只返回开头 303 和 293 字，全文由 X 检索逐字取得</td></tr><tr><td>烧掉的钱袋花不出来，Snickets 由平台记账（<span class="nobr">第 07 章</span>、<a class="nobr" href="index.html#appendix-B">附录 B</a>、I07）</td><td>官网 /shielded 页面脚本 9a2884728479369d.js（2026-11-03 下载，存档 site-2026-11-03）模块 403698：burnSpendKey(key) = SHA-256(&quot;Shielded Ordinals SNICKETS burn v1&quot; ‖ 0x00 ‖ key)，首字节清零；burnAddressOf = &quot;shord1&quot; ‖ burnSpendKey ‖ 查看公钥；BURN_CONFIRMATIONS = 2；Snickets 钥匙 = SHA-256(&quot;shord/snickets&quot; ‖ 种子) 对 secp256k1 阶取模，Schnorr 签名。查余额、烧、换名额、投票分别请求 /snickets/balance、/snickets/burn、/snickets/spot、/snickets/vote，每个请求都用这把钥匙签名；投票带主题、轮次、选项、赞成或反对、票数和票价，票价取自 /snickets/vote-price。官网引擎 walletFromSeed：持有人公钥 pk = Poseidon(sk)；销毁地址的持有人公钥是 SHA-256 的输出，花它得找到一个 sk 让 Poseidon(sk) 等于这个数。烧的流程（存档 f8c37337f94602c5.js）先核对 decodeAddress(销毁地址).pk 等于 burnSpendKey，再整袋转账或拆分转出。服务器怎么记 Snickets 账看不到。11 月 3 日 07:07（UTC）再下载金库页脚本复核（存档 site-2026-11-03/a926e8a6d1e1b3eb.js、ec986fe65a6649cf.js），上面几项不变：BURN_CONFIRMATIONS 仍是 2，销毁地址、Snickets 钥匙算法相同；烧的请求发 /snickets/burn/build，用 Snickets 钥匙签 &quot;pending&quot; 和信封哈希，整袋烧（buildTransfer 转到销毁地址）带 opening {assetId, tickets, s}，拆出一份烧（buildSplit 分成 [留下, 烧掉]、烧掉那份发到销毁地址）带 burnOuts 和 openings {out, ρ, s}；矿工费从金库的 BTC 付（selfPay，spend 0），界面写着 “Nothing is relayed.”，“1 {rune} burned = 1 Snicket. Whole {rune} only.”，“Your Snickets arrive by themselves after {n} blocks”。投票请求的签名内容是主题、轮次、选项、方向、票数、票价（/snickets/vote，一次最多 500 票），票价取自 /snickets/vote-price，变了服务器回新价；界面写着 “Snickets spent on votes are gone for good.”，没有 NAKA 的金库显示 “Hold a Naka to vote in the next round, or vote with Snickets below.”；公开记录 /topics/…/boosts 每条只有 id、选项、方向、票数、票价和时间</td></tr><tr><td>中文叫法照官网中文界面（助记词、粉尘限额、蚀刻、钱袋、预付中继、隐私地址）</td><td>官网中文文案 624a1b6e0181a28a.js（2026-11-03 下载，存档 site-2026-11-03；网页按 NEXT_LOCALE=zh-CN 载入它）：“Recovery phrase”是“助记词”，<span class="nobr">24 个</span>词写作“<span class="nobr">24 个</span>助记词”；“dust limit”是“粉尘限额”；符文的 Etching 是“蚀刻”，commit、reveal 是“提交”“揭示”；“Pouch”是“钱袋”；“Prepaid relays”是“预付中继”；“shielded address”多数译作“隐私地址”。界面里没有作废码、承诺、取回密钥这些协议内部的概念，本指南自己选了平常的叫法</td></tr><tr><td>投票的公开标记记录能用作废码对上（<span class="nobr">第 06 章</span>、<a class="nobr" href="index.html#appendix-B">附录 B</a>、I06、K）</td><td>11 月 3 日金库页脚本 cd53361caaa1b5b2.js（存档 site-2026-11-03）：投票仍用花费电路，hbody = SHA-256(&quot;ordz-vote-v1&quot; ‖ 合集 ‖ 主题 ‖ 轮次 ‖ 选项)，提交 <code>{choice, publicSignals, proof}</code> 到 backend-vote-production…/api/vote/topics/{主题}/ballots，publicSignals 含作废码；标记 tag = Poseidon(作废码, SHA-256(&quot;ordz-vote-tag-v1&quot; ‖ 主题 ‖ 轮次)，首字节清零)。公开接口 /topics/{主题}/tags?round=N 列出每票的 tag、choice 和时间，/boosts?round=N 列出 Snickets 票（存档 vote-topics、vote-tags-r1、vote-tags-r2、vote-boosts-r2，11 月 3 日下载）。投票页原文 “The vote service sees a one-time tag per Naka per round, never the piece or the vault.”。核对：tools/vote_tag_check.mjs 用官网 /state（高度 974,323，<span class="nobr">7,865 个</span>作废码、<span class="nobr">5,415 个</span>挂单，存档 state-974323-20261103.json.gz）逐个算标记，第 1 轮 1,463 票能算出 888 票、其中 38 票来自挂单作废码；第 2 轮 774 票能算出 82 票、8 票来自挂单。只数条数，没记是哪件</td></tr><tr><td>投票的计票、去重、资格能核到哪一步（<span class="nobr">第 06 章</span>技术卡、<a class="nobr" href="index.html#appendix-B">附录 B</a>、I06）</td><td>投票服务（backend-vote-production.up.railway.app）验证证明、去重、计票的代码在它自己的服务器上，金库页脚本里只有生成证明和提交选票，浏览器里读不到。能用公开记录核的：11 月 3 日存档的 /api/vote/topics（主题 next-launch-oct，第 2 轮，快照 973,899，totals）和第 2 轮 /tags 全部 774 条。tools/vote_round_check.mjs 的结果：按选项数出来的票数和 totals 完全一致（774 对 774），没有重复的标签；用官网账本（高度 974,323）的作废码按官网公式算标签，对上 82 票，这些票据都在快照块之后才花掉，0 张在快照之前；其余 692 票的作废码还没上链，证明不公开，资格查不了。第 2 轮另有 1 张 Snickets 票（/boosts），totals 里那个选项是 23，等于标签记录里的 23 票，Snickets 票是否另计，数据上看不出</td></tr><tr><td>官网金库的说明和提醒（第 06、07 章，提醒页，<a class="nobr" href="index.html#notes-07">附录 I07</a>、K）</td><td>11 月 3 日用测试金库逐页看过 ord-dropz.xyz/wallet（藏品、代币、质押、市场、投票、记录、比特币、设置，页面文字存档 site-2026-11-03/pages/），文案对照官网中英文文案 fbaabcc7fccab287.js、624a1b6e0181a28a.js：质押页 “Nothing to sign, nothing to lock”“A piece you receive or buy starts earning the week after it lands”“One claim pays every week earned so far, so the fee is per claim, not per week”；亮编号确认框 “Those SHNAKAS stay linked to the piece, also after you sell them”“that it was not listed, sold or sent from the start of the first claimed week until now”“If that was your wallet and you have not sent the piece privately since, people can link these claims to that wallet”；收款 “Pieces and bitcoin go to two different addresses”，BTC 地址 “Never send ordinals, inscriptions or runes to this address”；自己付费 “Until the block lands, do not send bitcoin from this wallet: a send from the same wallet can replace this transaction”；搬到手机 “Whoever scans this code gets your vault”“This link IS your vault until it is used … It works once”“The link works once and for five minutes”，收到别人发来的链接 “If someone sent you this link, stop. It would open their vault here, and anything you buy or deposit would be theirs”；安装 iOS 加到主屏幕、Android 下载安装包、电脑 Chrome/Edge，“No app store”；PIN “cannot be recovered”。Snickets “Whole SHNAKAS only”“One burn comes out of one pouch”，GTD “One spot = one code = one mint, from any wallet”，确认框 “if you don&#x27;t mint in the GTD phase, the Snickets are not returned”，“我的 GTD 码”说明 “One not used by the end of its phase gives its Snickets back”，两处不一致。钱袋 “Buying and listing SHNAKAS is open to a few testers first. Sending, splitting and burning are open to everyone”“Trading opens Friday, Nov 6”，即时挂单 “the first listing from this vault makes one 330-sat coin”。Snickets 一票 “what a base Naka earns in a week, live”</td></tr><tr><td>合集配置：全局编号、额度、即时挂单（术语表、<a class="nobr" href="index.html#notes-04">附录 I04</a>、I07）</td><td>11 月 3 日官网 /collection（存档 collection-naka、collection-coins、collection-trollbox、collection-shnakas）：global.start NAKA 0、COMMEMORATIVE COINS 3,333、Trollbox 3,833，市场和质押页的 “Shielded #” 由 globalNumber = global.start + 编号 算出（脚本 cd53361caaa1b5b2.js）；NAKA relayTokens.creditsOff false，listings3.active false，maxPerWallet 5；SHNAKAS listings3.active true，access &quot;list&quot;，split.maxOuts 16，saleFeeBps 200、saleFeeMin 330，ticketsPerLot 1</td></tr><tr><td>Naka Lounge（<a class="nobr" href="index.html#notes-07">附录 I07</a>、K）</td><td>项目方 <a href="https://x.com/ShieldedNaka/status/2117394578240360669" target="_blank" rel="noopener noreferrer">11 月 2 日帖</a>（UTC 23:13，北京时间 11 月 3 日）：No-Limit Hold&#x27;em，筹码是 SHNAKAS，连金库、一次确认存入，随时提现回金库；“Every card is locked in before the deal, and your device checks it”“The lounge shows what it owes against what it holds, 1:1”；抽水 “5% of hands that see a flop, max 2 big blinds”，攒起来烧掉；限时。游戏页（play.ord-dropz.xyz，11 月 3 日看）“Chips are real SHNAKAS, held in the lounge box while you play”。金库文案 walletLounge：游戏拿到由金库算出的 ID 和金库地址（代码 connectAnswer：玩家公钥 account、隐私地址 home、金库 BTC 地址 btcHome 和签名，存档 site-2026-11-03/7f10f4358f40d09a.js），“every cash-out comes back here and only here”“It can never move anything in your vault”。存入代码（cd53361caaa1b5b2.js）：buildSplit 把钱袋拆成 [余下, 存入数]，存入那份转给游戏地址，同一笔给游戏的收费地址付 330 + prepaySats + houseFeeSats；本机记到 11 月 3 日的 21 笔这类拆分，给收费地址的输出都是 <span class="nobr">3,330 sats</span>，付到 <span class="nobr">13 个</span>不同地址（本机 esplora 逐笔读）</td></tr><tr><td>第三方接不进 Lounge 和金库（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>金库页脚本（11 月 3 日下载，存档 site-2026-11-03/7f10f4358f40d09a.js、ec986fe65a6649cf.js）：LOUNGE_ORIGINS 默认 https://play.ord-dropz.xyz，LOUNGE_APIS 默认 https://lounge-api.ord-dropz.xyz，连接和存入请求先过 loungeOriginAllowed、loungeApiAllowed，不在名单上就显示 “{origin} is not the Naka Lounge. Nothing was shared.”；连接只给 loungeKeyOf（种子加 &quot;naka-lounge/v1&quot; 算出的玩家公钥）、隐私地址、BTC 地址和签名。持有证明（a926e8a6d1e1b3eb.js）：“证明”按钮的用途写死为 holder-demo，发官网 /holder/verify；挂单币用 listing-coins。公开仓库 README：“The code that builds transactions (minting, listing, buying, sending, withdrawing) and the wallet are not in this repository.”</td></tr><tr><td>创始人在 X 上的说法（2026-10-30 查）</td><td>价格公开、持有人私密：<a href="https://x.com/Ob1_Wan_Satoshi/status/2104680098066760098" target="_blank" rel="noopener noreferrer">帖 1</a>；credits 后续不再出售、改由金库 BTC 付网络费、预付中继保留、挂单改价撤单将来成交前不上链、挂单期间的 SHNAKAS 份额跳过不补：<a href="https://x.com/Ob1_Wan_Satoshi/status/2112303679709880606" target="_blank" rel="noopener noreferrer">帖 2</a>；卖出所得从金库 Send out 到 bc1 地址、shord1 不是比特币地址：<a href="https://x.com/Ob1_Wan_Satoshi/status/2110998536947171722" target="_blank" rel="noopener noreferrer">帖 3</a>；规则在父铭文、索引器开源任何人可跑：<a href="https://x.com/Ob1_Wan_Satoshi/status/2104371087266259019" target="_blank" rel="noopener noreferrer">帖 4</a>。用在<a class="nobr" href="index.html#notes-04">附录 I04</a> 和快答“卖出后的 BTC 在哪里”；<span class="nobr">第 05 章</span>的链下挂单一句 11 月 3 日起依据下一行 10 月 27 日的帖子。长帖正文本机只取到开头 297 字（联合接口不返回长文）；“CREDITS GONE” 一节由检索逐字引出：“Same update kills relay credits. No more buying tickets to do private actions. Your vault&#x27;s own bitcoin pays the network fee, same as any wallet. Old credits still work if you have them, nobody loses anything. Prepaid relays stay as an option for people who want the extra privacy. The platform never pays for anything, which is what keeps it honest.”</td></tr><tr><td>可信设置秘密的后果与修法</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/STATUS.md" target="_blank" rel="noopener noreferrer">docs/STATUS.md</a>：“The proof setup was a single contribution … The secret from that run is discarded by the software, but nobody outside can verify that it was. Someone who held it could forge a proof and create a duplicate of a piece (never take one out of a vault).” <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/ceremony/ceremony.mjs" target="_blank" rel="noopener noreferrer">ceremony/ceremony.mjs</a>：phase 1 用公开的 Perpetual Powers of Tau，本脚本做 phase 2 多方仪式，“the key is safe as long as ANY ONE contributor destroyed their randomness”，最后混入一个事先指定的比特币区块哈希。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a>：转账只查引用的树根高度、作废码没见过、证明通过，通过后才记作废码、加新承诺。2026-10-29 官网 state（高度 973,703，<span class="nobr">5,233 个</span>挂单）里没有同一编号同时两条 ACTIVE 挂单，也没有前一张没结束就再挂的。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a>：“The indexer refuses to start with any other key, so the parent inscription pins the ceremony forever”，NAKA 父铭文没有 spendVkeyHash、钥匙固定在 src/v1/collections.mjs；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a> 构造时只收一把验证密钥，对不上父铭文的哈希就报错。创始人 10 月 19 日<a href="https://x.com/Ob1_Wan_Satoshi/status/2112303679709880606" target="_blank" rel="noopener noreferrer">长帖</a>：“A key of ours sits in the loop so that if anyone found a hole we could stop it … The next update removes it. No key of ours in the protocol, nothing of ours in the money path.”，说的是交易流程里的平台签名密钥</td></tr><tr><td>付款交易由平台组装，金库只核对流出总额</td><td>官网存档脚本 62ebc8185a14617d.js：买预付中继走 /tokens/build 拿到平台组装的 PSBT，再交钱包 signPsbt；用金库 BTC 付费走 payFromPrivateWallet，向服务器要 PSBT 后用引擎的 signVaultPsbt 签。signVaultPsbt（存档 browser-engine.js）只检查输入都是金库的币、流出的净额不超过预期（“would take … sats from your private wallet, more than the … expected. Not signed.”），不检查输出去向。链下挂单的 signOffer 用 SIGHASH_SINGLE\</td><td>ANYONECANPAY 签挂单用的那枚币（输入）和付给卖家的输出。docs/API.md：“buying happens only on Ord Dropz”。购买页本身的代码没有存档</td></tr><tr><td>隐私地址的组成与用途（<a class="nobr" href="index.html#notes-01">附录 I01</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a> 票据表：ownerPk = Poseidon(sk)，inner = Poseidon(ownerPk, rho, s)；“The view key is an x25519 key … The address is shord1‖pk‖viewPk”；“Notes the owner builds for themselves (mint, buy, claim) are proof-less”。官网引擎（存档 review-2026-10-27/browser-engine.js）的地址编码是 &quot;shord1&quot; + hex(pk ‖ viewPk)，decodeAddress 拆回 {pk, viewPk}，长度不是 <span class="nobr">64 字节</span>就报错。官网界面文字：“Your shielded address · for pieces”，“For pieces only, never bitcoin. It does not show what you hold.”</td></tr><tr><td>网页金库的签名文字与种子（<a class="nobr" href="index.html#notes-01">附录 I01</a>、K）</td><td>官网引擎 <a href="https://shielded-mint-server-production.up.railway.app/api/shielded/engine/shielded-browser.js" target="_blank" rel="noopener noreferrer">shielded-browser.js</a>（2026-11-01 下载，<span class="nobr">567,545 字节</span>）：<code>VAULT_KEY_MESSAGE</code> 四句原文；<code>seedFromSignature</code> = SHA-256(&quot;shord/seed/v1&quot; ‖ 签名，至少 <span class="nobr">64 字节</span>)；<code>walletFromSeed</code>：sk = SHA-256(&quot;shord/spend&quot; ‖ 种子) 取模、查看密钥 = SHA-256(&quot;shord/view&quot; ‖ 种子)、ownerPk = Poseidon(sk)、查看公钥用 x25519；取回、收款、金库 BTC、链下挂单用的币各用 shord/return、shord/payout、shord/btc、shord/listing 标签。官网存档脚本 62ebc8185a14617d.js：UniSat <code>signMessage(…,&quot;ecdsa&quot;)</code>、Xverse <code>protocol:&quot;ECDSA&quot;</code>，签连接的付款地址。f8c37337f94602c5.js：App 新建金库用 <code>crypto.getRandomValues(new Uint8Array(32))</code>，<span class="nobr">32 字节</span>加 SHA-256 首字节校验编成 BIP39 词表的 <span class="nobr">24 个</span>词</td></tr><tr><td><span class="nobr">第 01 章</span>：重建条件、换钱包是空金库、隐私地址的用途、挂单的两把钥匙、扫描用两把钥匙</td><td>官网中文文案 624a1b6e0181a28a.js、英文 fbaabcc7fccab287.js（存档 site-2026-11-03）：导入页 intro “连接你铸造或购买时所用的同一钱包、同一账户和同一地址类型，并签署一条消息。此操作不会转移任何比特币。换成其他钱包会打开另一个空的保险库。”（“Connect the exact wallet, account and address type you minted or bought with, and sign one message. It moves no bitcoin. A different wallet opens a different, empty vault.”）；金库页 addressHint “只有别人直接给你发送藏品时才需要。购买和出售都无需你提供任何东西。”；挂单收款的 privateHint “一个只用于这次挂单、只有你的保险库能控制的全新地址”；助记词页 onlyHere “不是任何其他钱包的助记词”。官网引擎（存档 archive/ord-dropz-site/engine/2026-11-02/shielded-browser.js）：取回密钥 Pc(钱包, 挂单票据的 nf)、卖出收款 Vd(钱包, 挂单的 nf)，都是 SHA-256(标签 ‖ 种子 ‖ nf)；金库 BTC 地址 Kd(钱包, 序号) 接 <span class="nobr">4 字节</span>序号，找零走 changeIndex；scanNotes 有密文的用查看密钥解开，没有密文的按上一张票据的作废码推出 ρ，每张都用 sk 算作废码 Wd(sk, ρ)</td></tr><tr><td>挖矿原理页：SHNAKAS 是钱袋的合集，领一次生成一个钱袋，没人领的份额从不发行，总量</td><td>官网 SHNAKAS 合集配置 collection-shnakas-20261103.json（存档 site-2026-11-03）：kind 为 rune，rune.etching 92ff6274…、premine 2100000000000000、divisibility 8，supply 519,951，开头 <span class="nobr">3 个</span>固定钱袋各 <span class="nobr">80 枚</span>（minted 0），领奖钱袋号从 3 起共 <span class="nobr">519,948 个</span>，poolPerWeek 26,664,000,000,000，claimUntil 1,102,740；拆分出的钱袋号从 519,951 起（split.nextId 520,252），lots 1,288。官网引擎（archive/ord-dropz-site/engine/2026-11-02/shielded-browser.js）检查规则：“lots.count must be 2 x pieces x weeks”“lots must end at the supply”“pool exceeds the premine”，没有奖励计划的符文合集要求“lots must add up to the premine”；只有固定钱袋能铸（mintable = lots.from）；规则里的 rune 几项只查格式，不去链上核对蚀刻。领奖信封 REWARD、REWARD2 带作废码、新承诺、证明和钱袋的 lotInner 与密文，BONUS、BONUS2 带编号和签名，钱袋号取索引器的 nextId；每周的资格树按 leafCount 截取记录树（rewardTreeAt）。官网账本 state-974323-20261103.json.gz：<span class="nobr">987 个</span>钱袋，号 3–989 连续，基础 <span class="nobr">506 个</span>共 <span class="nobr">74,989.90801104 枚</span>，加成 <span class="nobr">481 个</span>共 <span class="nobr">92,265.79299642 枚</span>，最早一个在 <span class="nobr">972,709 块</span>；第 <span class="nobr">1 周</span>的资格树 7,640 张票据。官网代币页脚本 7f10f4358f40d09a.js：上限常量 21e6；说明文字“2100 万是上限而非供应量：从未领取的部分永不发行，销毁的钱袋永远消失。”；“上限”“已发行”“已销毁”“流通量”的中文叫法见 624a1b6e0181a28a.js，“预挖”在官网只出现在另一个产品 Forge 的说明里。创始人帖（存档 sources/x-posts/）：10 月 7 日 “All 21M $SHNAKAS are locked in the same NUMS parking address as the Nakas.”；10 月 19 日长帖 “It is never issued, and it can never be bought back. Same for Nakas that were never minted. 21M is the ceiling, not the supply. … The burn started on block one.”</td></tr><tr><td>私密转账沿用 s、ρ′ 由公开作废码算出；作废码要用花费密钥算，否则谁都能顺着串起转手（<span class="nobr">第 04 章</span>技术说明，<a class="nobr" href="index.html#notes-01">附录 I01</a>、I04、K）</td><td>电路开头注释 nf = Poseidon(sk, rho, 7) “only the owner can compute it”。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/circuits/spend.circom" target="_blank" rel="noopener noreferrer">circuits/spend.circom</a>：mode 0 “cmOut is a new note for pkOut with the SAME assetId and s, rhoOut = Poseidon(nf, 11)”，公开输入含 nf、cmOut、spend、buy；官网引擎 <code>buildTransfer</code> 同样用 <code>Poseidon(nf, 11)</code> 和旧票据的 s；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a>：“piece secret s: conserved across private sends; replaced on every sale, mint or claim”；官网引擎 <code>buildBuy</code>、<code>buildClaim</code> 都用 <code>zd()</code>（<span class="nobr">64 个</span>随机字节取模）重新生成 ρ 和 s，<code>buildTransfer</code> 和领奖励沿用旧的 s</td></tr><tr><td>票据加密</td><td>官网引擎：每次加密 <code>randomSecretKey()</code> 生成一次性 x25519 密钥，密钥 = SHA-256(&quot;shord/note/v1&quot; ‖ 共享秘密 ‖ 临时公钥)，ChaCha20-Poly1305 加密 <span class="nobr">72 字节</span>明文（编号、额度、ρ、s），密文 <span class="nobr">88 字节</span>；解密靠查看密钥逐条试</td></tr><tr><td>不能按隐私地址查收到了什么（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>公开代码 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/view.mjs" target="_blank" rel="noopener noreferrer">src/v1/view.mjs</a>：exportState 给出全部票据（pos、cm、epk、ct、txid、height、kind），没有归属，注释写明 “The wallet downloads ALL notes and scans them locally, so the server never learns which notes … belong to whom”；官网引擎扫描函数逐条用 viewSk 试解，再用自己的持有人公钥重算承诺核对。官网页面发中继时，请求体只有 envelopeHex 和预付凭证，请求头另带本地存的内测访问码 shord.pouchAccess（存档 sources/site-2026-10-28/f8c37337f94602c5.js）</td></tr><tr><td>转出方交出票据明细，能证明转给了谁（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>官网引擎 buildTransfer：ρ′ = Poseidon(nf, 11)，cmOut = Poseidon(编号, 额度, Poseidon(收件人持有人公钥, ρ′, s))，s 沿用旧票据；加密函数只返回 epk 和 ct，一次性私钥不留，所以转出方无法让第三方解开密文。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a>：“There is no in-circuit check of the TRANSFER ciphertext”“Sender-recovery ciphertext is not implemented”。官网页面的 SHNAKAS 销毁流程（存档 f8c37337f94602c5.js）：整袋转账时把 <code>{assetId, tickets, s}</code> 作为 opening，拆分时把 <code>{out, rho, s}</code> 作为 openings，连同信封哈希发给 /snickets/burn/build；服务器怎么核对看不到。引擎 buildSplit 发给别人地址的那个钱袋用新随机的 ρ、s，函数只返回 inner、epk、ct；销毁地址用的是自己的查看公钥，所以那里能解回 ρ、s。一个钱袋的大小由 lotSizeOf(编号) 按规则 lots 表或状态里的 lotSizes 公开查到。导出这组明细的办法依据引擎的导出：seedFromSignature、walletFromSeed（种子算出 sk、viewSk 等）、scanNotes（逐张解开账本里写给自己的票据，已花掉的也返回，带 ρ、s、nf）、parseEnvelope；官网页面用到的接口里没有替用户签名或导出这组明细的</td></tr><tr><td>钱袋整袋发送和转作品一样；只给一部分要先拆分、再发送，拆分公开原钱袋号和每袋数量（<span class="nobr">第 04 章</span>、<a class="nobr" href="index.html#notes-07">附录 I07</a>）</td><td>官网引擎 archive/ord-dropz-site/engine/2026-11-02/shielded-browser.js：整袋发送用的就是 buildTransfer（mode 0，编号不公开）；buildSplit 只用于符文合集（“a split is for a rune lot”），拆成 2 到 <span class="nobr">16 个</span>、每个至少 <span class="nobr">1 枚</span>、加起来等于原钱袋，信封带原编号、额度和每个新钱袋的数量，证明用 mode 1、assetIdPub 等于原编号；参数 to 可以给每个新钱袋各填一个地址（“to: one address (or null) per pouch”）。11 月 3 日存档的金库页脚本 cd53361caaa1b5b2.js 调 buildSplit 三处：“拆分”按钮不传 to，只走 selfPay；烧成 Snickets 传 to:[null, 销毁地址]；存进 Naka Lounge 传 to:[null, Lounge 地址]（钱袋正好等于存入数时对半拆，两袋都给 Lounge）。中文文案 624a1b6e0181a28a.js：“把一个钱袋拆成更小的钱袋（例如每个 1、5、<span class="nobr">10 枚</span>）和发送一样：一笔私密交易，用你自己的比特币支付。”“钱袋整袋移动。选一个。”</td></tr><tr><td>官网“证明”按钮用的是持有证明，证明交给谁（<span class="nobr">第 06 章</span>、<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>官网存档脚本 dff9f0e18378b9ad.js：用途 <code>&quot;holder-demo&quot;</code>，申领人是连接钱包的 <code>paymentAddress</code>（提示 “to name who the proof is for”），<code>holderContext</code> 后 <code>buildHolderProof</code>，发往 <code>/holder/verify</code>；成功文字 “Verified: you hold a piece of this collection. The verifier did not learn which one.”；说明文字 “This is what Discord roles and whitelists will use.”。引擎 <code>holderContext</code> = 哈希(cid ‖ 用途 ‖ 申领人)；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/circuits/holder.circom" target="_blank" rel="noopener noreferrer">circuits/holder.circom</a> 公开 root、context、ctxNf。11 月 3 日的金库页脚本 a926e8a6d1e1b3eb.js（存档 site-2026-11-03）照旧：holderContext(view, &quot;holder-demo&quot;, 付款地址) 后 buildHolderProof，发 /holder/verify，请求里是 purpose、claimant 和证明；同一脚本里其他合集申请挂单币也用持有证明（用途 &quot;listing-coins&quot;，发 /coins/request，附上挂单币公钥），NAKA 没开即时挂单，用不到</td></tr><tr><td>多方仪式怎么进行（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/ceremony/ceremony.mjs" target="_blank" rel="noopener noreferrer">ceremony/ceremony.mjs</a>：init → 把 0000.zkey 和 transcript.json 交给第一位 → 每人 <code>contribute &lt;circuit&gt; --name</code> 在自己机器上贡献并打印贡献哈希 → <code>verify</code> 检查整条链 → <code>beacon --height</code> 用事先指定的区块收尾 → <code>page</code> 生成公开记录页；电路 spend 和 holder。公开文档没有报名方式和日期</td></tr><tr><td>理论来源（<a class="nobr" href="index.html#appendix-D">附录 D</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/zk/spend_vkey.json" target="_blank" rel="noopener noreferrer">zk/spend_vkey.json</a>：protocol groth16、curve bn128；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/circuits/lib.circom" target="_blank" rel="noopener noreferrer">circuits/lib.circom</a> 引用 circomlib 的 poseidon.circom；公开仓库的文档和代码里没有出现 Zcash、Zerocash</td></tr><tr><td>中继 10 月 29 日换了代发钱包（<span class="nobr">第 08 章</span>、<a class="nobr" href="index.html#notes-08">附录 I08</a>、K）</td><td>11 月 2 日读 <a href="https://shielded-api.ord-dropz.xyz/api/shielded/status" target="_blank" rel="noopener noreferrer">status</a>：relayer.address 是 bc1pr5vsx…5hcp73，batchWindowMs 是 300000。mempool.space：旧地址 bc1phcjk…3t3cuy 共 5,554 笔、余额 0，最后一笔 <a href="https://mempool.space/tx/83409f79a67737062cf89283130f6087aacaa1d95637729ebd5be30558927474" target="_blank" rel="noopener noreferrer">83409f79…</a>（区块 973,777）把它的币全转给新地址；<a href="https://mempool.space/address/bc1pr5vsx3vpua22mqwhfmvymhvg79zr3mdhhhv82ghu4h04h94hcv8q5hcp73" target="_blank" rel="noopener noreferrer">新地址</a>的第一笔 <a href="https://mempool.space/tx/fe200a20067b8bc6004a9ef4ef2613416d5574703165e6a5c53c10442aa7b948" target="_blank" rel="noopener noreferrer">fe200a20…</a>（区块 973,769）花的是旧地址的币，之后发的交易仍是 SHORD 开头的 OP_RETURN 加 <span class="nobr">330 sats</span> 锁。合集规则的 relayerPayoutScript 仍是 5120be25…fe43</td></tr><tr><td>公开中继的批次和建锁（<a class="nobr" href="index.html#notes-04">附录 I04</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/relayer/relayer.mjs" target="_blank" rel="noopener noreferrer">relayer/relayer.mjs</a>：主网默认 BATCH_MS = 600000，每批等 BATCH_MS ×（0.5 到 1.5）；挂单时建锁 <code>value: 330</code></td></tr><tr><td>索引器认挂单锁、摘要内容、检查顺序（<a class="nobr" href="index.html#appendix-A">附录 A</a>、技术卡 08）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a>：挂单只按 lockScript 找锁输出，金额只记录不检查；转账和挂单先查引用的树根高度、再查作废码是否见过，最后验证明，有一项不过只记拒收；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/rules.mjs" target="_blank" rel="noopener noreferrer">rules.mjs</a> 的 ANCHOR_WINDOW 是 100、K_MIN 是 1，即树根要在最近 <span class="nobr">100 块</span>里、早于当前块；stateDigest 是树根、叶子数、作废码、铸造编号，以及每个挂单的作废码、状态、编号、额度、价格，<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/API.md" target="_blank" rel="noopener noreferrer">docs/API.md</a> 写明不含票据的密文、交易号、高度和类型，也不含挂单的区块、锁、收款脚本、取回公钥，以及成交和取回的交易号</td></tr><tr><td>检查点怎么存、怎么读、重组怎么退（<span class="nobr">第 08 章</span>、<a class="nobr" href="index.html#appendix-H">附录 H</a>、I08）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/RUN-AN-INDEXER.md" target="_blank" rel="noopener noreferrer">docs/RUN-AN-INDEXER.md</a> 的 Restarts 一节和 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/checkpoint.mjs" target="_blank" rel="noopener noreferrer">checkpoint.mjs</a>：在最新区块上每 <span class="nobr">6 块</span>存一份、留最近 4 份；启动时用最新一份通过全部检查的，不行就试更早的，都不行从起始区块重放；重组时退回还在主链上的最新一份，在旁边重放，追上最新区块才换，之前一直用旧状态答复</td></tr><tr><td>10 月 11 日公开代码重放和官网摘要对上（<span class="nobr">第 08 章</span>、<a class="nobr" href="index.html#appendix-H">附录 H</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/STATUS.md" target="_blank" rel="noopener noreferrer">docs/STATUS.md</a>：release-2 从区块 969,342 独立重放，在 <span class="nobr">970,879 块</span>和 Ord Dropz 服务器的状态摘要相同（7,090 张票据）</td></tr><tr><td>两个状态接口给什么（<span class="nobr">第 08 章</span>、<a class="nobr" href="index.html#appendix-F">附录 F</a>）</td><td>11 月 3 日同时读官网 <a href="https://shielded-api.ord-dropz.xyz/api/shielded/status" target="_blank" rel="noopener noreferrer">status</a> 和 Ord Dropz 托管的公开接口 <a href="https://shielded-public-api-production.up.railway.app/status" target="_blank" rel="noopener noreferrer">/status</a>，存档 sources/site-2026-11-03/status-official-20261103.json、status-hosted-20261103.json：两边都在 <span class="nobr">974,394 块</span>、11,160 张票据、摘要相同；官网的没有区块哈希，托管的有。公开仓库 docs/API.md 写着托管接口由 Ord Dropz 运行</td></tr><tr><td>抢同一单要另有平台签名（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/cosign.mjs" target="_blank" rel="noopener noreferrer">src/v1/cosign.mjs</a>：同一张挂单已有一笔待确认时拒签，“this listing is already being bought or cancelled”；NAKA 平台的签名代码没有公开</td></tr><tr><td>隐私地址没有校验位（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>官网引擎 decodeAddress：只查 shord1 开头、<span class="nobr">64 字节</span>、前 <span class="nobr">32 字节</span>的数值小于电路的上限（否则 “non-canonical field element”），没有校验和</td></tr><tr><td>保留名字和粉尘限额（<a class="nobr" href="index.html#appendix-J">附录 J</a>、I05）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/names.mjs" target="_blank" rel="noopener noreferrer">names.mjs</a> 的 RESERVED_LABELS 共 <span class="nobr">35 个</span>；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/rules.mjs" target="_blank" rel="noopener noreferrer">rules.mjs</a> 的 dustFor：<span class="nobr">34 字节</span>且以 0x51 开头是 330，以 0x00 开头（bc1q、P2WSH）是 294，其余 546</td></tr><tr><td>开发者能用什么，两套接口（<a class="nobr" href="index.html#appendix-K">附录 K</a>）</td><td>公开仓库 <a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a> 是 MIT。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/API.md" target="_blank" rel="noopener noreferrer">docs/API.md</a>：托管接口 shielded-public-api-production.up.railway.app 的密钥在 Ord Dropz Discord 用 /verify、/apikey 领；不带密钥只答 /status、/collections、/names/info、/health，每个网络地址每分钟 30 单位；带密钥每分钟 60、每天 5,000 单位，/state 整份 20 单位。11 月 2 日实测：托管接口的 /listings、/state 不带密钥回 401；官网接口 shielded-api.ord-dropz.xyz/api/shielded 的 /listings、/state 不带密钥正常返回（高度 974,197），/names/bob.naka 只回 {&quot;available&quot;:true}</td></tr><tr><td>官网证明密钥的核对（<a class="nobr" href="index.html#appendix-D">附录 D</a>、K）</td><td>11 月 2 日从官网 /engine/ 下载：shielded-browser.js <span class="nobr">567,545 字节</span>、spend.wasm 2,513,090、spend.zkey 6,285,499、holder.wasm 2,446,304、holder.zkey 5,624,582。用 snarkjs 0.7.5 的 zKey.exportVerificationKey 导出后按 rules.mjs 的 vkeyHash 算：spend 是 e7dbcdb0…e788，等于 collections.mjs 给 NAKA 固定的哈希，也等于公开仓库 zk/spend_vkey.json；holder 是 644ad887…2a82，等于 zk/holder_vkey.json。按 zkey 文件格式读第 10 段：两份都只记一次贡献，类型 0（普通贡献，不是区块哈希信标），名字分别是 “proto” 和 “local dev (pre-ceremony)”。验证密钥里 δ 不是 G2 生成元、也不等于 γ</td></tr><tr><td>名字靠内容认定，不跟踪铭文</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/registry.mjs" target="_blank" rel="noopener noreferrer">registry.mjs</a> 的 scanBlock：读每块每笔交易的铭文（readInscriptions），内容类型是 JSON 或纯文本、readNameRecord 能读出来就记下，按交易、铭文顺序交给 NameIndex；之后的区块不再看这枚铭文</td></tr><tr><td>隐私名字（<a class="nobr" href="index.html#appendix-J">附录 J</a>）</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/names.mjs" target="_blank" rel="noopener noreferrer">names.mjs</a> 开头的说明：名字是内容为 {&quot;p&quot;:&quot;shord&quot;,&quot;op&quot;:&quot;name&quot;,&quot;name&quot;,&quot;to&quot;} 的普通铭文，“Anyone may inscribe one … No parent, no fee rule, no signature”，“First is first”，“The label … is unique across both endings”，“<code>to</code> is fixed by the inscription: moving or selling the inscription never changes where it points”，“METADATA ONLY: nothing in the protocol&#x27;s acceptance rules depends on it”；NAMES_START 主网 969800；标签正则 3–20 位；RESERVED_LABELS 名单；累计摘要 sha256(前一摘要</td><td>高度</td><td>铭文</td><td>名字</td><td>指向)。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/tools/names-indexer.mjs" target="_blank" rel="noopener noreferrer">tools/names-indexer.mjs</a> 自建索引、--compare 对照；<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/docs/STATUS.md" target="_blank" rel="noopener noreferrer">docs/STATUS.md</a>：“A name bought through the wallet was inscribed by the relayer from an unrelated coin … (mainnet, dub.naka)”。官网界面文字（存档 1981f5467097dc93.js）：“It is inscribed on Bitcoin, and the first to inscribe a name owns it”，“A name is public and points at your shielded address. It does not show what your vault holds, and it is not inscribed with your bitcoin”。2026-10-30 读 <a href="https://shielded-api.ord-dropz.xyz/api/shielded/names/info" target="_blank" rel="noopener noreferrer">官网名字接口</a>：enabled true、fee 2500、endings naka/shield，index 高度 973,831、<span class="nobr">533 个</span>名字；<a href="https://shielded-public-api-production.up.railway.app/names/info" target="_blank" rel="noopener noreferrer">公开接口</a> 同高度同摘要 877d9f00…aa59</td></tr><tr><td>奖励权重能独立重算，不依赖官网</td><td>链上的 <a href="https://ordinals.com/inscription/30adf5233d1a0eec4d3c836f195e3966acf634cf96634444358ccfe8c7c961a9i0" target="_blank" rel="noopener noreferrer">SHNAKAS 规则铭文</a>（存档 sources/onchain/programme-shnakas.json）的 rewards.weights：base 4、cap 16、steps [[300,4],[200,3],[150,2],[125,1]]、numbers [[10,8],[100,4],[1000,2]]、zeroListed {minPieces 20, units 4, sales 3}、asks {minPrice 546, scripts p2tr/p2wsh/p2wpkh/p2sh/p2pkh}、traitsSha256 和 traits（types、values、pieces）。输入是账本里的挂单和成交。官网金库页取 /rewards/weights/now（存档 site-2026-10-28/f8c37337f94602c5.js），引擎里只有解析权重快照的代码，没有本地重算。10 月 27 日的权重快照（sources/review-2026-10-27/weights-now.json）<span class="nobr">351 个</span>属性值的地板价来源：挂单 175、成交 106、零挂单 62、上一块 8；零挂单的都是不少于 <span class="nobr">20 件</span>、定为 +4 档（100%），成交的都不足 <span class="nobr">20 件</span>。规则铭文没写挂单从哪读；官网对链下挂单的说明是 “Nothing went on chain: the listing is a signed note this marketplace holds”</td></tr><tr><td>SHNAKAS 是目前唯一的隐私符文</td><td>存档 local-collections.json 的 <span class="nobr">15 个</span>合集都是 collection 类型，符文计划只有 programme-shnakas（rewards.collection 指向 NAKA 父铭文）；没有查到第二个符文计划，所以写“目前唯一”</td></tr><tr><td>官方中继的地址就是规则里的中继收款地址，代发的信封也从它出钱</td><td>官网 <a href="https://shielded-api.ord-dropz.xyz/api/shielded/status" target="_blank" rel="noopener noreferrer">status 接口</a>的 relayer.address 是 <a href="https://mempool.space/address/bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy" target="_blank" rel="noopener noreferrer">bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy</a>（存档 sources/review-2026-10-27/site-status.json），和 NAKA <a href="https://ordinals.com/inscription/896803ff66162b1956ccaa3a15723e9c3acd3cbfd81acadbc94812c3ad4fb3cci0" target="_blank" rel="noopener noreferrer">父铭文</a>里 relayerPayoutScript <code>5120be2563233bb4feb149c3a6111f67a2ec5061991921d97406c78ca48614fefe43</code> 换算出的地址相同。链上（<a href="https://mempool.space/address/bc1phcjkxgemknltzjwr5cg37eaza3gxrxgey8vhgpk83jjgv987leps3t3cuy" target="_blank" rel="noopener noreferrer">mempool.space</a>，2026-10-29 查）：5,517 笔交易，余额约 <span class="nobr">0.018 BTC</span>，最近的交易都是本地址的找零做输入、一个 SHORD 开头的 OP_RETURN、挂单时多一个 <span class="nobr">330 sats</span> 锁、找零回本地址，矿工费 672 到 <span class="nobr">1,971 sats</span>；累计收入 <span class="nobr">1.27 BTC</span> 含自找零，净收入没有算</td></tr><tr><td>官网另卖预付中继（prepaid relays），只存在这台浏览器里</td><td>官网金库页脚本（存档 site-2026-10-28/62ebc8185a14617d.js 的 buyRelays）：每个单位由 crypto.getRandomValues 生成 <span class="nobr">32 字节</span>秘密和盲化因子，用 BTC 向官网买（/tokens/build，单价 collection.relayTokens.unitSats = 2,500），官网盲签（/tokens/mint，标签 shord/relay-token/v1/htc），解盲后存在 localStorage 的 shielded_relays_v1:网络:金库地址:站点 键下；代发时取出，连同信封提交 /relay。界面文案（1981f5467097dc93.js）：Relays 页 “Prepaid relays… A prepaid relay pays the network fee of one private send, listing or cancel… kept in this browser&#x27;s vault, for every piece you hold”；付费选项 payChoice 有四种：Use 1 relay credit、Pay from my wallet、Pay from my private wallet、Use a prepaid relay (none left: buy some under Relays)；“This needs {units} prepaid relays at today&#x27;s network fee”。NAKA 的 relayTokens.creditsOff 是 false，票据里的额度照常用</td></tr><tr><td>中继额度跟着作品走</td><td>官网文案 creditsHint：“Each private send, listing or cancel uses one credit. Credits stay with the piece, even when you send or sell it.”；给单件充值的按钮 “Relay credits for #{id}… Buy # credits”，成功提示 “#{id} will have {count} relay credits after the next Bitcoin block”</td></tr><tr><td>NAKA 买家付标价和平台费，矿工费另算</td><td>官网前端的买家总价是标价 + 平台费 + 版税 + 结算费，结算费只对链下挂单计算（offchain 时才取 settleFee，上限 <span class="nobr">20,000 sats</span>）。2026-10-28 20:17 读的 NAKA 挂单 114 条都没有 settleFee 字段。存档 sources/site-2026-10-28/listings-20261028T2017.json</td></tr><tr><td>官网铸造默认每件捆 <span class="nobr">3 个</span>额度</td><td>官网脚本的 ticketsPerMint：规则里有 ticketsPerMint 就用它，否则在规则没有 spendVkeyHash 时取 3。NAKA 规则两样都没有，relayTokens.creditsOff 为 false，所以按 <span class="nobr">3 个</span>算，即 <span class="nobr">7,500 sats</span></td></tr><tr><td>挂单不加叶子，只凭钥匙找回要有完整的票据列表</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a> 里只有铸造、私密转账、购买、取回调用 _addNote，挂单不调。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/envelope.mjs" target="_blank" rel="noopener noreferrer">envelope.mjs</a> 解析到不认识的类型直接报错，所以公开版索引器列不出奖励、拆分等新类型产生的票据</td></tr><tr><td>作废码为什么用花费密钥算</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a> Notes 一节：nf = Poseidon(sk, rho, 7)，私密转账的新 rho = Poseidon(nf, 11)，“unique, so a sender can’t collide notes”。私密转账的新票据由转出方生成（电路 mode 0 由转出方给出 cmOut 和密文），转出方因此知道新票据的 rho</td></tr><tr><td>不带信封的交易花掉挂单锁，索引器也看得到</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/follow.mjs" target="_blank" rel="noopener noreferrer">follow.mjs</a> 第 448 行起：每笔交易都保留它花掉的币（“a listing lock being spent”），没有信封的交易也交给验收。indexer.mjs 的 _applyTx 先收集被花掉的锁，没有有效 BUY 的挂单在这笔交易后改成 CLOSED。PROTOCOL-v1.md Listing lock 一节：锁花掉而没有有效 BUY 就关单，平台的“关单开关”就是花锁</td></tr><tr><td>自己广播与中继合批</td><td>PROTOCOL-v1.md 的 Self-publish 一节：spend = 0 的信封可以放进自己付费的交易，代价是付费钱包公开。Relay batches 一节：中继把一个时间窗里的信封随机排序放进一笔交易。官网 status 的 batchWindowMs 是 300000，即 5 分钟。官网前端的“自己发送”（selfPublish）用连接的钱包和它的币建交易</td></tr></tbody></table></div>
+<p>说 NUMS 地址没有已知的私钥、也没有脚本花费路径，靠的是通常的密码学假设。共同地址的输出脚本是 <code>5120192c2a30cbd7d0352f94d4c31a43f767f1ef43d7ff6438839880ec075d81a9f6</code>。</p>
+<h2 id="3-公开代码和线上版本">3　公开代码和线上版本</h2>
+<p>公开的协议代码在 <a href="https://github.com/Fl1ntstowned/shielded-ordinals" target="_blank" rel="noopener noreferrer">shielded-ordinals</a>，本指南对照的是 2026 年 10 月 12 日的 commit <a href="https://github.com/Fl1ntstowned/shielded-ordinals/commit/3cdbdfdf87221e41824eca19c20c2b41a546de31" target="_blank" rel="noopener noreferrer">3cdbdfdf</a>。线上的接口和客户端已经多了奖励、拆分这些功能，正文按线上的材料讲，没有拿旧版去否定新功能。</p>
+<p>项目方说新版本会公开。这是他们的计划，本指南没有核实过，也不保证日期。想完整地独立重放，还需要对应的正式规则、验证参数和激活配置。</p>
+<p>线上的奖励服务这次没有独立复现。投票服务的代码不发到浏览器，只能拿它的公开记录核：计票和去重对得上，资格只能抽查（第 2 节投票一行）。旧的公开 holder 电路在离线检查里露出来的边界，说成线上投票的漏洞是不对的。</p>
+<p>本指南还参考了 <a href="https://github.com/ordinalser/naka-sigil" target="_blank" rel="noopener noreferrer">naka-sigil</a> 公开的代码和文档（规则、快照、奖励校验），只读了代码和文档，没有读取任何人的持仓或钱包。</p>
+<h2 id="4-技术卡的出处">4　技术卡的出处</h2>
+<div class="table"><table><thead><tr><th>技术卡</th><th>依据</th></tr></thead><tbody><tr><td>00 以一次私密转账为例：每样东西从哪来、放在哪</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/PROTOCOL-v1.md" target="_blank" rel="noopener noreferrer">PROTOCOL-v1.md</a> 的 Notes 一节和末尾“谁能做什么”一表；indexer.mjs 的引擎字段（存什么）和 _addNote（铸造、购买、取回由索引器补算承诺）。证明验过不进状态，见 checkpoint.mjs 保存的字段</td></tr><tr><td>01 一份签名，算出全部钥匙</td><td>官网引擎的派生函数（见第 2 节：spend、view 由种子直接算出，return、payout 加这次挂单的作废码，btc 加序号），官网金库页的签名调用（UniSat ecdsa、Xverse ECDSA）和导入页原文</td></tr><tr><td>02 规则刻在父铭文，付款照规则验收</td><td>PROTOCOL-v1.md 的 Collection = rules 一节和 rules.mjs 开头的字段注释（mintPrice 付艺术家脚本、mintFee 付平台、inscribeFee 和 ticketPrice 付中继、saleFee 按 max(最低, 价格×bps/10000)、v2 才有 royalty）；NAKA 的数值来自存档的 collection.json（mintPrice 15000、mintFee 0、inscribeFee 3000、saleFeeBps 200、saleFeeMin 1000、ticketPrice 2500、v 1），艺术家脚本与平台脚本逐字节相同也是在这份存档里比的；许可币 gateKey 和 MINTN 最多 <span class="nobr">20 件</span>见 PROTOCOL-v1.md 与 indexer.mjs。第六十八轮复核（collection-naka-20261103.json、PROTOCOL-v1.md）：数值同上，没有 cosigners（单钥匙）；MINT 要花一枚 P2TR(gateKey)，MINTN 整批只花一枚（“one P2TR(gateKey) coin for the whole batch”）；付款按 scriptPubKey 加总，“artist, platform and relayer may all be the same address”；合集有两种：预先铭刻（children）和先铸后刻（artRoot，铸完由平台分批铭刻为子铭文），NAKA 是后一种；cid = sha256(parent id)[0..8]（rules.mjs collectionId）；官网默认每件捆 <span class="nobr">3 个</span>额度见本表“官网铸造默认每件捆 <span class="nobr">3 个</span>额度”一行。第六十九轮补：BUY 的交易必须花掉挂单锁（PROTOCOL-v1.md 信封表 BUY 一行），成交框的例子按 2% 算（100,000 的 2% 是 2,000，高于最低 1,000）；父铭文在最后一件子铭文铭刻后停进 NUMS，“so the rules and supply can never change”（同文 Collection = rules 一节末）</td></tr><tr><td>03 一张票据，链上只有承诺和密文</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/core.mjs" target="_blank" rel="noopener noreferrer">core.mjs</a> 的 noteCommitment = Poseidon(assetId, tickets, inner)；PROTOCOL-v1.md：自己给自己生成的票据（铸造、购买、取回）不带证明，只交 inner，索引器补算 cm；私密转账的 cmOut 在证明的公开输入里；地址 shord1‖pk‖viewPk 给出收件人的持有人公钥；indexer.mjs 按上链顺序把承诺加进记录树，树深 20 层。第七十轮复核：密文加密 <span class="nobr">72 字节</span>，依次是编号（u32）、额度（u32）、ρ、s，不含持有人公钥（官网引擎 Fr/Mc，archive/ord-dropz-site/engine/2026-11-02/shielded-browser.js），加 <span class="nobr">16 字节</span>校验即 <span class="nobr">88 字节</span>；公开索引器 _addNote 只把 cm 加进记录树，epk 和 ct 另存在票据列表里供金库扫描，MINTN 每件各加一片叶子（indexer.mjs 第 196 行）；树深 20（引擎 vr = 20）；证明引用的树根限最近 <span class="nobr">100 块</span>（indexer.mjs “anchor in [H-100, H-1]”）；NUMS 地址的公钥是 BIP341 的 NUMS 点、没有脚本树（scripts.mjs NUMS_X，本表“作品地址没人花得动”一行）第七十一轮补 SHNAKAS 的存放：钱袋票据和作品票据同样五个字段，编号是钱袋号；钱袋的数量按编号查（引擎 lotSizeOf：固定钱袋查规则里的 lots，其余查账本的 lotSizes），扫描时附上 size，不在票据和密文里；SHNAKAS 的 2,100 万枚和 NAKA 作品停在同一个地址（<a class="nobr" href="index.html#appendix-G">附录 G</a>）。</td></tr><tr><td>作废码抢不走；挂单锁被直接花掉就关闭挂单</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/indexer.mjs" target="_blank" rel="noopener noreferrer">indexer.mjs</a>：转账和挂单的公开输入是 [树根, nf, hbody, cmOut, spend, buy, mode, assetId, tickets]，hbody 是去掉证明的整段正文的 SHA-256（<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/core.mjs" target="_blank" rel="noopener noreferrer">core.mjs</a> hashBody），同一笔里和已记的作废码重复就拒收；每笔交易先收集它花掉的挂单锁，处理完信封后，没有有效 BUY 的挂单置为 CLOSED；CLAIM 要求挂单 CLOSED（或同一笔花锁），用挂单记录里的 returnKey 验 BIP340 签名（签的是整段正文的 SHA-256），新承诺 = noteCommitment(编号, 额度 − 用掉的, inner)。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/scripts.mjs" target="_blank" rel="noopener noreferrer">scripts.mjs</a>：锁是 P2TR，内部公钥 lockKey，叶子 “1008 CSV DROP returnKey CHECKSIG”。<a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/cosign.mjs" target="_blank" rel="noopener noreferrer">cosign.mjs</a>：多签模块只签一个输入，用 SIGHASH_DEFAULT（“commits to every input and output”），签之前用自己的索引器检查交易里有有效的 BUY 或卖家的 CLAIM，并记住已签过的单，不给同一件签第二笔；NAKA 只用平台一把钥匙，平台签名代码不在公开仓库</td></tr><tr><td>04 一个信封，各去各处</td><td><a href="https://github.com/Fl1ntstowned/shielded-ordinals/blob/3cdbdfdf87221e41824eca19c20c2b41a546de31/src/v1/envelope.mjs" target="_blank" rel="noopener noreferrer">src/v1/envelope.mjs</a> 里 TRANSFER 的布局：头 15、引用的树根高度 4、nf 32、cmOut 32、spend 1、buy 2、epk 32、密文 88、证明 256，一共 <span class="nobr">462 字节</span>。indexer.mjs 里作废码进集合、cmOut 进树、证明只验不存。卡底的 SPLIT 一行：官网引擎 buildSplit（见第 2 节）</td></tr><tr><td>05 一把锁，三条出路（原名“挂单期间，作品绑在锁上”）</td><td>PROTOCOL-v1.md 的 Listing lock 一节，见上面第 2 节。indexer.mjs 的 BUY、CLAIM 验收条件。费率来自 collection</td></tr><tr><td>06 三种用法，各交出什么（原名“三种证明”：投票和领基础奖励用的都是花费电路，只有持有证明是另一个电路）</td><td>投票一行来自存档的官网金库页脚本（花费电路、快照资格、hbody 绑定主题/轮次/选项、提交给投票服务的字段）；领奖励一行来自存档客户端的 buildReward / buildRewardBatch（花费电路、资格树根、REWARD 信封上链、作废码公开）和 RESEARCH-RUNES.md 第 4.2、4.4 节的信封布局；持有证明一行来自 circuits/holder.circom（只查树成员和 ctxNf，不查作废码）、PROTOCOL-v1.md 的 Holder proof 一节和 rules.mjs 的 HOLDER_ROOT_WINDOW = 6；“<span class="nobr">6 块</span>挡不住旧叶子”见<a class="nobr" href="index.html#appendix-E">附录 E</a>；持有证明一行的“交出去的”按官网实际请求写（证明和申领人地址，见第 2 节“证明”按钮一行）；底栏领加成另是一封 BONUS 信封、用签名亮出编号，见流程图 03 和<a class="nobr" href="index.html#notes-06">附录 I06</a></td></tr><tr><td>07 一周 <span class="nobr">1,008 块</span></td><td>官网客户端里起算周和截止周的算法：创建高度 h ≤ 周起点，花费高度 t &gt; 周终点，这一周才算数。转手的交易在哪一块确认，旧票据就在哪一块花掉、新票据就在哪一块创建。rewards 里的起点 971,700、每周 <span class="nobr">266,640 枚</span>、<span class="nobr">78 周</span>、截止 1,102,740。第八十二轮按 11 月 2 日的官网引擎（archive/ord-dropz-site/engine/2026-11-02/shielded-browser.js）复核：Tr 把区块 t 归到 floor((t − start − 1) / 1008) 周，所以一周是 (start + 1008w, start + 1008(w+1)]，第 <span class="nobr">3 周</span>即 973,717–<span class="nobr">974,724 块</span>；ns 给普通票据的起算周是 ceil((h − start) / 1008)，给 kind 为 reward 的票据是它所在那一周（领奖励换出的新票据当周照算）；Qn 给花掉的票据的最后一周是 floor((t − 1 − start) / 1008) − 1，在一周最后一块花掉也丢这一周。领加成是另一封 BONUS 信封、可选，基础钱袋按 100% 发</td></tr><tr><td>08 索引器验什么，摘要盖住什么</td><td>PROTOCOL-v1.md 里的验收顺序和证明引用的树根限最近 <span class="nobr">100 块</span>，indexer.mjs 和 checkpoint.mjs 的保存字段，<a class="nobr" href="index.html#appendix-F">附录 F</a> 里对账的前提和重组的处理</td></tr></tbody></table></div>
+<h2 id="5-图像">5　图像</h2>
+<p>图中的人物和作品都是 Shielded Nakas 合集作品：持有人 A 是 #2，B 是 #0，买家 C 是 #21，#4 是各图版里被买卖的那一件；其余出现的是 #1、#3、#7、#12、#14、#15、#37、#42、#46、#49。封面是一条街，每章一个地点：金库门口 A #2 拿着签名纸，铸造间门口 #7 带着自己金库做好的票据，博物馆楼上放大挂着 #4、楼下是 #15、#1、#3 的头像，#42 指着 #4 给 #14 看，B #0 在自家窗里拿着拆开的信，摊位前 C #21 抱着钱袋，核验亭前 #46 举着证明卡，钟楼前 #12 举着奖励币，索引器亭前 #37 拿着摘要。<span class="nobr">图版 02</span> 铸造的是 A，<span class="nobr">图版 06</span> 举证明卡的是 #46。</p>
+<p>指南里的编号就是资产编号，从 0 开始。官方作品接口 /art/0 和 /art/1 返回的图片，和这里的 #0、#1 一模一样。官网卡片标题上的数字可能会大 1，naka-sigil 的页面代码里记过这件事：站点把资产 0、1、2 显示成 #1、#2、#3。</p>
+<p>横版图文的版面参考过 catvm.pdf，没有用它的图像、角色和文字。</p>
+<h2 id="6-这份指南能用来做什么">6　这份指南能用来做什么</h2>
+<p>这是社区做的学习资料，用来讲清 SHORD 的机制和用的时候要留意的地方。它没有对协议、钱包、参数或者线上服务做过安全审计。</p>
+<h2 id="7-没写进正文的细节">7　没写进正文的细节</h2>
+<p>这些内容核对过，但对第一次了解 SHORD 帮助不大，放在这里备查：</p>
+<ul><li>第一周的分类：按存下来的第一周数据，能领的上限大约是 <span class="nobr">220,370.72 枚</span>，比名义奖池至少少 <span class="nobr">46,269.28 枚</span>。私密转账没法全按编号对上，这不是全网可领余额的精确值。</li><li>奖池和上限的差额：<span class="nobr">78 周</span>的奖池加上开头固定的 <span class="nobr">3 个</span>钱袋（每个 <span class="nobr">80 枚</span>）一共是 <span class="nobr">20,798,160 枚</span>，比蚀刻的 2,100 万少 <span class="nobr">201,840 枚</span>。规则里没有安排这部分，引擎只要求发放总额不超过 2,100 万（“pool exceeds the premine”），所以它永远不会发行；NUMS 上的符文原样不动，这不是销毁。</li><li>生成证明的速度：PROTOCOL-v1.md 写的是 Spend(20) 电路大约 0.8 到 1.0 秒，这是特定版本、特定机器上的数，不代表你的设备。</li><li>改价、卖入报价：官网上有相关的操作记录，服务端怎么撮合没有完整复现。</li><li>名称注册：按有效铭文先到先得，to 字段固定指向一个地址。目标地址不用签名确认，移动名称铭文不会改地址，也不能拿来证明身份。</li><li>shield/unshield、竞拍、烧币换名额：各自都要有完整的进入、退出、结算和去重规则。普通资产进出这些功能，当前公开版没做完整，名额规则还缺能复现的材料。</li></ul></div></main><script>document.addEventListener("click",function(e){var a=e.target.closest("[data-lang]");if(!a)return;try{localStorage.setItem("shord-lang",a.getAttribute("data-lang"))}catch(err){}})</script></body></html>

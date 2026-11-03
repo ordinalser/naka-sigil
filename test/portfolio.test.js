@@ -208,3 +208,18 @@ test('A simultaneous reclaim of another holding counts in the post-purchase flee
  const s=fixture();s.saleHistory=[[0,[]],[1,[]]];s.closing=[[id(2),'cancel']];const x=H.impact(s,[id(2),id(4)],id(1));assert.deepEqual(x.allocation.after.units,{lo:12,hi:12});
  s.closing=[[id(2),'sale']];const sold=H.impact(s,[id(2),id(4)],id(1));assert.deepEqual(sold.allocation.after.units,{lo:8,hi:8});
 });
+
+test('持仓排序：四种依据，可反向；相同时编号小的在前；没有数的排最后；读不懂的设置按加入时间', () => {
+  const H = require('../src/lib/portfolio.js');
+  const w = (lo, hi = lo) => ({ lo: { weight: lo }, hi: { weight: hi } });
+  const ids = ['a', 'b', 'c', 'd'];
+  const facts = new Map([['a', { number: 888, weight: w(150), week: 20 }], ['b', { number: 6, weight: w(400), week: null }], ['c', { number: 314, weight: w(150), week: 0 }], ['d', { number: 1500, weight: null, week: 35 }]]);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'added', dir: 'asc' }), ['a', 'b', 'c', 'd']);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'added', dir: 'desc' }), ['d', 'c', 'b', 'a']);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'number', dir: 'asc' }), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'weight', dir: 'desc' }), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'weight', dir: 'asc' }), ['c', 'a', 'b', 'd']);
+  assert.deepEqual(H.sortIds(ids, facts, { by: 'week', dir: 'desc' }), ['d', 'a', 'c', 'b']);
+  assert.deepEqual(H.sortChoice('{"by":"week","dir":"asc"}'), { by: 'week', dir: 'asc' });
+  for (const bad of [null, 'x', '{"by":"price","dir":"asc"}', '{"by":"week","dir":"up"}']) assert.deepEqual(H.sortChoice(bad), { by: 'added', dir: 'asc' });
+});

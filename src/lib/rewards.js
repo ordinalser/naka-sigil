@@ -31,6 +31,12 @@
   const out={};for(const [k,row] of Object.entries(raw.weeks)){const w=Number(k);if(Number.isInteger(w)&&row?.week===w&&row.complete===true&&table(row))out[w]=row;}
   return out;
  }
+ /** The same tables as they stand in one chain epoch: a row read in another epoch is left out, so it is read again. A row
+  * an older version saved without an epoch, or an unknown epoch, keeps every row. Every reader uses this one test. */
+ function weeksAt(raw,epoch){
+  const out=weeks(raw);if(out&&epoch!==undefined&&epoch!==null)for(const [w,row] of Object.entries(out))if(row.epoch!==undefined&&row.epoch!==epoch)delete out[w];
+  return out;
+ }
  /**
   * Why one NFT does or does not count this week, from public data at the snapshot block: its listing (with the listing
   * block), an exit inside this week (sale, reclaim or both, with blocks), or nothing public. `held` holds only if no
@@ -162,15 +168,15 @@
   return {weeks:out,left:sold,total:out.length?total:null};
  }
  const copy=lang=>lang==='zh'?{
-  accrued:'本周已产出',reference:'本周已产出 · 参考',projected:'本周预计',toLaunch:'距第 1 周',blocksLeft:n=>`${n} 块`,weekly:'预计每周',weeklyAfter:'开始后每周',remaining:'预计剩余',netShare:'全网占比',netShareAfter:'开始后全网占比',netShareHint:'预计每周 ÷ 每周奖池 266,640：全网每周产出里你分到的比例。',lastBlock:'最新一块',share:'占应发',rest:'本周剩余',unitShare:'权重占比',past:'往周合计',
+  accrued:'本周已产出',reference:'本周已产出 · 参考',projected:'本周预计',toLaunch:'距第 1 周',blocksLeft:n=>`${n} 块`,weekly:'预计每周',remaining:'预计剩余',netShare:'全网占比',netShareHint:'预计每周 ÷ 每周奖池 266,640：按当前权重，全网每周产出里你分到的比例，口径和预计每周相同。',lastBlock:'最新一块',share:'占应发',rest:'本周剩余',unitShare:'权重占比',past:'往周合计',
   week:(n,b)=>`第 ${n} 周 · ${b} / 1008 块`,weekOnly:n=>`第 ${n} 周`,before:'奖励启动前',ended:'奖励已结束',launchAt:h=>`第 1 周起点 区块 ${h}`,claimBy:h=>`领取截止区块 ${h}`,
   loading:'正在读取本周累计…',error:'累计读取失败，下次检查时重试',notYet:'官方累计表尚未更新到本块，下次检查再读',endedNote:h=>`78 周奖励已结束；已完成的周在官方钱包领取，协议领取截止区块 ${h}`,closedNote:h=>`已过协议领取截止区块 ${h}`,
   counts:c=>[c.earning?`${c.earning} 枚本周有奖励`:'',c.idle?`${c.idle} 枚第 1 周起有奖励`:'',c.waiting?`${c.waiting} 枚下周起有奖励`:'',c.listed?`${c.listed} 枚挂单中`:'',c.paused?`${c.paused} 枚暂停`:'',c.gone?`${c.gone} 枚已转出（钱包页）`:'',c.ended?`${c.ended} 枚没有后续周`:'',c.unknown?`${c.unknown} 枚本周无法确认`:''].filter(Boolean).join(' · ')||'本周没有持仓有奖励',
   leftCount:n=>`已离手 ${n} 枚`,
   shareHint:cur=>`本周已产出 ÷ 本周已过区块的规则应发（每周 266,640 SHNAKAS × 已过块数 ÷ 1,008）。分母是规则应发，不是理论分配，也不是没有奖励的占比。当前区块本周有奖励的持仓占全部 3,333 枚权重单位 K 的 ${cur}。`,
   unitShareHint:'未挂单持仓的权重单位 ÷ 全部 3,333 枚的权重单位 K；第 1 周起每块按这个比例分',
-  weeklyHint:'按当前权重，一整周能产出的数量。',
-  remainingHint:'未来还能产出的总量：按当前权重，从现在算到奖励结束（区块 1,050,324）。',
+  weeklyHint:'按当前权重，一整周能产出的数量：持有的都算，下周才开始有奖励的也算，挂单中的不算。',
+  remainingHint:'未来还能产出的总量：按当前权重，从现在（还没开始的从它开始有奖励的那周）算到奖励结束（区块 1,050,324）。',
   accruedHint:'本周截至当前区块已产出的数量（官方逐块累计）。',referenceHint:'资格按公开记录判断。',restHint:(n,v)=>`本周还剩 ${n} 块，约再产出 ${v}。`,
   pastHint:'已结束各周之和，含已领取和已离手的部分，不含本周。点开看每一周。',pastIncomplete:'记录未齐。',pastReference:'含按公开记录推算的部分。',
   restOfWeek:v=>`本周剩余大约还有 ${v}（只到本周结束，不是预计剩余产量）`,
@@ -181,15 +187,15 @@
   tracked:'资格已按钱包页核对。',
   status:{earning:'本周',waiting:'下周起',listed:'挂单中',paused:'暂停',gone:'已转出',ended:'无后续周',idle:'',unknown:'无法确认'},startsWeek:n=>`第 ${n} 周起`,
  }:{
-  accrued:'Accrued this week',reference:'Accrued this week · reference',projected:'Projected',toLaunch:'To week 1',blocksLeft:n=>`${n} block${n==='1'?'':'s'}`,weekly:'Per week',weeklyAfter:'Per week once started',remaining:'Remaining',netShare:'Network share',netShareAfter:'Network share once started',netShareHint:'Per week ÷ the weekly pool of 266,640: your part of the network’s output.',lastBlock:'Last block',share:'Of pool',rest:'This week left',unitShare:'Weight share',past:'Past weeks',
+  accrued:'Accrued this week',reference:'Accrued this week · reference',projected:'Projected',toLaunch:'To week 1',blocksLeft:n=>`${n} block${n==='1'?'':'s'}`,weekly:'Per week',remaining:'Remaining',netShare:'Network share',netShareHint:'Per week ÷ the weekly pool of 266,640: at the current weights, your part of the network’s output, counted as per week is.',lastBlock:'Last block',share:'Of pool',rest:'This week left',unitShare:'Weight share',past:'Past weeks',
   week:(n,b)=>`Week ${n} · ${b} / 1008 blocks`,weekOnly:n=>`Week ${n}`,before:'Before rewards start',ended:'Accrual ended',launchAt:h=>`Week 1 starts at block ${h}`,claimBy:h=>`Claim deadline block ${h}`,
   loading:'Reading this week’s accumulator…',error:'Reward data unavailable; retried at the next check',notYet:'The official accumulator has not reached this block yet; read again at the next check',endedNote:h=>`The 78 reward weeks are over; claim completed weeks in the official wallet (programme claim deadline: block ${h})`,closedNote:h=>`Past the programme claim deadline, block ${h}`,
   counts:c=>[c.earning?`${c.earning} earning this week`:'',c.idle?`${c.idle} count${c.idle===1?'s':''} from week 1`:'',c.waiting?`${c.waiting} start${c.waiting===1?'s':''} next week`:'',c.listed?`${c.listed} listed`:'',c.paused?`${c.paused} paused`:'',c.gone?`${c.gone} sent away (Wallet)`:'',c.ended?`${c.ended} with no later week`:'',c.unknown?`${c.unknown} undecided this week`:''].filter(Boolean).join(' · ')||'No holding earns this week',
   leftCount:n=>`${n} left your vault`,
   shareHint:cur=>`Accrued this week ÷ the rule’s issuance so far (266,640 SHNAKAS a week × blocks so far ÷ 1,008). The denominator is that issuance, not the theoretical allocation and not an unrewarded share. Holdings earning this week currently hold ${cur} of all 3,333 pieces’ units K.`,
   unitShareHint:'Weight units of unlisted holdings ÷ all 3,333 pieces’ units K; from week 1 each block is split this way',
-  weeklyHint:'One full week at the current weights.',
-  remainingHint:'All future output: at the current weights, from now to the end of rewards (block 1,050,324).',
+  weeklyHint:'One full week at the current weights: every holding counts, those that start next week included, listed ones not.',
+  remainingHint:'All future output: at the current weights, from now (or the week a piece starts earning) to the end of rewards (block 1,050,324).',
   accruedHint:'This week so far, through the current block (official per-block accrual).',referenceHint:' Eligibility read from public records.',restHint:(n,v)=>` ${n} blocks left this week: about ${v} more.`,
   pastHint:'Completed weeks, claimed and departed pieces included, this week excluded. Open each week.',pastIncomplete:' Records are incomplete.',pastReference:' Includes public-record estimates.',
   restOfWeek:v=>`About ${v} still to accrue this week (through this week only, not estimated remaining output)`,
@@ -295,11 +301,11 @@
   // that share as SHNAKAS a week, and those weeks to the end of rewards. The share has the same scope as per week (pieces
   // that start next week included), so share × 266,640 = per week, and the same caption before rewards start; the page
   // has room for it, the popup does not. After the end there is no weekly output to share.
-  if(options.network&&!ended){const f=x=>`${(x*100).toFixed(2)}%`,sh=view?.weekly?{lo:view.weekly.lo/R.RULES.poolPerWeek,hi:view.weekly.hi/R.RULES.poolPerWeek}:null;stat('share',view?.waiting?c.netShareAfter:c.netShare,sh===null?null:f(sh.lo)===f(sh.hi)?f(sh.lo):`${f(sh.lo)}–${f(sh.hi)}`,c.netShareHint);}
-  stat('weekly',view?.waiting&&!ended?c.weeklyAfter:c.weekly,view?U.shn(view.weekly):null,c.weeklyHint);
+  if(options.network&&!ended){const f=x=>`${(x*100).toFixed(2)}%`,sh=view?.weekly?{lo:view.weekly.lo/R.RULES.poolPerWeek,hi:view.weekly.hi/R.RULES.poolPerWeek}:null;stat('share',c.netShare,sh===null?null:f(sh.lo)===f(sh.hi)?f(sh.lo):`${f(sh.lo)}–${f(sh.hi)}`,c.netShareHint);}
+  stat('weekly',c.weekly,view?U.shn(view.weekly):null,c.weeklyHint);
   stat('remaining',c.remaining,view?U.shn(view.remaining):null,c.remainingHint);
   if(phase.state==='active'&&data.state==='ready'){const left=W-data.blocks,rest=U.shn({lo:rate.lo*left/W,hi:rate.hi*left/W});label.title+=c.restHint(int(left),rest);}
-  const past=n('button','naka-reward__past naka-reward__stat'),pastLabel=lang==='zh'?'历史累计':'Past total',evidence=!report?'':report.total===null?c.pastIncomplete:report.reference?c.pastReference:'';past.type='button';past.dataset.key='past';past.append(n('span','',pastLabel),n('b','',report?(report.total===null?'—':U.shn({lo:report.total,hi:report.total})):'—'));past.title=c.pastHint+evidence;past.addEventListener('click',()=>{const surface=document.documentElement.dataset.nakaSurface;if(surface==='popup'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'history'});return;}if(surface==='workspace'){location.hash='history';return;}globalThis.NakaLedgerUI?.history(snap,lang);});
+  const past=n('button','naka-reward__past naka-reward__stat'),pastLabel=(lang==='zh'?'历史累计':'Past total')+(report?.reference&&report.total!==null?(lang==='zh'?' · 参考':' · reference'):''),evidence=!report?'':report.total===null?c.pastIncomplete:report.reference?c.pastReference:'';past.type='button';past.dataset.key='past';past.append(n('span','',pastLabel),n('b','',report?(report.total===null?'—':U.shn({lo:report.total,hi:report.total})):'—'));past.title=c.pastHint+evidence;past.addEventListener('click',()=>{const surface=document.documentElement.dataset.nakaSurface;if(surface==='popup'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'history'});return;}if(surface==='workspace'){location.hash='history';return;}globalThis.NakaLedgerUI?.history(snap,lang);});
   stats.insertBefore(past,stats.firstChild);main.append(figure,stats);box.append(main);
   const bar=n('div','naka-reward__bar'),fill=n('i','');fill.style.width=(phase.state==='active'?Math.min(1,data.blocks/W)*100:ended?100:0)+'%';
   bar.setAttribute('role','progressbar');bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(W));bar.setAttribute('aria-valuenow',String(phase.state==='active'?data.blocks:ended?W:0));bar.append(fill);box.append(bar);
@@ -310,6 +316,6 @@
   return {element:box,data};
  }
  /** Caption parts for one holding tile: amount this week (null while loading), its status words and the exact reason. */
- function tile(data,id,lang){const c=copy(lang),row=data.rows.find(r=>r.id===id);if(!row)return null;const e=explain(row.reason,lang);return {row,amount:row.amount,label:row.status==='waiting'&&row.startsWeek?c.startsWeek(row.startsWeek):c.status[row.status],explain:e};}
- return {KEY,STATUS,OBSERVED,WEEKS,normalize,table,piece,weeks,reason,explain,explainFor,portfolio,currentRate,blockRate,steadyRate,shareNow,projection,weekShare,history,rangeText,render,tile,format,blockText,statusLine,copy,weekNo,listedWhen};
+ function tile(data,id,lang){const c=copy(lang),row=data.rows.find(r=>r.id===id);if(!row)return null;const e=explain(row.reason,lang);return {row,amount:row.amount,label:row.status==='waiting'&&row.startsWeek&&!(data.week!==null&&row.startsWeek===data.week+1)?c.startsWeek(row.startsWeek):c.status[row.status],explain:e};}
+ return {KEY,STATUS,OBSERVED,WEEKS,normalize,table,piece,weeks,weeksAt,reason,explain,explainFor,portfolio,currentRate,blockRate,steadyRate,shareNow,projection,weekShare,history,rangeText,render,tile,format,blockText,statusLine,copy,weekNo,listedWhen};
 });

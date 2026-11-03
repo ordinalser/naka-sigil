@@ -153,3 +153,10 @@ test('A recorded current receipt narrows current-week eligibility without certif
  const x=A.portfolio(s,[nft],row,null,null,ledger);assert.equal(x.rows[0].status,'waiting');assert.equal(x.rows[0].amount,0);assert.equal(x.rows[0].startsWeek,3);assert.equal(JSON.stringify(ledger),before);
  const earlier={format:1,runs:{[nft]:[{from:S,to:null,confirmed:true}]}};assert.equal(A.portfolio(s,[nft],row,null,null,earlier).verified,false,'A manual interval never becomes official wallet proof');
 });
+test('Completed-week tables are read in one chain epoch: rows of another epoch are left out',()=>{
+  const R=require('../src/lib/rules'),row=(w,epoch)=>({...A.normalize({w,height:R.RULES.startBlock+w*R.RULES.weekBlocks,blocks:R.RULES.weekBlocks,complete:true,base:'100000000',pieces:Array(3333).fill('100000000')}),...(epoch===undefined?{}:{epoch})});
+  const raw={format:1,weeks:{0:row(0,'old'),1:row(1,'new'),2:row(2)}};
+  assert.deepEqual(Object.keys(A.weeksAt(raw,'new')),['1','2']);
+  assert.deepEqual(Object.keys(A.weeksAt(raw,undefined)),['0','1','2'],'an unknown epoch keeps every row');
+  assert.equal(A.weeksAt({format:2},'new'),null);
+});

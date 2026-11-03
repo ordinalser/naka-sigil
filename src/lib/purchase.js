@@ -195,26 +195,31 @@
   /** Public sales of the piece, read when opened: price, block and the block's local time, newest first. One read per piece
    * and block, shared by every card that shows it (a card rebuilt while reading picks up the same answer). */
   const salesReads=new Map();
+  // A sale's block opens that piece at that block: in place where a page offers the lookup (setLookup), otherwise on the
+  // extension page, which opens the lookup for it.
+  let lookupAt=null;
+  function setLookup(fn){lookupAt=fn;}
+  function openAt(number,height){if(lookupAt)lookupAt(number,height);else chrome.runtime.sendMessage({type:'shn-open-compare',lookup:{number,height}});}
   function readSales(id,height){
     const key=`${id}|${height}`;if(salesReads.has(key))return salesReads.get(key);
     const job=chrome.runtime.sendMessage({type:'shn-sales',id,height}).then(r=>{if(!r?.ok)throw Error(r?.error??'unavailable');return r.sales;});
     salesReads.set(key,job);job.catch(()=>salesReads.delete(key));while(salesReads.size>64)salesReads.delete(salesReads.keys().next().value);return job;
   }
-  function salesBox(snapshot,id,T,I) {
+  function salesBox(snapshot,id,number,T,I) {
     const box=node('details','naka-sales'),sum=node('summary','naka-sales__summary'),list=node('div','naka-sales__list');
     sum.append(node('span','',T.salesTitle),node('span','naka-sales__count',''));box.append(sum,list);let loaded=false;
     const load=()=>{loaded=true;list.replaceChildren(node('p','naka-sales__note',T.salesLoading));
       readSales(id,snapshot.height).then(({total,rows})=>{
         sum.lastChild.textContent=T.salesCount(I.int(total));
         if(!rows.length){list.replaceChildren(node('p','naka-sales__note',T.salesNone));return;}
-        list.replaceChildren(...rows.map(x=>{const row=node('div','naka-sales__row');row.append(node('b','',`${I.btc(x.price)} BTC`),node('span','',T.salesAt(I.int(x.height))),node('span','naka-sales__time',x.time===null?'—':I.localTime(x.time*1000)));return row;}));
+        list.replaceChildren(...rows.map(x=>{const row=node('div','naka-sales__row'),at=node('button','naka-sales__at',T.salesAt(I.int(x.height)));at.type='button';at.title=T.salesAtHint;at.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openAt(number,x.height);});row.append(node('b','',`${I.btc(x.price)} BTC`),at,node('span','naka-sales__time',x.time===null?'—':I.localTime(x.time*1000)));return row;}));
         if(total>rows.length)list.append(node('p','naka-sales__note',T.salesMore(I.int(total))));
       }).catch(()=>{loaded=false;const retry=node('button','naka-sales__retry',T.salesRetry);retry.type='button';retry.addEventListener('click',load);const p=node('p','naka-sales__note',T.salesFailed+' ');p.append(retry);list.replaceChildren(p);});};
     box.addEventListener('toggle',()=>{if(box.open&&!loaded)load();});
     return box;
   }
   function inspection(before,after,snapshot,T,I,options={}) {
-    const paired=Boolean(after),afterLabel=options.action==='cancel'?T.cancelAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
+    const paired=Boolean(after),afterLabel=options.action==='cancel'?T.cancelAfter:options.activity?T.activityAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
     box.dataset.action=options.action??'sale';box.dataset.state=paired?'ready':'current';box.dataset.metric='total-holding-weight';
     const listing=paired?'listed':(options.listing??'unknown'),status=T.listing[listing];
     box.dataset.listing=listing;
@@ -232,9 +237,12 @@
     state.append(node('strong','naka-listing__badge',options.closing==='sale'?T.closingSaleTag:options.closing==='cancel'?T.closingCancelTag:status.short??status.label));
     state.title=`${status.label} · ${explained.full}`;
     const basis=node('p','naka-purchase__basis');paintBasis(basis,snapshot,T,I);
-    const rates=heroRates(paired,{...options,listing}),from=rates?.from?T.rateFrom(rates.from):null;
+    // The week it starts earning, against the current week ("next week (week 4)"), so "week 4" never reads as three weeks
+    // away; the caption's hint gives that week's first block and how far off it is.
+    const rates=heroRates(paired,{...options,listing}),phase=R.rewardPhase(snapshot),now=phase.state==='active'?phase.week:null,from=rates?.from?T.rateFrom(rates.from,now):null;
     const caption=[paired?afterLabel:listing==='listed'?T.formulaOnly:null,from].filter(Boolean).join(' · ');
-    const weight=node('div','naka-hero__weight');weight.append(node('span','naka-hero__caption',caption));weight.title=[paired?(options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort):null,explained.full].filter(Boolean).join('\n');weight.append(decorateWeight(node('span','naka-hero__value'),after??before,true));
+    const weight=node('div','naka-hero__weight'),captionNode=node('span','naka-hero__caption',caption);weight.append(captionNode);
+    if(rates?.from){const first=phase.start+(rates.from-1)*R.RULES.weekBlocks+1,blocks=first-snapshot.height;if(blocks>0)captionNode.title=T.rateFromTitle(rates.from,I.int(first),I.int(blocks),(blocks*10/1440).toFixed(1));}weight.title=[paired?(options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort):null,explained.full].filter(Boolean).join('\n');weight.append(decorateWeight(node('span','naka-hero__value'),after??before,true));
     side.append(state,basis,weight);
     if(rates&&rates.weekly!==null){const dl=node('dl','naka-hero__rates'),cell=(label,value)=>{const d=node('div',''),dd=node('dd',value==='—'?'is-none':'',value);if(value!=='—')dd.append(node('span','naka-hero__unit','SHNAKAS'));d.append(node('dt','',label),dd);dl.append(d);};
       cell(T.rateWeek,shn(rates.weekly));cell(T.rateRest,shn(rates.remaining));dl.title=`${T.rateHint}\n${explained.full}`;side.append(dl);}
@@ -279,14 +287,14 @@
     box.append(table);
     if(changes.size)table.title=T.changedRows;
     // Context under the weight table, not part of it: the collection floor every ratio is measured against (and how the
-    // sale moves it), and the listing's relay credits.
+    // sale moves it), and the listing's relay credits when it has any (most have none, and the market is retiring them).
     const facts=node('dl','naka-facts'),fact=(label,value,hint)=>{const d=node('div','naka-facts__item');d.append(node('dt','',label));const dd=node('dd','');dd.append(...value);d.append(dd);if(hint)d.title=hint;facts.append(d);return d;};
     const floorBefore=options.beforeFloor??snapshot.collectionFloor,floorAfter=options.afterFloor??snapshot.collectionFloor,moved=paired&&floorBefore!==floorAfter;
     const floorItem=fact(T.collectionFloorBTC,moved?[node('span','naka-compare__old',I.btc(floorBefore)),node('span','naka-compare__arrow',' → '),node('b','',I.btc(floorAfter)),node('span','naka-change naka-change--market','◆')]:[node('b','',I.btc(floorAfter))]);
     if(moved){floorItem.dataset.change='market';changes.add('market');}
-    if(options.action!=='cancel' && options.credits!==null && options.credits!==undefined)fact(T.relayCredits,[node('b','',String(options.credits))],T.relayCreditsMeaning);
+    if(options.action!=='cancel' && Number.isSafeInteger(options.credits))fact(T.relayCredits,[node('b','',String(options.credits))],T.relayCreditsMeaning);
     box.append(facts);
-    if(options.sales!==false&&root.chrome?.runtime?.sendMessage&&options.id&&options.snap)box.append(salesBox(snapshot,options.id,T,I));
+    if(options.sales!==false&&root.chrome?.runtime?.sendMessage&&options.id&&options.snap?.items?.[options.id])box.append(salesBox(snapshot,options.id,options.snap.items[options.id][0],T,I));
     // Fine print, one line: how a ratio is read and what a private claim pays. Notes only when they apply.
     // Each part stays whole when the line wraps in a narrow card.
     const caution=node('div','naka-purchase__caution'),formula=node('p','naka-purchase__formula');[T.buyRatioNote,`${T.base} ${R.RULES.basePct}%`,`${T.capShort} ${R.RULES.capPct}%`,T.claimShort].forEach((part,i)=>{if(i)formula.append(' · ');formula.append(node('span','naka-purchase__part',part));});
@@ -302,5 +310,5 @@
     const scenario=model.get(id);if(scenario.state!=='ready')return null;
     const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,{...scenario,scenario,...options});box.dataset.id=id;return box;
   }
-  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,paintBasis,numberTag,numberBadge,decorateWeight,traitChange,traitPct,traitRatio};
+  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,paintBasis,numberTag,numberBadge,decorateWeight,traitChange,traitPct,traitRatio,setLookup};
 });

@@ -1,4 +1,4 @@
-# Classic projections · v0.13.0
+# Classic projections · v0.13.1
 
 Classic is the only interface. The former mining skin and selector are removed. The internal `mining.js` module retains pure projection helpers for compatibility; it does not change weights into hashrate.
 
@@ -16,10 +16,10 @@ A newly created note at height h starts at week ceil((h − 971,700) ÷ 1,008), 
 
 ## Network statistics
 
-The Block tab's hero gives the block (large, with its age and live state), the reward week and how far into it the block is, the week bar, then three figures of that block: floor, listings and what a 100% weight earns in a full week now (the unit every listing's weekly gain is measured in). Three dates follow — blocks left first, the estimated local date beside it — then the selected week's network output, read top down as one sum: full output on one line, a 1 px muted split under it, earnable under its left half and forfeited under its right; claimed is a separate fact, on its own line below. The tab fits the popup without scrolling. The open week's progress is shown once, in the hero; figures keep their places while a week loads; meanings are on the About tab and exact bases in tooltips.
+The Block tab's hero gives the block (large, with its age and live state), the reward week and how far into it the block is, the week bar, then three figures of that block: floor, listings and what a 100% weight earns in a full week now (the unit every listing's weekly gain is measured in). Three dates follow — blocks left first, the estimated local date beside it (marked as approximate: the protocol fixes the height, the date assumes about 10 minutes a block) — then the selected week's network output, read top down as one sum: full output on one line, a 1 px muted split under it, earnable under its left half and forfeited under its right; claimed is a separate fact, on its own line below. An open week's range says where its figures stop ("Blocks 972,709 – 973,161 so far"; in Chinese the full range and "累计至 973,161"): they run to the block shown, not the full week. The tab fits the popup without scrolling. The open week's progress is shown once, in the hero; figures keep their places while a week loads; meanings are on the About tab and exact bases in tooltips.
 
 - **满额产出 / Full output** is the week's output if all 3,333 pieces earned: the exact official per-NFT accrual vector summed, listed and unminted pieces included. The rule's issuance minus this sum is per-block rounding.
-- **流失 / Forfeited (≥)** sums that vector for the listings and moves public records identify, still-unminted pieces and the six known-unminted pieces in week 1: output nobody can claim, never issued. Its share of the full output sits beside it. Both are lower bounds: an encrypted transfer cannot be matched to a piece publicly.
+- **流失 / Forfeited (≥)** sums that vector for the listings and moves public records identify, still-unminted pieces and the six known-unminted pieces in week 1: output nobody can claim and nobody else receives; what becomes of it is not stated in the programme or the wallet (see the rules audit). Its share of the full output sits beside it. Both are lower bounds: an encrypted transfer cannot be matched to a piece publicly.
 - **可产出 / Earnable (≤)** is the full output less forfeited, the most holders can claim. A hairline is split in these two parts, earnable on the left and forfeited on the right, the same sides as their figures.
 - **已领取 / Claimed** comes from the complete set of public claim receipts, attributed to the week earned. It can grow after the week ends and is neither a claimable maximum nor an unclaimed balance. An open week says when it shows.
 

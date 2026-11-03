@@ -17,7 +17,7 @@
    goal:{buy:'针对我的持仓，我想花最少的钱，让每周 SHNAKAS 增加最多',plan:'针对我的持仓，在当前区块把它们冲到 400%',lock:'我想垄断一个特征：带它的 Naka 全在我们手里',sim:'我想知道挂单、成交或撤单会对我和全网有什么影响'},
    how:{buy:'按每 0.001 BTC 换来的每周增量排序。买到的这一枚下周起有奖励；现有持仓的变化从成交那一块起生效。正在成交确认的挂单买不到，不列出。',
     plan:'每行是这一枚单独冲到 400% 最省钱的做法，按每 0.001 BTC 换来的每周增量排序，点一行看步骤。勾选两枚以上，合起来算一份方案：共用的挂单只买一次（合并方案不一定最省）。',
-    lock:'垄断后，没人能再挂低价单拉低它的加成。点一行看做法：在售的买下；没挂单的私下收购，复制求购信息发到 Naka Telegram 群。持仓和队友的编号加得越全，越能找到最接近垄断的特征：每多一枚，就少找一枚。',
+    lock:'垄断后，没人能再挂低价单拉低它的加成。点一行看做法：在售的买下；没挂单的私下收购，复制求购信息发到 Naka Telegram 中文交流群。持仓和队友的编号加得越全，越能找到最接近垄断的特征：每多一枚，就少找一枚。',
     sim:'在持仓旁输入挂价，或点“地板 / 1.5× / 2× / 3×”快捷挂价，结果马上算出；点 × 清空。也可以输入任意编号，假设它挂单、成交或撤单。'},
    needHoldings:'先在上面的“我的持仓”添加你的 Naka。',
    sort:{rate:'每 0.001 BTC 最划算',gain:'每周增加最多',ask:'挂价最低'},
@@ -70,7 +70,7 @@
    goal:{buy:'For my holdings: the most weekly SHNAKAS for the least BTC',plan:'For my holdings: take them to 400% at this block',lock:'I want to own a trait: every Naka with it in our hands',sim:'I want to see what a listing, sale or reclaim does to me and everyone'},
    how:{buy:'Sorted by weekly gain per 0.001 BTC. The piece you buy counts from next week; your other holdings change from the block of the sale. Listings already being bought cannot be bought and are left out.',
     plan:'Each row is that piece’s own cheapest way to 400%, sorted by weekly gain per 0.001 BTC; select a row for its steps. Tick two or more for one combined plan: a listing they share is bought once (not necessarily the cheapest combination).',
-    lock:'Once it is all ours, nobody can list one cheaply to pull its bonus down. Select a row for the way there: buy what is listed; for the rest, copy a wanted post into the Naka Telegram group. Add all your holdings and teammates’ numbers to find the traits you are closest to owning: each piece added is one fewer to find.',
+    lock:'Once it is all ours, nobody can list one cheaply to pull its bonus down. Select a row for the way there: buy what is listed; for the rest, copy a wanted post into the Naka Telegram Chinese group. Add all your holdings and teammates’ numbers to find the traits you are closest to owning: each piece added is one fewer to find.',
     sim:'Type an ask next to a holding, or pick Floor / 1.5× / 2× / 3×, and the result appears at once; × clears it. Or enter any number and assume it lists, sells or is reclaimed.'},
    needHoldings:'Add your Nakas under My holdings above first.',
    sort:{rate:'Best per 0.001 BTC',gain:'Largest gain',ask:'Lowest ask'},
@@ -233,17 +233,23 @@
 
   // ---------------------------------------------------------------- Best buy.
   let rankCache={key:'',rows:null};
+  /** Every listing that raises the weekly allocation of `held` (with none held, what the piece earns on its own), in the
+   * order asked: best value first (weekly gain per BTC, conservative bound), the lowest ask, or the largest gain. Each
+   * listing's effect is computed in the next block's world (NakaPortfolio.rank), so the ranking is keyed on the closing
+   * listings too; the ones closing are left out, since nobody can buy them. */
+  function buyRows(s,held,sort){
+   const key=`${blockKey(s)}|${held.join()}`,closing=closingSet(s);
+   if(rankCache.key!==key)rankCache={key,rows:H.rank(s,held).filter(x=>x.impact.allocation.delta.lo>0)};
+   const value=x=>x.impact.allocation.delta.lo/x.price;
+   return rankCache.rows.filter(x=>!closing.has(x.id)).sort(sort==='ask'?(a,b)=>a.price-b.price:sort==='gain'?(a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo:(a,b)=>value(b)-value(a));
+  }
   function buyPanel(c,s){
    for(const b of sortBox.children){b.textContent=c.sort[b.dataset.sort];b.setAttribute('aria-pressed',String(b.dataset.sort===state.sort));}
    const held=mine();buyMore.hidden=true;buyCount.textContent='';
    if(!held.length){buyOut.replaceChildren(n('p','ws-muted',c.needHoldings));return;}
    if(['ended','closed'].includes(R.rewardPhase(s.snapshot).state)){buyOut.replaceChildren(n('p','ws-muted',c.ended));return;}
-   // Each listing's effect is computed in the next block's world (NakaPortfolio.rank), so the ranking is keyed on the closing
-   // listings too; the ones closing are also left out of the rows, since nobody can buy them.
-   const key=`${blockKey(s)}|${held.join()}`,closing=closingSet(s);
-   if(rankCache.key!==key)rankCache={key,rows:H.rank(s,held).filter(x=>x.impact.allocation.delta.lo>0)};
-   const value=x=>x.impact.allocation.delta.lo/x.price;
-   const rows=rankCache.rows.filter(x=>!closing.has(x.id)).sort(state.sort==='ask'?(a,b)=>a.price-b.price:state.sort==='gain'?(a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo:(a,b)=>value(b)-value(a));
+   const value=x=>x.impact.allocation.delta.lo/x.price,closing=closingSet(s);
+   const rows=buyRows(s,held,state.sort);
    buyCount.textContent=c.buyCount(rows.length,s.offers.length,s.offers.filter(([id])=>closing.has(id)).length);
    if(!rows.length){buyOut.replaceChildren(n('p','ws-muted',c.buyNone));return;}
    const SHOW=15,shown=state.buyAll?rows:rows.slice(0,SHOW);
@@ -568,13 +574,15 @@
    // it back by its key.
    const focused=section.contains(document.activeElement)?document.activeElement.dataset.focus:undefined;
    const c=C(),s=snap();title.textContent=c.title;basis.textContent=c.basis;goalText.textContent=c.goal[state.tab];howText.textContent=c.how[state.tab];
-   if(state.tab==='buy'){const rules=root.ShnakasRules,w=rules.startWeek(s.snapshot.height+1);if(w<rules.RULES.weeks){const n=String(w+1);howText.textContent=c.how.buy.includes('下周')?c.how.buy.replace('下周起','第 '+n+' 周起'):c.how.buy.replace('next week','week '+n);}}
+   if(state.tab==='buy'){const rules=root.ShnakasRules,w=rules.startWeek(s.snapshot.height+1);if(w<rules.RULES.weeks){const phase=rules.rewardPhase(s.snapshot),from=I.pick(api.lang()).rateFrom(w+1,phase.state==='active'?phase.week:null);howText.textContent=c.how.buy.includes('下周起')?c.how.buy.replace('下周起',from):c.how.buy.replace('from next week',from);}}
    for(const [k,b] of tabButtons){b.textContent=c.tabs[k];b.setAttribute('aria-selected',String(k===state.tab));}
    for(const [k,p] of panels)p.hidden=k!==state.tab;
    ({buy:buyPanel,plan:planPanel,lock:lockPanel,sim:simPanel})[state.tab](c,s);
    if(focused!==undefined)panels.get(state.tab).querySelector(`[data-focus="${focused}"]`)?.focus({preventScroll:true});
   }
   return {render,tabLabel:()=>C().tab,
+   /** Best buy's listings for my holdings, best value first (Compare's example selection); none once rewards have ended. */
+   bestBuys:()=>{const s=snap();return ['ended','closed'].includes(R.rewardPhase(s.snapshot).state)?[]:buyRows(s,mine(),'rate').map(x=>x.id);},
    openTab:k=>{if(KEYS.includes(k)){state.tab=k;render();}},
    /** The simulator for one piece: a holding's own row (focused, its ask field ready, or a listed one's reclaim chosen), or
     * any other number in the top row. */

@@ -31,3 +31,16 @@ test('Toolbar PNG has visible amber and violet artwork with transparent margins 
   assert.deepEqual(at(7,9),[0,0,0,0]); // inner shield cutout
   assert.deepEqual(at(0,0),[0,0,0,0]);
 });
+
+test('The sigil turn views are the generator’s: four to each profile, two colours, the lenses forward, each side its own mark',()=>{
+ const {TURN}=require('../src/lib/pixel.js'),{frames}=require('../scripts/gen-sigil-turn.js');
+ assert.deepEqual(TURN,frames());assert.equal(TURN.length,8);
+ const grid=TURN.map(f=>f.split('/'));
+ for(const rows of grid){assert.equal(rows.length,24);for(const r of rows){assert.equal(r.length,24);assert.match(r,/^[.ov]+$/);}}
+ // At each profile the lenses stand past the head's outline (columns 3–20) on the side the face turned to.
+ assert.match(grid[3][10].slice(21),/v/);assert.match(grid[7][10].slice(0,3),/v/);
+ // The sides differ: the right turn shows a square earpiece, the left a cross (rows 13–15 under the strap).
+ const mark=rows=>rows.slice(13,16).map(r=>r.slice(3,21).replace(/o/g,'.')).join('/');
+ assert.notEqual(mark(grid[3]),mark(grid[7]).split('/').map(r=>[...r].reverse().join('')).join('/'));
+ assert.match(mark(grid[3]),/vv/);assert.match(mark(grid[7]).split('/')[1],/vvvv/);
+});

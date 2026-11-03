@@ -49,6 +49,8 @@ async function upgrade() {
 chrome.runtime.onInstalled.addListener(ensureAlarm);
 chrome.runtime.onStartup.addListener(ensureAlarm);
 ensureAlarm();
+// A worker that starts is reading no block yet: a mark left by one that stopped mid-read (SESSION_UPDATING) goes.
+chrome.storage.session.remove(SRC.SESSION_UPDATING);
 
 // Sections of the extension page a link may open: My holdings (or its pieces that left), Raise weight (one of its tabs, or
 // its simulator / 400% plan for one number), Compare or the listings.
@@ -122,25 +124,31 @@ async function liveTick(force=false) {
         await chrome.storage.local.set({ [K.liveStatus]: { state: 'ok', checkedAt: Date.now(), epoch: pulse.epoch } });
         return;
       }
-      const res = await CORE.generateLive({
-        before: pulse,
-        bases: [BUNDLED, current].filter(usable),
-        generatedAt: () => new Date().toISOString(),
-      });
-      if (res === null) {
-        // The indexer moved during the read; keep the previous epoch: this batch was not accepted.
-        await chrome.storage.local.set({ [K.liveStatus]: { state: 'ok', checkedAt: now, epoch: prev?.epoch } });
-        return;
+      // From here until the block's records are in, pages say their figures are about to change; a failed read ends it too.
+      await chrome.storage.session.set({ [SRC.SESSION_UPDATING]: { height: pulse.lastHeight } });
+      try {
+        const res = await CORE.generateLive({
+          before: pulse,
+          bases: [BUNDLED, current].filter(usable),
+          generatedAt: () => new Date().toISOString(),
+        });
+        if (res === null) {
+          // The indexer moved during the read; keep the previous epoch: this batch was not accepted.
+          await chrome.storage.local.set({ [K.liveStatus]: { state: 'ok', checkedAt: now, epoch: prev?.epoch } });
+          return;
+        }
+        if (!usable(res.snapshot)) throw new Error('Invalid generated live snapshot');
+        await chrome.storage.local.set({
+          [K.live]: res.snapshot,
+          [K.liveStatus]: { state: 'ok', checkedAt: Date.now(), epoch: pulse.epoch },
+          // The new block's own read: purchases and reclaims already on their way when it was taken.
+          [K.closing]: { height: res.snapshot.snapshot.height, rows: res.snapshot.closing ?? [] },
+        });
+        await anchorTick(res.snapshot, askedAt); await holdingsTick(res.snapshot, res.records);
+        await rewardTick(res.snapshot, pulse.epoch); await weeksTick(res.snapshot, pulse.epoch);
+      } finally {
+        await chrome.storage.session.remove(SRC.SESSION_UPDATING);
       }
-      if (!usable(res.snapshot)) throw new Error('Invalid generated live snapshot');
-      await chrome.storage.local.set({
-        [K.live]: res.snapshot,
-        [K.liveStatus]: { state: 'ok', checkedAt: Date.now(), epoch: pulse.epoch },
-        // The new block's own read: purchases and reclaims already on their way when it was taken.
-        [K.closing]: { height: res.snapshot.snapshot.height, rows: res.snapshot.closing ?? [] },
-      });
-      await anchorTick(res.snapshot, askedAt); await holdingsTick(res.snapshot, res.records);
-      await rewardTick(res.snapshot, pulse.epoch); await weeksTick(res.snapshot, pulse.epoch);
     } catch (e) {
       await failed(prev, now, e);
     }
@@ -230,7 +238,7 @@ async function rewardTick(snap, epoch) {
  * week that is not served complete (or fails) is retried later without holding back the others. Stored rows are checked
  * one by one; an invalid row is dropped and read again. Once every finished week is stored, checks skip storage.
  */
-let weeksCursor = -1, weeksDone = -1;
+let weeksCursor = -1, weeksDone = -1, weeksEpoch;
 /** The stored weekly vectors as written, rows this version cannot read included; null when the store holds a format this
  * version does not know (it is then never overwritten). */
 function weeksStore(got) {
@@ -245,9 +253,12 @@ function saveWeeks(rows) {
 }
 // Rows carry the chain epoch they were read in, as the history reader's do, so a reorganisation invalidates both alike.
 async function weeksTick(snap, epoch) {
+  // Another chain epoch: every completed week is checked again and those read before it are read anew (saveWeeks replaces
+  // them); holdings and recorded intervals are untouched.
+  if (epoch !== weeksEpoch) { weeksEpoch = epoch; weeksCursor = -1; weeksDone = -1; }
   const A = self.NakaRewards, R = self.ShnakasRules, phase = R.rewardPhase(snap.snapshot);
   const last = phase.state === 'active' ? phase.index - 1 : ['ended', 'closed'].includes(phase.state) ? R.RULES.weeks - 1 : -1; if (last < 0 || last <= weeksDone) return;
-  const raw = weeksStore(await chrome.storage.local.get(A.WEEKS)), weeks = A.weeks({ format: 1, weeks: raw ?? {} }) ?? {}, fetched = {};
+  const raw = weeksStore(await chrome.storage.local.get(A.WEEKS)), weeks = A.weeksAt({ format: 1, weeks: raw ?? {} }, epoch) ?? {}, fetched = {};
   const missing = []; for (let w = 0; w <= last; w++) if (!weeks[w]) missing.push(w);
   for (const w of [...missing.filter(w => w > weeksCursor), ...missing.filter(w => w <= weeksCursor)].slice(0, 2)) {
     weeksCursor = w;
@@ -432,6 +443,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.section !== undefined && !sectionOk(msg.section)) { sendResponse({ ok: false, error: 'bad-section' }); return false; }
     const H=self.NakaPortfolio,params=new URLSearchParams();if(msg.classic===true)params.set('skin','classic');
     if(msg.classic===true&&msg.inspection!==undefined){const x=msg.inspection;if(!x||H.normalize([x.id]).length!==1||!Number.isSafeInteger(x.height)||x.height<0||!['hold','sale','cancel'].includes(x.action)){sendResponse({ok:false,error:'bad-context'});return false;}params.set('inspect',x.id);params.set('basis',String(x.height));params.set('action',x.action);}
+    // A sale's block on a details card (NakaPurchase): the extension page opens the lookup of that piece at that block.
+    if(msg.lookup!==undefined){const x=msg.lookup;if(!x||!Number.isSafeInteger(x.number)||x.number<0||!Number.isSafeInteger(x.height)||x.height<0){sendResponse({ok:false,error:'bad-lookup'});return false;}params.set('lookup',String(x.number));params.set('at',String(x.height));}
     if(msg.classic===true&&msg.history===true)params.set('history','1');if(msg.classic===true&&Number.isSafeInteger(msg.number)&&msg.number>=0)params.set('number',String(msg.number));
     const network=msg.classic===true&&msg.section==='network',page=network?'popup/popup.html':'workspace/index.html';if(network)params.set('view','block');
     chrome.tabs.create({ url: chrome.runtime.getURL(page)+(params.size?'?'+params.toString():'')+(msg.section===undefined?'':'#'+msg.section) }).then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }));
@@ -490,10 +503,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Public listing records (and the public sales in them) at a chain height, read once and shared per height in session
 // storage: no recipient, scripts or wallet notes. A record set older than the block asked for is read again.
 let miningRecords=null;
+function readRecords(){
+ if(!miningRecords)miningRecords=CORE.fetchJson(`${CORE.API}/state?since=999999999`,1).then(state=>{if(!Number.isSafeInteger(state.lastHeight)||!Array.isArray(state.listings))throw Error('Public records incomplete');return {height:state.lastHeight,records:CORE.listingRecords(state.listings,state.lastHeight),trades:self.NakaMining.publicTrades(state.listings,state.lastHeight)};}).finally(()=>{miningRecords=null;});
+ return miningRecords;
+}
 async function publicRecordsAt(height){
  const stored=await chrome.storage.session.get(RECORDS);let batch=stored[RECORDS];if(batch&&batch.height>=height&&Array.isArray(batch.trades))return batch;
- if(!miningRecords)miningRecords=CORE.fetchJson(`${CORE.API}/state?since=999999999`,1).then(state=>{if(state.lastHeight<height||!Array.isArray(state.listings))throw Error('Public records incomplete');return {height:state.lastHeight,records:CORE.listingRecords(state.listings,state.lastHeight),trades:self.NakaMining.publicTrades(state.listings,state.lastHeight)};}).finally(()=>{miningRecords=null;});
- try{batch=await miningRecords;await chrome.storage.session.set({[RECORDS]:batch});}catch(error){if(!batch||batch.height<height)throw error;}
+ // One read answers everyone waiting on it, but each caller checks it reaches its own block: a read started for an earlier
+ // block is followed by one more; still short, the records are incomplete for this block.
+ // A failed read falls back to the set kept for this session when that one already reaches the block.
+ try{batch=await readRecords();if(batch.height<height)batch=await readRecords();if(batch.height<height)throw Error('Public records incomplete');}
+ catch(error){const kept=stored[RECORDS];if(kept&&kept.height>=height)return kept;throw error;}
+ // Only a newer set replaces the one kept for this session.
+ const kept=(await chrome.storage.session.get(RECORDS))[RECORDS];if(!kept||!(kept.height>batch.height))await chrome.storage.session.set({[RECORDS]:batch});
  return batch;
 }
 /** One NFT's public sales up to a block, newest first: the total, and the latest six with price, block and block time
@@ -550,7 +572,7 @@ async function readLedger(scope,wanted,expected){
  if(expected!==undefined&&expected!==snap.snapshot.height)throw Error('Block changed');if(last<0)return {state:'before',height:snap.snapshot.height,weeks:[],total:null};const week=wanted??last;if(week>last)throw Error('Future week');
  const signature=scope==='fleet'?JSON.stringify([got[H.KEY],got[H.META],got[H.LEFT],got[L.KEY]]):'',key=[scope,wanted===undefined?'all':week,snap.snapshot.height,got[K.liveStatus]?.epoch??'',signature].join('|');if(ledgerReports.has(key))return ledgerReports.get(key);if(ledgerJobs.has(key))return ledgerJobs.get(key);
  const job=(async()=>{const alive=setInterval(()=>chrome.runtime.getPlatformInfo(),20000);try{
-  const indices=scope==='fleet'&&wanted===undefined?Array.from({length:last+1},(_,i)=>i):[week],tables=A.weeks(got[A.WEEKS])??{},epoch=got[K.liveStatus]?.epoch;for(const [w,row]of Object.entries(tables))if(epoch!==undefined&&row.epoch!==undefined&&row.epoch!==epoch)delete tables[w];
+  const indices=scope==='fleet'&&wanted===undefined?Array.from({length:last+1},(_,i)=>i):[week],epoch=got[K.liveStatus]?.epoch,tables=A.weeksAt(got[A.WEEKS],epoch)??{};
   if(got[A.KEY]?.week===last&&A.table(got[A.KEY])&&got[A.KEY].height===snap.snapshot.height&&(epoch===undefined||got[A.KEY].epoch===epoch))tables[last]=got[A.KEY];
   let loaded=indices.filter(w=>tables[w]).length;const progress=()=>chrome.storage.session.set({nakaLedgerProgress:{scope,height:snap.snapshot.height,loaded,total:indices.length,stage:'weeks'}});await progress();
   const missing=indices.filter(w=>!tables[w]);for(let i=0;i<missing.length;i+=2){const fetched=await Promise.all(missing.slice(i,i+2).map(async w=>{const row={...A.normalize(await CORE.fetchJson(`${CORE.API}/rewards/weights/${w}`,1)),epoch};if(row.week!==w||w<last&&!row.complete||w===last&&!row.complete&&row.height!==snap.snapshot.height)throw Error('Block changed');return row;}));

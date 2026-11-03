@@ -48,6 +48,8 @@
 .naka-sales__row b { color:#ffcf6b; font-weight:700; }
 .naka-sales__row span { color:#bdb4a6; white-space:nowrap; }
 .naka-sales__row .naka-sales__time { color:#9f978b; }
+.naka-sales__at { padding:0; background:none; border:0; color:#bdb4a6; font:inherit; white-space:nowrap; text-decoration:underline dotted #6f675b; text-underline-offset:3px; cursor:pointer; }
+.naka-sales__at:hover, .naka-sales__at:focus-visible { color:#ffcf6b; text-decoration-color:currentColor; }
 .naka-sales__note { margin:2px 0; color:#9f978b; }
 .naka-sales__retry { margin-left:4px; padding:0 6px; background:transparent; border:1px solid #79603d; color:#ffbd62; font:inherit; font-size:10px; cursor:pointer; }
 .naka-listing { display:flex; align-items:center; flex-wrap:wrap; gap:3px 7px; margin-top:6px!important; font-size:10px; line-height:1.3; }
@@ -137,10 +139,14 @@
   .naka-purchase__assumption { margin-top:3px!important; }
 }
 
-/* Shared comparison control: selected shows "In Compare", and reveals its remove action on hover or keyboard focus. */
-.naka-select__off { display:none; }
-[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__on { display:none; }
-[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__off { display:inline; }
+/* Shared comparison control: selected shows "In Compare", and reveals its remove action on hover or keyboard focus. Both
+ * labels share one grid cell, so the button keeps the wider one's width: the hover label never moves its edge out from
+ * under the pointer (which would swap the labels back and forth). */
+.naka-select__labels { display:inline-grid; justify-items:center; }
+.naka-select__labels > span { grid-area:1 / 1; }
+.naka-select__off { visibility:hidden; }
+[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__on { visibility:hidden; }
+[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__off { visibility:visible; }
 
 /* My holdings line under an inspection or lookup: weekly allocation before → after, change in color. */
 .naka-holdings { margin:10px 0 0; padding:8px 0 0; border-top:1px solid #3a3530; font-family:ui-monospace,SFMono-Regular,Consolas,"PingFang SC",monospace; }
@@ -153,7 +159,9 @@
 .naka-holdings__rows dd[data-change=down],.naka-holdings__pixels[data-change=down] { color:#efb29f; }
 .naka-holdings__rows dd[data-change=same],.naka-holdings__pixels[data-change=same] { color:#a6a19b; }
 .naka-holdings__sum { margin-top:4px !important; padding-top:5px; border-top:1px dashed #3a3530; }
-.naka-holdings__total { display:inline-flex; align-items:center; gap:8px; }
+.naka-holdings__rows dd { min-width:0; }
+/* A long total wraps (before → above, after and change on the right) instead of running past a narrow card. */
+.naka-holdings__total { display:inline-flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:2px 8px; }
 .naka-holdings__before { color:#a49e95; font-weight:400; }
 .naka-holdings__pixels { display:inline-flex; color:#f0e9df; }
 .naka-holdings__pixels svg { display:block; width:auto; height:13px; }
@@ -228,6 +236,34 @@
 .naka-reward[data-state=loading] .naka-reward__note::after{content:'';display:inline-block;width:4px;height:4px;margin-left:6px;background:#ffcf6b;vertical-align:middle;animation:naka-reward-pulse 1.2s steps(2,end) infinite}
 @keyframes naka-reward-pulse{50%{opacity:.2}}
 @media(prefers-reduced-motion:reduce){.naka-reward__bar i{transition:none}.naka-reward[data-state=loading] .naka-reward__note::after{animation:none}}
+/* Something on its way (NakaPixel.busy): three pixels lit in turn, then the word, if any. */
+.naka-busy{display:inline-flex;align-items:center;gap:5px;color:#ffcf6b;white-space:nowrap}
+.naka-busy[hidden]{display:none}
+.naka-busy__dots{display:inline-flex;gap:2px}
+.naka-busy__dots i{width:3px;height:3px;background:currentColor;opacity:.25;animation:naka-busy .9s steps(1,end) infinite}
+.naka-busy__dots i:nth-child(2){animation-delay:.3s}.naka-busy__dots i:nth-child(3){animation-delay:.6s}
+@keyframes naka-busy{0%{opacity:1}33.333%{opacity:.25}}
+/* The sigil in the header of the popup and of the extension page is alive. Its eyes switch on as the page opens; then, in a
+   30 s cycle, they blink now and then, and toward its end the sigil looks round: the eyes glance left, then right and
+   stay there, and the head turns to the right, holds its profile and turns back; a blink, the eyes glance left and the
+   head turns to the left the same way; a last blink. A turn moves its strip of views (NakaPixel.sigil with turn) one
+   24-unit view at a time: 22.5°, 45°, 67.5° and the profile, held 380 ms, then back (65–90 ms a view, about 0.8 s in all),
+   and the sigil rises one unit as it sets off and as it comes back, a small hop. The cycle starts 19.3 s in, so the
+   look-round begins 0.7 s after opening, the right turn comes at about 3.7 s and the left at about 6.7 s, and again every
+   30 s. While new data is on its way ([data-busy]) the eyes scan from side to side and the head does not turn; once it has
+   come the look-round plays again. Whole pixels only: held steps, moves of one grid unit (one unit of the SVG's own grid).
+   An animation kept in both lists runs on, so the eyes never switch on twice. */
+.naka-alive .naka-sigil__eyes{transform-box:fill-box;transform-origin:center;animation:naka-wake .7s steps(1,end) both,naka-eyes 30s -19.3s steps(1,end) infinite}
+.naka-alive>svg{overflow:hidden}
+.naka-alive .naka-sigil__strip{animation:naka-turn 30s -19.3s steps(1,end) infinite}
+.naka-alive[data-busy] .naka-sigil__eyes{animation:naka-wake .7s steps(1,end) both,naka-blink 4.7s 1.2s steps(1,end) infinite,naka-scan 1.2s steps(1,end) infinite}
+.naka-alive[data-busy] .naka-sigil__strip{animation:none}
+@keyframes naka-wake{0%{opacity:0}30%{opacity:1}45%{opacity:.2}60%{opacity:1}}
+@keyframes naka-eyes{20%{scale:1 .34}20.4%{scale:1 1}45%{scale:1 .34}45.4%{scale:1 1}66.6667%{translate:-1px 0}70%{translate:1px 0}74.6667%{scale:1 .34}75.0667%{scale:1 1}76.6667%{translate:0 0}81.3333%{scale:1 .34}81.7333%{scale:1 1}82.6667%{translate:-1px 0}86.6667%{translate:0 0}92%{scale:1 .34}92.4%{scale:1 1}}
+@keyframes naka-turn{76.6667%{translate:-24px -1px}76.9667%{translate:-48px -1px}77.2%{translate:-72px 0}77.4167%{translate:-96px 0}78.6833%{translate:-72px 0}78.9167%{translate:-48px -1px}79.1333%{translate:-24px -1px}79.4167%{translate:0 0}86.6667%{translate:-120px -1px}86.9667%{translate:-144px -1px}87.2%{translate:-168px 0}87.4167%{translate:-192px 0}88.6833%{translate:-168px 0}88.9167%{translate:-144px -1px}89.1333%{translate:-120px -1px}89.4167%{translate:0 0}}
+@keyframes naka-blink{97.4%{scale:1 .34}}
+@keyframes naka-scan{25%{translate:-1px 0}50%{translate:0 0}75%{translate:1px 0}}
+@media(prefers-reduced-motion:reduce){.naka-busy__dots i{animation:none;opacity:.7}.naka-alive .naka-sigil__eyes,.naka-alive[data-busy] .naka-sigil__eyes,.naka-alive .naka-sigil__strip{animation:none}}
 /* Extension page: one band. Figure left, stats right-aligned beside it, so a changing amount never moves the stats. */
 .ws-portfolio>.naka-reward{gap:10px;margin:14px 0 16px;padding:14px 20px 11px;background:#17150f;border-top:1px solid #3a3123}
 .ws-portfolio .naka-reward__label,.ws-portfolio .naka-reward__week{font-size:12px}

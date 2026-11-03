@@ -12,7 +12,7 @@ const files = [...screenshots,
   'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js','test/portfolio.test.js', 'test/programme.test.js','test/rewards.test.js','test/ledger.test.js','test/mining.test.js','test/planner.test.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
   '.gitignore', 'LICENSE', 'README.md', 'package.json',
   'docs/DESIGN.md','docs/MINING.md', 'docs/ADVERSARIAL_AUDIT.md', 'docs/RULES_AUDIT.md', 'docs/PRIVACY.md', 'docs/VALIDATION.md',
-  'scripts/build.js', 'scripts/snapshot.js', 'scripts/gen-icons.js', 'scripts/privacy.js', 'scripts/release.js', 'scripts/package-chrome.js',
+  'scripts/build.js', 'scripts/snapshot.js', 'scripts/gen-icons.js', 'scripts/gen-sigil-turn.js', 'scripts/privacy.js', 'scripts/release.js', 'scripts/package-chrome.js',
   'test/purchase.test.js', 'test/lookup.test.js', 'test/worker.test.js', 'test/pixel.test.js', 'test/i18n.test.js', 'test/rules.test.js', 'test/snapshot.test.js', 'test/source.test.js', 'test/tier.test.js', 'test/pages.test.js',
 ];
 const source = [
@@ -24,6 +24,14 @@ const source = [
 ];
 const allowed = new Set([...files, ...source.map(f => `src/${f}`), ...downloads.downloadFiles]);
 const built = new Set(['manifest.json', ...source]);
+// The SHORD guide (learn/shord, served by GitHub Pages) is published as built, outside the source archive. Its pages
+// name three public project addresses (the NUMS address SHNAKAS was etched to, the relay's payout address and its
+// sending wallet), kept here as SHA-256 so this file holds none of them; any other address still fails.
+const guide = new Set(['README.md', 'index.html', 'en.html', 'sources.html', 'sources-en.html', 'apple-touch-icon.png', 'icon-72.png', 'share.png', 'share-en.png',
+  ...['zh','en'].flatMap(l => [`shord-guide-${l}.pdf`, `shord-guide-${l}-print.pdf`, ...[0,1,2,3,4,5,6,7,8].map(n => `cards/${l}/card${n}.svg`), ...[1,2,3,4,5,6,7,8].map(n => `share/${l}/ch${n}.png`)]),
+].map(f => `learn/shord/${f}`));
+const guideAddresses = new Set(['6e6c6c102592a03aac34832dd392e6f097be3da03b03fa1c33f56579be3eb2f8', '854d061e8b9d990e01f77e8daf58f532633c1c85a0801953dd47a1cdcc203de8', '901c5c669763236aeffefb2fa052f37402d2059c0b14af8ea3c6c546246b8dd0']);
+const withoutGuideAddresses = text => text.replace(/\b(?:bc1|tb1|bcrt1)[02-9ac-hj-np-z]{11,87}\b/gi, a => guideAddresses.has(crypto.createHash('sha256').update(a.toLowerCase()).digest('hex')) ? '' : a);
 const patterns = [
   /\/(?:Users|home)\/[A-Za-z0-9_.-]+\//,
   /[A-Z]:\\Users\\[^\\\s]+\\/i,
@@ -60,9 +68,10 @@ function walk(dir, prefix = '') {
       assert(entries.length===built.size && entries.every(f => built.has(f)), 'Unexpected installation archive content');
       for (const f of entries) assert(execFileSync('unzip', ['-p', zipPath, f]).equals(fs.readFileSync(path.join(ROOT,'dist/chrome',f))), 'Archive differs from validated build');
     }
-    if (!allowed.has(rel) && !(isBuild && built.has(rel.slice('dist/chrome/'.length))) && !isZip) throw new Error(`Unexpected file: ${rel}`);
+    const isGuide = guide.has(rel);
+    if (!allowed.has(rel) && !isGuide && !(isBuild && built.has(rel.slice('dist/chrome/'.length))) && !isZip) throw new Error(`Unexpected file: ${rel}`);
     if (!rel.endsWith('.png') && !isZip) {
-      const text = fs.readFileSync(path.join(dir, entry.name), 'utf8');
+      const read = fs.readFileSync(path.join(dir, entry.name), 'utf8'), text = isGuide ? withoutGuideAddresses(read) : read;
       for (let i=0; i<patterns.length; i++) if (patterns[i].test(text)) throw new Error(`Privacy pattern ${i+1} in ${rel}; value withheld`);
     }
     count++;
@@ -89,6 +98,7 @@ function validateSnapshot() {
 function assert(ok, message) { if (!ok) throw new Error(message); }
 walk(ROOT);
 for (const rel of allowed) assert(fs.existsSync(path.join(ROOT,rel)), `Missing release file: ${rel}`);
+for (const rel of guide) assert(fs.existsSync(path.join(ROOT,rel)), `Missing guide file: ${rel}`);
 const downloadBytes = fs.readFileSync(path.join(ROOT,'release',downloads.zipName));
 assert(downloadBytes.equals(fs.readFileSync(path.join(ROOT,'dist',downloads.zipName))), 'Download differs from validated installation archive');
 assert(fs.readFileSync(path.join(ROOT,'release/README.md'),'utf8')===downloads.readme, 'Download guide differs from generated content');
@@ -102,8 +112,8 @@ for (const size of [16,32,48,128]) {
   const canonical=encodePNG(size,render(size));
   assert(fs.readFileSync(path.join(ROOT,`src/icons/icon${size}.png`)).equals(canonical), 'Noncanonical icon content');
 }
-// Reviewed screenshots may contain only image data, never comments, profiles or trailing payloads.
-for(const rel of screenshots){
+// Reviewed screenshots and the guide's images may contain only image data, never comments, profiles or trailing payloads.
+for(const rel of [...screenshots, ...[...guide].filter(f => f.endsWith('.png'))]){
  const b=fs.readFileSync(path.join(ROOT,rel));assert(b.length<8000000&&b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'Invalid screenshot PNG');
  let at=8,ended=false,header=false;
  while(at<b.length){assert(at+12<=b.length,'Truncated screenshot');const size=b.readUInt32BE(at),type=b.toString('ascii',at+4,at+8);assert(['IHDR','IDAT','IEND','sRGB'].includes(type)&&at+12+size<=b.length,'Screenshot metadata forbidden');

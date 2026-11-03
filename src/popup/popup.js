@@ -54,6 +54,8 @@
     lookupRaw: null, lookupSnapshot:null, lookupHistorical:false, historyPending:false, pendingLookup:null,rewardClock:null, live: undefined, liveStatus: undefined, visibleAt: undefined,
     // Whether the worker runs this code (SRC.BUILD): null until it answers.
     workerCurrent: null,
+    // The block the worker is reading now (SRC.SESSION_UPDATING), undefined while it reads none.
+    updating: undefined,
   };
 
   let staticLang = '';
@@ -94,9 +96,9 @@
       $('allocTitle').textContent = cc.aboutAlloc; $('aboutAlloc').replaceChildren(...about.alloc);
       $('aboutRules').replaceChildren(...about.rules);
       $('dataTitle').textContent = cc.aboutData; $('aboutData').replaceChildren(...about.data);
-      // The last line: the community group on Telegram.
+      // The last line: the illustrated guide to the protocol, in the page's language, and the community group on Telegram.
+      $('guideLink').textContent = cc.guideLink; $('guideLink').href = globalThis.NakaExploreUI.GUIDE[state.lang];
       $('tgJoin').textContent = cc.tgJoin; $('tgJoin').href = globalThis.NakaExploreUI.TELEGRAM;
-      $('sigil').replaceChildren(PIXEL.sigil('pixel-sigil'));
       $('tabbar').setAttribute('aria-label', cc.navSections);
     }
     $('lookupHow').textContent = cc.lookupHow;
@@ -154,14 +156,29 @@
     $('measureNote').title = note ?? '';
     $('measureNote').hidden = note === null;
     const now = phase.state === 'active' ? T.rewardWeek(phase.week, W.weeks) : phase.state === 'boundary' ? T.firstRewardAtBlock : phase.state === 'closed' ? T.rewardClosed : T.completedWeeks;
-    // Home: one quiet line says which block the figures use and how fresh it is; it opens the Block tab.
+    // Home: one quiet line says which block the figures use, how fresh it is and whether a newer one is on its way; it opens
+    // the Block tab. Built once and written in place, so its pixels keep their rhythm through every render.
     const kind = $('liveState').className.match(/live-state--(\w+)/)?.[1] ?? 'muted', strip = $('statusStrip');
-    const age = I.blockAgeShort(T, s);
-    const lead = el('span', 'strip-lead'); lead.append(el('i', `strip-dot strip-dot--${kind}`), el('b', '', source === 'live' ? T.modeLive : T.srcBundled), el('span', '', cc.blockChip(I.int(s.height))), el('span', 'strip-age', age));
-    strip.replaceChildren(lead, el('span', 'strip-next', `${phase.state === 'before' ? cc.stripStart(I.int(phase.remaining)) : now} ›`));
+    if (!strip.firstChild) { const lead = el('span', 'strip-lead'); lead.append(el('i'), el('b'), el('span'), el('span', 'strip-age'), PIXEL.busy('strip-busy', '')); strip.append(lead, el('span', 'strip-next')); }
+    const [dot, mode, chip, age, busy] = strip.firstChild.children;
+    dot.className = `strip-dot strip-dot--${kind}`; mode.textContent = source === 'live' ? T.modeLive : T.srcBundled; chip.textContent = cc.blockChip(I.int(s.height)); age.textContent = I.blockAgeShort(T, s);
+    paintUpdating(busy, cc); paintUpdating(blockBusy, cc);
+    strip.lastChild.textContent = `${phase.state === 'before' ? cc.stripStart(I.int(phase.remaining)) : now} ›`;
+    // The word after the pixels shows only while the whole line still fits; otherwise the pixels stay alone (their title
+    // keeps the sentence), and only then does the data's label give way.
+    const word = busy.querySelector('.naka-busy__text'); word.hidden = false;
+    if (!busy.hidden && (mode.scrollWidth > mode.clientWidth || strip.firstChild.scrollWidth > strip.firstChild.clientWidth)) word.hidden = true;
     strip.title = $('liveState').title;
     state.blockClock = clock;
     return snap;
+  }
+
+  /** "Updating" pixels beside a block or its age: shown while the worker reads a newer block (state.updating), which the
+   * title names; the word after them, where there is one, follows the language. */
+  function paintUpdating(node, cc) {
+    const height = state.updating?.height;
+    node.hidden = height === undefined; node.title = height === undefined ? '' : cc.updatingTip(I.int(height));
+    const word = node.querySelector('.naka-busy__text'); if (word) word.textContent = cc.updating;
   }
 
   /** 实时同步：开关状态、最近一次检查结果；失败时说明原因、多久后重试、页面正在用哪份数据，并给出技术细节。 */
@@ -233,9 +250,10 @@
   let lookupKey = '';
   function renderLookup(T, snap) {
     const found = state.lookupRaw === null ? null : LOOKUP.query(snap, state.lookupRaw);
-    // Rebuilt only when its inputs change: the block, the number, language, mode, my holdings and the listings already
-    // closing (the single-sale model computes in the next block's world, without them).
-    const key = found === null ? '' : `${snap.snapshot.height}|${snap.snapshot.generatedAt}|${state.lookupRaw}|${state.lang}|${state.lookupHistorical}|${rewardWeek?.height}|${JSON.stringify(officialReadings)}|${holdings.join()}|${JSON.stringify(snap.closing ?? [])}`;
+    // Rebuilt only when its inputs change: the block, the number, language, mode, my holdings, this piece's own records
+    // (public events and recorded intervals) and the listings already closing (the single-sale model computes in the next
+    // block's world, without them).
+    const key = found === null ? '' : `${snap.snapshot.height}|${snap.snapshot.generatedAt}|${state.lookupRaw}|${state.lang}|${state.lookupHistorical}|${rewardWeek?.height}|${JSON.stringify(officialReadings)}|${holdings.join()}|${JSON.stringify(holdingEvents?.rows?.[found.id]??null)}|${JSON.stringify(state.ledger?.runs?.[found.id]??null)}|${JSON.stringify(snap.closing ?? [])}`;
     if (key === lookupKey) {
       for(const n of $('lookupResult').querySelectorAll('.lookup-basis--time')) { n.textContent=T.lookupBasis(I.blockBasis(T,snap.snapshot)); n.title=I.blockTimeTitle(T,snap.snapshot); }
       return;
@@ -274,7 +292,7 @@
     const model=globalThis.NakaPurchase.create(snap,{action}),scenario=model.get(found.id);
     card.dataset.listing=found.listing;card.dataset.queryPurpose=state.lookupHistorical?'block':'purchase';
     const notice=scenario.state==='no-floor'?(action==='cancel'?T.cancelNoFloor:T.buyNoFloor):null;
-    card.append(head,!state.lookupHistorical&&scenario.state==='ready'?globalThis.NakaPurchase.render(model,found.id,T,I,{explain:A.explainFor(snap,found.id,state.lang,action),closing,snap,id:found.id,sales:!state.lookupHistorical}):globalThis.NakaPurchase.renderCurrent(r,snap.snapshot,T,I,{notice:state.lookupHistorical?null:notice,explain:A.explainFor(snap,found.id,state.lang),listing:found.listing,closing,credits:globalThis.NakaPurchase.relayCredits(snap,found.id),snap,id:found.id,status:held?A.portfolio(snap,[found.id],rewardWeek,officialReadings,holdingEvents).rows[0]??null:null,sales:!state.lookupHistorical}));
+    card.append(head,!state.lookupHistorical&&scenario.state==='ready'?globalThis.NakaPurchase.render(model,found.id,T,I,{explain:A.explainFor(snap,found.id,state.lang,action),closing,snap,id:found.id,sales:!state.lookupHistorical}):globalThis.NakaPurchase.renderCurrent(r,snap.snapshot,T,I,{notice:state.lookupHistorical?null:notice,explain:A.explainFor(snap,found.id,state.lang),listing:found.listing,closing,credits:globalThis.NakaPurchase.relayCredits(snap,found.id),snap,id:found.id,status:held?A.portfolio(snap,[found.id],rewardWeek,officialReadings,holdingEvents,state.ledger).rows[0]??null:null,sales:!state.lookupHistorical}));
     const purchase=card.querySelector('.naka-purchase');
     const mode=el('button','lookup-mode');mode.type='button';mode.addEventListener('click',openHistoryDialog);
     // The mode chip (live, or a historical block) sits beside the listing state at the top of the hero's right column.
@@ -294,6 +312,12 @@
   // One artwork element per NFT, reused by every render: moving it keeps the decoded image, so a data refresh never flashes.
   const artFor = globalThis.NakaExploreUI.artStore();
   let holdingsKey = '';
+  // My holdings' order: the one choice the extension page and this popup share (NakaPortfolio, this extension's
+  // localStorage). A refresh while the pointer is on the tiles keeps the order shown, new pieces at the end, until it leaves;
+  // a choice made in the menu applies at once.
+  let holdingsOrder = null, holdingsSortNow = false, holdingsSortWait = null;
+  const holdingsSort = () => { let raw = null; try { raw = localStorage.getItem(HOLD.SORT_KEY); } catch { raw = null; } return HOLD.sortChoice(raw); };
+  const holdingsSortLater = () => { if (holdingsSortWait) return; holdingsSortWait = setInterval(() => { if ($('holdingsTiles').matches(':hover')) return; clearInterval(holdingsSortWait); holdingsSortWait = null; holdingsKey = ''; render(); }, 400); };
   function renderHoldings(snap) {
     const c = globalThis.NakaExploreUI.pick(state.lang), U = globalThis.NakaExploreUI, own = HOLD.current(snap, holdings);
     let missing=$('holdingsMissing');if(!missing){missing=el('p','hc-how');missing.id='holdingsMissing';missing.setAttribute('role','status');$('holdingsEmpty').before(missing);}missing.hidden=!own.missing;missing.textContent=c.holdingsWaiting(own.missing);
@@ -302,8 +326,8 @@
     // already closing (their status says so) and layout.
     const mineRows = own.ids.map(id => JSON.stringify([holdingEvents?.rows?.[id] ?? null, holdingsMeta?.[id] ?? null])).join(';');
     const key = `${rewardWeek?.height}|${rewardStatus?.state}|${rewardStatus?.reason}|${JSON.stringify(officialReadings)}|${JSON.stringify(rewardWeeks?.weeks??{})}|${JSON.stringify(leftPieces)}|${JSON.stringify(leftSeen)}|${holdingEvents?.height}|${mineRows}|${state.lang}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing ?? [])}|${own.ids.join()}|${state.holdingsOpen}|${state.fresh ? [...state.fresh].join() : ''}|${JSON.stringify([...confirmErrors])}|${JSON.stringify(walletAbsent)}|${[...absentErrors].join()}`;
-    if (key === holdingsKey) return;
-    holdingsKey = key;
+    if (key + `|${JSON.stringify(holdingsSort())}` === holdingsKey) return;
+    holdingsKey = key + `|${JSON.stringify(holdingsSort())}`;
     const empty = !holdings.length, phase = R.rewardPhase(snap.snapshot);
     document.querySelector('.holdings-hero').hidden = empty; $('holdingsList').hidden = empty; $('holdingsEmpty').hidden = !empty;
     const history = A.history(snap, own.ids, leftPieces, holdingEvents, A.weeks(rewardWeeks), phase, holdingsMeta);
@@ -322,7 +346,24 @@
     // Holdings the Wallet page showed no row of at the last sync (maybe sent away privately) are asked about the same way.
     const absent = HOLD.absentOf(walletAbsent), absentIds = absent === null ? [] : absent.ids.filter((id) => own.ids.includes(id) && !absent.dismissed.includes(id));
     paintNotes(c, [...[...asks].map(([id, x]) => confirmNote(c, snap.items[id][0], id, x)), ...absentIds.map((id) => absentNote(c, snap.items[id][0], id))], history, phase, false);
-    const cancel = globalThis.NakaPurchase.create(snap, { action: 'cancel' }), limit = TILE_ROWS*TILE_COLUMNS, visible=own.ids, folded = !state.holdingsOpen && visible.length > limit;
+    const cancel = globalThis.NakaPurchase.create(snap, { action: 'cancel' }), limit = TILE_ROWS*TILE_COLUMNS, sort = holdingsSort();
+    const sorted = HOLD.sortIds(own.ids, HOLD.sortFacts(snap, own.ids, new Map(rewards.data.rows.map((row) => [row.id, row])), cancel, a.all), sort), kept = holdingsOrder ? holdingsOrder.filter((id) => own.ids.includes(id)) : [];
+    const visible = !holdingsSortNow && holdingsOrder && $('holdingsTiles').matches(':hover') ? [...kept, ...sorted.filter((id) => !kept.includes(id))] : sorted;
+    if (visible.join() !== sorted.join()) holdingsSortLater(); holdingsSortNow = false; holdingsOrder = visible;
+    const folded = !state.holdingsOpen && visible.length > limit;
+    // The sort: a button per order, as on the extension page; the shared choice is lit with its direction and pressing it
+    // again reverses it. Built once per language and only restated after, so the button just pressed keeps the focus.
+    // Shown once there is something to sort.
+    const bar = $('holdingsSort');
+    if (bar.dataset.lang !== state.lang) {
+      bar.replaceChildren(el('span', 'hc-sort-label', c.sortLabel), ...Object.keys(HOLD.SORTS).map((by) => { const b = el('button', 'hc-sort-btn'); b.type = 'button'; b.dataset.sort = by; b.append(el('span', '', c.sortBy[by]), el('span', 'hc-sort-dir')); return b; }));
+      bar.setAttribute('aria-label', c.sortLabel); bar.dataset.lang = state.lang;
+    }
+    for (const b of bar.querySelectorAll('.hc-sort-btn')) {
+      const by = b.dataset.sort, on = sort.by === by, dir = on ? sort.dir : HOLD.SORTS[by];
+      b.setAttribute('aria-pressed', String(on)); b.querySelector('.hc-sort-dir').textContent = on ? (dir === 'asc' ? '↑' : '↓') : ''; b.title = c.sortHint(by, dir) + (on ? c.sortReverse : '');
+    }
+    bar.hidden = own.ids.length < 2;
     $('holdingsTiles').replaceChildren(...(folded ? visible.slice(0, limit) : visible).map((id) => {
       const number = snap.items[id][0], listed = globalThis.NakaPurchase.listingStatus(snap, id) === 'listed', r = R.evaluateSnapshot(snap, id);
       const weekly = listed ? null : R.weeklyAllocation(R.units(r), a.all), view = A.tile(rewards.data, id, state.lang), status = view.row.status;
@@ -465,10 +506,13 @@
    * closing listings change (purchases and reclaims on their way): the ranking behind Best buy never reads them (its card
    * just leaves them out), and Reach 400% and Own a trait read them only for our own listings and listings that carry a
    * trait of one of our pieces (planner.js). So the answers are kept per block and holdings (and added numbers and those
-   * closing rows), a card is rebuilt only when what it shows changes, and cards on screen stay, dimmed, until their
-   * replacement is ready. */
+   * closing rows), and a card is rebuilt only when what it shows changes. While answers are computed every card waits in
+   * its place: one on screen stays, dimmed, until its replacement is ready; before any, a placeholder card with blank rows.
+   * The pixels after a waiting card's title say it is on its way, and how far its own answer has come. */
   const RAISE_ROWS = 2;
   const rankCache = { key: null, rows: null }, planCache = { key: null, plans: null, lock: null };
+  // What the tab shows: a note ('empty', 'ended', 'error'), or 'cards': the four places of the answers (0 Best buy, 1 Reach
+  // 400%, 2 Own a trait, 3 the Simulate line), each with the key of what it shows (null: a placeholder waiting for it).
   let raiseShown = { kind: null }, raiseJob = null;
   const raiseBases=new WeakMap();
   const raiseBasis=snap=>{if(!raiseBases.has(snap))raiseBases.set(snap,JSON.stringify(snap));return raiseBases.get(snap);};
@@ -482,7 +526,8 @@
   const put = (node, prop, value) => { if (node[prop] !== value) node[prop] = value; };
   function renderRaise(snap) {
     const c = globalThis.NakaExploreUI.pick(state.lang);
-    put($('raiseTitle'), 'textContent', c.navRaise); put($('raiseFull'), 'textContent', c.raiseFull); put($('raiseFull'), 'title', c.raiseFullHint); put($('raiseBasis'), 'textContent', c.raiseBasis(I.int(snap.snapshot.height)));
+    put($('raiseTitle'), 'textContent', c.navRaise); put($('raiseFull'), 'textContent', c.raiseFull); put($('raiseFull'), 'title', c.raiseFullHint); put($('raiseBasisText'), 'textContent', c.raiseBasis(I.int(snap.snapshot.height)));
+    paintUpdating(raiseBusy, c);
     if (state.view !== 'raise' || state.sheet !== null) return;
     const own = HOLD.current(snap, holdings).ids, extra = extraIds(snap, own), box = $('raiseBody'), s = snap.snapshot;
     const note = !own.length ? 'empty' : ['ended', 'closed'].includes(R.rewardPhase(s).state) ? 'ended' : null;
@@ -491,7 +536,7 @@
     const mates = note === null ? extra.map((id) => snap.items[id][0]).sort((a, b) => a - b) : [], scope = mates.length ? c.raiseScope(mates.length, mates.slice(0, 5).map((n) => `#${n}`)) : '';
     put($('raiseScope'), 'hidden', !mates.length); put($('raiseScope'), 'textContent', scope); put($('raiseScope'), 'title', scope);
     if (note !== null) {
-      raiseJob = null; box.removeAttribute('aria-busy');
+      raiseJob = null;
       if (raiseShown.kind === note && raiseShown.lang === state.lang) return;
       raiseShown = { kind: note, lang: state.lang };
       if (note === 'ended') { box.replaceChildren(el('p', 'raise-note', c.raiseEnded)); return; }
@@ -501,8 +546,10 @@
     const ours = new Set([...own, ...extra]), rankKey = `${raiseBasis(snap)}|${own.join()}`, planKey = `${rankKey}|${extra.join()}`;
     if (rankCache.key === rankKey && planCache.key === planKey) { raiseJob = null; showRaise(c, snap, ours); return; }
     const job = `${rankKey}#${planKey}`; if (raiseJob === job) return; raiseJob = job;
-    if (raiseShown.kind === 'cards') box.setAttribute('aria-busy', 'true');
-    else { const wait=(title,section,n)=>{const card=raiseCard(title,null,section);for(let i=0;i<n;i++){const row=el('div','raise-row raise-row--wait');row.append(el('span','raise-art'),el('span','raise-info',c.raiseRunning),el('span','raise-gain','…'));card.append(row);}return card;}; box.replaceChildren(wait(c.raiseBuyTitle,'planner-buy',2),wait(c.raisePlanTitle,'planner-plan',2),wait(c.raiseLockTitle,'planner-lock',2)); raiseShown = { kind: 'running' }; }
+    // The answers about to change wait in their places; Best buy, when its ranking is kept, is shown at once.
+    if (raiseShown.kind !== 'cards') raisePlaces(c);
+    if (rankCache.key === rankKey) fillBuy(c, snap); else waiting(box.children[0]);
+    if (planCache.key !== planKey) { waiting(box.children[1]); waiting(box.children[2]); }
     setTimeout(async () => {
       if (raiseJob !== job) return;
       if (state.view !== 'raise' || state.sheet !== null){raiseJob=null;return;}
@@ -515,33 +562,33 @@
       if(cached?.format===2&&cached.key===cacheKey&&Array.isArray(cached.rows)&&Array.isArray(cached.plans)&&Array.isArray(cached.lock?.can)&&Array.isArray(cached.lock?.have)&&Array.isArray(cached.lock?.far)){
         Object.assign(rankCache,{key:rankKey,rows:cached.rows});Object.assign(planCache,{key:planKey,plans:cached.plans,lock:{...cached.lock,missing:t=>t.wanted.length+t.unminted.length}});
       }else{
+        // Each answer goes in its card as soon as it is ready; the cards still waiting say how far theirs has come.
         if(rankCache.key!==rankKey){
-          const rows=[],offers=snap.offers??[];let progress=box.querySelector('.raise-note,.raise-progress');if(!progress){progress=el('p','raise-progress');box.prepend(progress);}progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
+          const rows=[],offers=snap.offers??[];
           for(let i=0;i<offers.length;i+=8){
             if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
-            progress.textContent=state.lang==='zh'?`正在比较挂单 ${i}/${offers.length}…`:`Comparing listings ${i}/${offers.length}…`;await new Promise(resolve=>setTimeout(resolve,0));rows.push(...HOLD.rank(snap,own,offers.slice(i,i+8)));
+            raiseStage(0,c.raiseStageListings(i,offers.length));await new Promise(resolve=>setTimeout(resolve,0));rows.push(...HOLD.rank(snap,own,offers.slice(i,i+8)));
           }
           if(raiseJob!==job)return;Object.assign(rankCache,{key:rankKey,rows:rows.sort(HOLD.rankOrder)});
-          {const c=globalThis.NakaExploreUI.pick(state.lang),closing=new Set((snap.closing??[]).map(r=>r[0])),buys=rankCache.rows.filter(x=>!closing.has(x.id)&&x.impact.allocation.delta.lo>0).sort((a,b)=>(b.impact.allocation.delta.lo/b.price)-(a.impact.allocation.delta.lo/a.price));const plan=raiseCard(c.raisePlanTitle,null,'planner-plan'),lock=raiseCard(c.raiseLockTitle,null,'planner-lock'),progress=el('p','raise-progress',state.lang==='zh'?'买哪单已经排好，正在计算冲 400% 和特征…':'Best buys are ready. Planning 400% and traits…');plan.append(progress);lock.append(el('p','raise-note',c.raiseRunning));box.replaceChildren(buyCard(c,snap,buys),plan,lock);}
+          fillBuy(globalThis.NakaExploreUI.pick(state.lang),snap);
         }
         if (planCache.key !== planKey){
           const targets=[...own,...extra],plans=[],pause=()=>new Promise(resolve=>setTimeout(resolve,0));
-          let progress=box.querySelector('.raise-note,.raise-progress');if(!progress){progress=el('p','raise-progress');box.prepend(progress);}progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
           for(let i=0;i<targets.length;i+=4){
             if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
-            progress.textContent=state.lang==='zh'?`正在计算方案 ${i}/${targets.length}…`:`Planning ${i}/${targets.length}…`;
+            raiseStage(1,c.raiseStagePlans(i,targets.length));
             await pause();plans.push(...PL.targetPlans(snap,{mine:own,mates:extra,targets:targets.slice(i,i+4)}));
           }
-          progress.textContent=state.lang==='zh'?`方案 ${targets.length}/${targets.length} · 检查特征…`:`Plans ${targets.length}/${targets.length} · checking traits…`;await pause();
           if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
+          plans.sort(PL.targetPlanOrder);fill(1,`${state.lang}|${planKey}`,()=>planCard(globalThis.NakaExploreUI.pick(state.lang),snap,plans));
           const traits=[...new Set(targets.flatMap(id=>snap.items[id].slice(1)))],locks=[];
           for(let i=0;i<traits.length;i+=4){
             if(raiseJob!==job||state.view!=='raise'||state.sheet!==null){if(raiseJob===job)raiseJob=null;return;}
-            progress.textContent=state.lang==='zh'?`正在检查特征 ${i}/${traits.length}…`:`Checking traits ${i}/${traits.length}…`;await pause();
+            raiseStage(2,c.raiseStageTraits(i,traits.length));await pause();
             locks.push(...PL.lockTraits(snap,targets,traits.slice(i,i+4)));
           }
           if(raiseJob!==job)return;
-          Object.assign(planCache,{key:planKey,plans:plans.sort(PL.targetPlanOrder),lock:PL.lockGroups(locks.sort(PL.lockTraitOrder))});
+          Object.assign(planCache,{key:planKey,plans,lock:PL.lockGroups(locks.sort(PL.lockTraitOrder))});
         }
         if(cacheKey){
           const rows=rankCache.rows.map(x=>({id:x.id,price:x.price,impact:{allocation:x.impact.allocation}})),plans=planCache.plans.map(r=>({id:r.id,number:r.number,side:r.side,state:r.state,before:r.before,auto:r.auto,value:r.value,total:r.total,plan:r.plan?{cost:r.plan.cost,buys:r.plan.buys}:null}));
@@ -551,22 +598,50 @@
       }
       if(raiseJob!==job)return;raiseJob=null;
       renderRaise(SRC.choose({ live: state.live, closing: state.closing }, BUNDLED).snap);
-      }catch{if(raiseJob!==job&&raiseJob!==null)return;raiseJob=null;rankCache.key=null;planCache.key=null;box.removeAttribute('aria-busy');const retry=el('button','btn',state.lang==='zh'?'计算暂不可用 · 重试':'Calculation unavailable · Retry');retry.type='button';retry.addEventListener('click',()=>renderRaise(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap));box.replaceChildren(retry);raiseShown={kind:'error'};}
+      }catch{if(raiseJob!==job&&raiseJob!==null)return;raiseJob=null;rankCache.key=null;planCache.key=null;const retry=el('button','btn',state.lang==='zh'?'计算暂不可用 · 重试':'Calculation unavailable · Retry');retry.type='button';retry.addEventListener('click',()=>renderRaise(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap));box.replaceChildren(retry);raiseShown={kind:'error'};}
     }, 30);
   }
-  /** The cards from the kept answers (`ours`: my holdings, then the numbers added). Best buy leaves out listings already
-   * closing (nobody can buy them). A card whose content is unchanged stays on screen untouched. */
+  /** The cards from the kept answers (`ours`: my holdings, then the numbers added), each in its place. */
   function showRaise(c, snap, ours) {
-    const box = $('raiseBody'), closing = new Set((snap.closing ?? []).map((r) => r[0])), value = (x) => x.impact.allocation.delta.lo / x.price;
+    if (raiseShown.kind !== 'cards') raisePlaces(c);
+    fillBuy(c, snap);
+    fill(1, `${state.lang}|${planCache.key}`, () => planCard(c, snap, planCache.plans));
+    fill(2, `${state.lang}|${planCache.key}`, () => lockCard(c, snap, ours));
+    fill(3, state.lang, () => simLink(c));
+  }
+  /** The four places, each card a placeholder waiting for its answer, and the Simulate line. */
+  function raisePlaces(c) {
+    $('raiseBody').replaceChildren(waitCard(c.raiseBuyTitle, 'planner-buy'), waitCard(c.raisePlanTitle, 'planner-plan'), waitCard(c.raiseLockTitle, 'planner-lock'), simLink(c));
+    raiseShown = { kind: 'cards', keys: [null, null, null, state.lang] };
+  }
+  /** Puts an answer in its place: one whose key is unchanged stays on screen untouched and stops waiting; any other
+   * replaces what is there (its earlier version or its placeholder). Returns the card shown. */
+  function fill(i, key, make) {
+    const was = $('raiseBody').children[i];
+    if (raiseShown.keys[i] === key) { was.removeAttribute('aria-busy'); was.querySelector('.raise-busy')?.remove(); return was; }
+    const card = make(); was.replaceWith(card); raiseShown.keys[i] = key; return card;
+  }
+  /** A card waits for its answer: what it shows dims, and pixels after its title say the answer is on its way. */
+  function waiting(card) {
+    card.setAttribute('aria-busy', 'true');
+    if (!card.querySelector('.raise-busy')) card.querySelector('.raise-card-head h3').after(PIXEL.busy('raise-busy', ''));
+    return card;
+  }
+  /** A placeholder: the card's title and blank rows where its answer goes. */
+  function waitCard(title, section) {
+    const card = raiseCard(title, null, section);
+    for (let i = 0; i < RAISE_ROWS; i++) { const row = el('div', 'raise-row raise-row--wait'); row.setAttribute('aria-hidden', 'true'); row.append(el('span', 'raise-art'), el('span', 'raise-info'), el('span', 'raise-gain')); card.append(row); }
+    return waiting(card);
+  }
+  /** How far a waiting card's answer has come, after its pixels. */
+  function raiseStage(i, text) { $('raiseBody').children[i].querySelector('.raise-busy .naka-busy__text').textContent = text; }
+  /** Best buy from the kept ranking; it leaves out listings already closing (nobody can buy them). */
+  function fillBuy(c, snap) {
+    const closing = new Set((snap.closing ?? []).map((r) => r[0])), value = (x) => x.impact.allocation.delta.lo / x.price;
     const buys = rankCache.rows.filter((x) => !closing.has(x.id) && x.impact.allocation.delta.lo > 0).sort((a, b) => value(b) - value(a));
-    const top = `${state.lang}|${rankCache.key}|${buys.slice(0, RAISE_ROWS).map((x) => x.id).join()}`, plan = `${state.lang}|${planCache.key}`;
-    box.removeAttribute('aria-busy');box.querySelector('.raise-progress')?.remove();
-    const was = raiseShown.kind === 'cards' ? raiseShown : null, keepBuy = was !== null && was.top === top, keepPlan = was !== null && was.plan === plan;
+    const card = fill(0, `${state.lang}|${rankCache.key}|${buys.slice(0, RAISE_ROWS).map((x) => x.id).join()}`, () => buyCard(c, snap, buys));
     // With the same top rows only the number of buyable listings can differ: it changes in place.
-    if (keepBuy && was.count !== buys.length) was.nodes[0].querySelector('.raise-card-head .list-link').textContent = c.raiseAllBuys(buys.length);
-    const nodes = [keepBuy ? was.nodes[0] : buyCard(c, snap, buys), ...(keepPlan ? was.nodes.slice(1) : planCards(c, snap, ours))];
-    if (was === null) box.replaceChildren(...nodes); else nodes.forEach((n, i) => { if (n !== was.nodes[i]) was.nodes[i].replaceWith(n); });
-    raiseShown = { kind: 'cards', top, count: buys.length, plan, nodes };
+    if (buys.length) card.querySelector('.raise-card-head .list-link').textContent = c.raiseAllBuys(buys.length);
   }
   function raiseCard(title, more, section) {
     const box = el('section', 'raise-card'+(section==='planner-buy'?' raise-card--buy':'')), head = el('div', 'raise-card-head'); head.append(el('h3', 'px-title', title));
@@ -602,11 +677,10 @@
     }
     return buy;
   }
-  /** Reach 400%: each piece's own cheapest plan (my holdings and the numbers added), best value first; then Own a trait and
-   * the Simulate line into the page. */
-  function planCards(c, snap, ours) {
+  /** Reach 400%: each piece's own cheapest plan (my holdings and the numbers added), best value first. */
+  function planCard(c, snap, rows) {
     // Plans that need us; one made only of listings already closing (`auto`) is no choice: the piece gets there anyway.
-    const U = globalThis.NakaExploreUI, rows = planCache.plans, reach = rows.filter((r) => r.state === 'reachable' && !r.auto), auto = rows.filter((r) => r.state === 'reachable' && r.auto);
+    const U = globalThis.NakaExploreUI, reach = rows.filter((r) => r.state === 'reachable' && !r.auto), auto = rows.filter((r) => r.state === 'reachable' && r.auto);
     const plan = raiseCard(c.raisePlanTitle, rows.length ? c.raiseAllPlans(rows.length) : null, 'planner-plan');
     if (!rows.length) plan.append(el('p', 'raise-note', c.raisePlanDone));
     else if (!reach.length) plan.append(el('p', 'raise-note', auto.length ? c.raisePlanAuto(auto.length) : c.raisePlanNone));
@@ -614,8 +688,12 @@
       const sub = raiseSub(`#${r.number}`, [`${r.before.lo.weight}% → ${R.RULES.capPct}%`, 'max'], r.side === 'mates' ? c.raiseMate : null, r.value === null ? null : c.raisePer(U.shn({ lo: r.value, hi: r.value })));
       const b = raiseRow(snap, 'raise-plan', 'button', r.id, el('strong', '', c.raisePlanCost(I.btc(r.plan.cost), r.plan.buys)), sub, U.shn(r.total, true), c.raiseWeek, trend(r.total)); b.type = 'button'; b.title = c.raisePlanHint(r.number); b.addEventListener('click', () => openPage(`plan-${r.number}`)); plan.append(b);
     }
+    return plan;
+  }
+  /** The Simulate line into the page. */
+  function simLink(c) {
     const sim = el('button', 'raise-link'); sim.type = 'button'; sim.append(el('strong', '', c.raiseSimTitle), el('span', '', c.raiseSimLine)); sim.addEventListener('click', () => openPage('planner-sim'));
-    return [plan, lockCard(c, snap, ours), sim];
+    return sim;
   }
   /** Own a trait: the traits buying listings makes ours, best value first, then the traits all ours where keeping one of
    * ours listed at the +100% line pays (keepListed), then the ones a private deal is still needed for, the fewest pieces
@@ -740,6 +818,8 @@
     const T = I.pick(state.lang);
     renderStatic(T);
     renderLive(T);
+    // The sigil's eyes scan while a newer block is on its way.
+    $('sigil').toggleAttribute('data-busy', state.updating !== undefined);
     const snap = renderSnapshot(T);
     const querySnap=state.lookupHistorical&&state.lookupSnapshot?state.lookupSnapshot:snap;
     renderLookup(T,querySnap);
@@ -765,14 +845,14 @@
 
   Promise.all([
     chrome.storage.local.get([K.live, K.closing, K.liveStatus, I.STORAGE_KEY, EXP.KEY, HOLD.KEY, HOLD.TEAM,A.KEY,A.STATUS,A.OBSERVED,A.WEEKS,HOLD.LEFT,HOLD.LEFT_SEEN,HOLD.EVENTS,HOLD.META,HOLD.ABSENT,NakaLedger.KEY]),
-    chrome.storage.session.get(SRC.SESSION_VISIBLE),
+    chrome.storage.session.get([SRC.SESSION_VISIBLE, SRC.SESSION_UPDATING]),
   ]).then(([got, ses]) => {
     rewardWeek=got[A.KEY];rewardStatus=got[A.STATUS];officialReadings=got[A.OBSERVED];rewardWeeks=got[A.WEEKS];leftPieces=got[HOLD.LEFT];leftSeen=got[HOLD.LEFT_SEEN];holdingEvents=got[HOLD.EVENTS];holdingsMeta=got[HOLD.META];walletAbsent=got[HOLD.ABSENT];state.ledger=got[NakaLedger.KEY];comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);team=HOLD.mates(got[HOLD.TEAM]);
     state.lang = I.resolveLang(got[I.STORAGE_KEY]);
     state.live = got[K.live];
     state.closing = got[K.closing];
     state.liveStatus = got[K.liveStatus];
-    state.visibleAt = ses[SRC.SESSION_VISIBLE];
+    state.visibleAt = ses[SRC.SESSION_VISIBLE]; state.updating = ses[SRC.SESSION_UPDATING];
     chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok){state.rewardClock=c;render();}}).catch(()=>{});
     render();
     setInterval(render, 15000); // 刷新「几分钟前」与暂停状态
@@ -780,6 +860,11 @@
     // rejected message means no worker took it: neither runs this code.
     chrome.runtime.sendMessage({ type: 'shn-build' }).then((answer) => SRC.sameBuild(answer), () => false).then((same) => { state.workerCurrent = same; if (!same) state.sheet = null; render(); });
   });
+  // Built once: the header sigil's eyes switch on as the popup opens (purchase.css, .naka-alive), and the "updating" pixels
+  // after the block's age and after the Raise weight basis line keep their rhythm through every render.
+  $('sigil').replaceChildren(PIXEL.sigil('pixel-sigil', { turn: true }));
+  const blockBusy = Object.assign(PIXEL.busy('bh-busy', ''), { hidden: true }), raiseBusy = Object.assign(PIXEL.busy('raise-basis-busy'), { hidden: true });
+  $('blockAge').after(blockBusy); $('raiseBasis').append(raiseBusy);
   // Reload asks the new worker to open the popup again (Chrome closes it on reload), so the update ends on the usual view.
   $('updateSigil').replaceChildren(PIXEL.sigil('pixel-sigil'));
   $('updateReload').addEventListener('click', () => { $('updateReload').disabled = true; chrome.storage.local.set({ [SRC.REOPEN]: { page: 'popup', at: Date.now() } }).then(() => chrome.runtime.reload()); });
@@ -787,6 +872,7 @@
     if (area === 'session') {
       if(has(changes,'nakaHistoryProgress')&&state.historyPending){state.status=changes.nakaHistoryProgress.newValue;renderStatus(I.pick(state.lang));}
       if (has(changes, SRC.SESSION_VISIBLE)) { state.visibleAt = changes[SRC.SESSION_VISIBLE].newValue; render(); }
+      if (has(changes, SRC.SESSION_UPDATING)) { state.updating = changes[SRC.SESSION_UPDATING].newValue; render(); }
       return;
     }
     if (area !== 'local') return;
@@ -806,6 +892,11 @@
   $('compare').addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'compare'}));
   $('holdingsManage').addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'holdings'}));
   $('holdingsMore').addEventListener('click',()=>{state.holdingsOpen=!state.holdingsOpen;render();});
+  // A choice saved here reaches the extension page too (its storage event); storage refused keeps it for this popup.
+  // A press picks that order in its usual direction, or reverses the lit one; the arrow keys move between the buttons.
+  $('holdingsSort').addEventListener('click',ev=>{const b=ev.target.closest('.hc-sort-btn');if(!b)return;const by=b.dataset.sort,now=holdingsSort(),dir=now.by===by?(now.dir==='asc'?'desc':'asc'):HOLD.SORTS[by];try{localStorage.setItem(HOLD.SORT_KEY,JSON.stringify({by,dir}));}catch{}holdingsSortNow=true;holdingsKey='';render();});
+  $('holdingsSort').addEventListener('keydown',ev=>{if(!['ArrowLeft','ArrowRight'].includes(ev.key))return;const list=[...$('holdingsSort').querySelectorAll('.hc-sort-btn')],i=list.indexOf(document.activeElement);if(i<0)return;ev.preventDefault();list[(i+(ev.key==='ArrowRight'?1:list.length-1))%list.length].focus();});
+  addEventListener('storage',ev=>{if(ev.key!==HOLD.SORT_KEY)return;holdingsSortNow=true;holdingsKey='';render();});
   $('tabbar').addEventListener('click',(e)=>{const b=e.target instanceof Element?e.target.closest('button[data-view]'):null;if(b)setView(b.dataset.view);});
   $('raiseFull').addEventListener('click',()=>chrome.runtime.sendMessage({type:'shn-open-compare',section:'planner'}));
   $('searchOpen').addEventListener('click',showSearch);
@@ -849,7 +940,10 @@
     const valid=[state.live,BUNDLED].filter(s=>SRC.compatibleSnapshot(s,BUNDLED));
     const tip=state.rewardClock?.height??Math.max(...valid.map(s=>s.snapshot.indexerHeight)),clock=state.rewardClock??valid.filter(s=>I.blockTimestamp(s.snapshot)!==null).sort((a,b)=>b.snapshot.height-a.snapshot.height)[0]?.snapshot;
     $('boundaryClock').textContent=T.boundaryReference(I.int(tip));
-    const key=`${state.lang}|${tip}|${clock?.height}|${I.blockTimestamp(clock??{})}|${Math.floor(Date.now()/60000)}`;if(key===boundaryKey)return;boundaryKey=key;
+    const key=`${state.lang}|${tip}|${clock?.height}|${I.blockTimestamp(clock??{})}|${Math.floor(Date.now()/60000)}`;if(key===boundaryKey)return;
+    // Rebuilding the options closes a list the viewer has open: it waits until they leave the field (the next render).
+    if(document.activeElement===$('rewardBoundary'))return;
+    boundaryKey=key;
     const select=$('rewardBoundary'),value=select.value,placeholder=el('option','',T.boundaryChoose);placeholder.value='';
     const past=el('optgroup',''),future=el('optgroup','');past.label=T.boundaryPast;future.label=T.boundaryFuture;
     const points=R.rewardBoundaries();
@@ -864,6 +958,8 @@
    * here; focus goes to the number while it is not a valid one, otherwise to the block height (the current block, so no
    * reward week is chosen). */
   function openHistoryDialog(){state.localError=null;state.status=undefined;state.pendingLookup=null;const selected=SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap,raw=$('lookupNumber').value,n=LOOKUP.parseNumber(raw);$('syncHeight').value=String(selected.snapshot.height);$('rewardBoundary').value='';$('historyNumber').value=n===null?raw.trim():String(n);$('historyNumber').removeAttribute('aria-invalid');boundaryKey='';$('fixedDialog').showModal();render();const first=n===null?$('historyNumber'):$('syncHeight');first.focus();first.select();chrome.runtime.sendMessage({type:'shn-reward-clock'}).then(c=>{if(c?.ok&&Number.isSafeInteger(c.height)&&c.height>=0){state.rewardClock=c;boundaryKey='';if($('fixedDialog').open)renderBoundaries(I.pick(state.lang));}}).catch(()=>{});}
+  // A sale's block on a lookup card opens the same block lookup, at that block.
+  globalThis.NakaPurchase.setLookup((number,height)=>NakaLedgerUI.inspect(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap,state.lang,number,height));
   $('historyLookup').addEventListener('click',()=>NakaLedgerUI.inspect(SRC.choose({live:state.live,closing:state.closing},BUNDLED).snap,state.lang,LOOKUP.parseNumber($('lookupNumber').value)));
   $('rewardBoundary').addEventListener('change',()=>{if($('rewardBoundary').value)$('syncHeight').value=$('rewardBoundary').value;});
   $('fixedCancel').addEventListener('click',()=>{if(!state.historyPending){state.pendingLookup=null;$('fixedDialog').close();$('historyLookup').focus();}});

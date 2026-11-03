@@ -74,3 +74,14 @@ test('Short local times use calendar days across year boundaries without fixed t
  assert.equal(I.localTimeShort(null,'zh',now),'—');assert.equal(I.localTimeShort(Infinity,'en',now),'—');
  assert.doesNotMatch(I.localTimeShort(now,'en',now),/UTC|GMT/);
 });
+
+test('起算周对着当前周说：下一周写“下周起”，更晚的周带上现在第几周，启动前只写周数', () => {
+  assert.equal(ZH.rateFrom(4, 3), '下周起（第 4 周）');
+  assert.equal(ZH.rateFrom(5, 3), '第 5 周起（现在第 3 周）');
+  assert.equal(ZH.rateFrom(1, null), '第 1 周起');
+  assert.equal(EN.rateFrom(4, 3), 'from next week (week 4)');
+  assert.equal(EN.rateFrom(5, 3), 'from week 5 (now week 3)');
+  assert.equal(EN.rateFrom(1, null), 'from week 1');
+  assert.equal(ZH.activityAfter, '现在买入后');
+  assert.equal(EN.activityAfter, 'If bought now');
+});

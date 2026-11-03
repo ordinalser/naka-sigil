@@ -11,7 +11,6 @@
   function entry(snap,model,id){if(!Object.hasOwn(snap.items,id))return null;const before=R.evaluateSnapshot(snap,id),sale=model.get(id);return {id,number:before.number.value,listing:P.listingStatus(snap,id),closing:(snap.closing??[]).find(([x])=>x===id)?.[1]??null,before,sale,result:sale.state==='ready'?sale.result:sale.state==='no-floor'?null:before};}
   function matches(e,minimum){return minimum===0||Number.isFinite(minimum)&&minimum>0&&Boolean(e&&e.sale.state==='ready'&&e.result.lo.weight>=minimum);}
   function candidates(snap,model,minimum=0){return (snap.offers??[]).map(([id])=>entry(snap,model,id)).filter(e=>e&&matches(e,minimum)).sort((a,b)=>a.sale.price-b.sale.price||a.number-b.number);}
-  function examples(snap,model){const all=candidates(snap,model).filter(e=>e.sale.state==='ready'&&e.result.exact&&e.before.exact);all.sort((a,b)=>(b.result.lo.weight-b.before.lo.weight)-(a.result.lo.weight-a.before.lo.weight)||a.number-b.number);const out=[];for(const e of all){if(!out.some(x=>x.result.lo.weight===e.result.lo.weight)){out.push(e);if(out.length===MAX)break;}}return out.map(e=>e.id);}
   // Lowest ask for each reachable after-sale weight: walking asks upward, keep a listing only when its
   // conservative (lower-bound) after-sale weight beats every cheaper listing. Equal asks keep the lower number.
   function ladder(snap,model){
@@ -19,5 +18,5 @@
     for(const e of candidates(snap,model)){if(e.sale.state==='ready'&&e.result.lo.weight>best){best=e.result.lo.weight;out.push(e);}}
     return out;
   }
-  return {KEY,MAX,normalize,compareState,toggle,entry,matches,candidates,examples,ladder};
+  return {KEY,MAX,normalize,compareState,toggle,entry,matches,candidates,ladder};
 });

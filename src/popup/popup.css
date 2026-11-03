@@ -12,6 +12,7 @@
 .bh-meta { display:flex; align-items:center; gap:8px; margin:0; color:var(--muted); font-size:10px; }
 .bh-meta .live-state { flex:none; font-size:10px; }
 .bh-age { flex:none; font-variant-numeric:tabular-nums; }
+.bh-busy { flex:none; }
 .bh-meta .source-chip { flex:none; }
 .bh-week-now { display:flex; flex-direction:column; align-items:flex-end; gap:3px; padding-top:2px; white-space:nowrap; }
 .bh-week-now b { color:#ffd99c; font-size:13px; font-weight:750; }
@@ -37,6 +38,9 @@
 .nl-when-row dd b { color:#efe6d6; font-size:12px; font-weight:700; }
 .nl-when-row dd span { min-width:76px; color:#8f877c; font-size:10px; text-align:right; }
 .block-network .nl-section-name { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.block-network .nl-title-row { display:flex; align-items:center; gap:7px; }
+/* As on Raise weight's cards: the pixels appear only if the week takes a noticeable moment to read. */
+.block-network .nl-busy { visibility:hidden; animation:busy-in 0s .25s forwards; }
 .block-network .nl-select { min-height:24px; padding:3px 6px; font-size:10px; }
 .block-network .nl-period { margin:0; color:#8f877c; font-size:10px; font-variant-numeric:tabular-nums; min-height:14px; }
 .nl-out { display:flex; flex-direction:column; gap:10px; }
@@ -298,8 +302,10 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .status-strip { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:30px; padding:5px 10px; background:#161514; border:1px solid var(--card-line); color:var(--muted); font:inherit; font-size:10px; text-align:left; cursor:pointer; }
 .status-strip:hover { border-color:#5a4a33; color:var(--text); }
 .strip-lead { display:flex; align-items:center; gap:7px; min-width:0; white-space:nowrap; }
-.strip-lead b { color:var(--text); font-weight:700; }
-.strip-age { color:#8f877c; overflow:hidden; text-overflow:ellipsis; }
+/* When the line is short of room the data's label gives way first: the age and the "updating" pixels after it stay whole. */
+.strip-lead b { min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--text); font-weight:700; }
+.strip-age { flex:none; color:#8f877c; }
+.strip-busy { flex:none; }
 .strip-dot { flex:none; width:6px; height:6px; background:#8f877c; }
 .strip-dot--ok { background:#96d6a5; } .strip-dot--error { background:var(--red); }
 .strip-next { flex:none; color:#8f877c; white-space:nowrap; }
@@ -348,6 +354,15 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .list-head h3 { margin:0; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
 .list-add { padding:3px 9px; background:#28221a; border:1px solid #79603d; color:#ffbd62; font-size:10px; font-weight:700; cursor:pointer; }
 .list-add:hover,.list-add[aria-expanded=true] { background:#33291c; border-color:#ffb347; }
+/* The sort: one row as wide as the tiles, a label and a button per order; the lit one carries its direction. */
+.hc-sort { display:flex; align-items:stretch; margin:6px 0 8px; background:#141312; border:1px solid var(--card-line); clip-path:var(--notch); font-size:10px; }
+.hc-sort[hidden] { display:none; }
+.hc-sort-label { display:flex; align-items:center; padding:0 8px; color:var(--muted); }
+.hc-sort-btn { flex:1 1 auto; display:inline-flex; align-items:center; justify-content:center; gap:3px; min-width:0; min-height:24px; padding:0 6px; background:transparent; border:0; border-left:1px solid var(--card-line); color:#b9b2a7; font:inherit; white-space:nowrap; cursor:pointer; }
+.hc-sort-btn:hover { color:var(--text); background:#1d1b19; }
+.hc-sort-btn[aria-pressed="true"] { color:#ffd99c; background:#2a2519; box-shadow:inset 0 -2px 0 var(--gold); }
+.hc-sort-btn:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.hc-sort-dir:empty { display:none; }
 .hc-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .hc-tile { display:flex; flex-direction:column; min-width:0; padding:0; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
 .hc-tile:hover { border-color:#8a6d3d; }
@@ -474,7 +489,7 @@ button.lookup-mode{background:transparent;font-family:inherit;line-height:inheri
 .about-links { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin-top:12px; color:var(--muted); font-size:10px; }
 .about-links a { color:var(--accent); font-size:10px; }
 /* The last line: the community group on Telegram, a quiet link just under the folds. */
-.about-tg { margin-top:-6px; padding:0 2px; font-size:10px; }
+.about-tg { display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:-6px; padding:0 2px; font-size:10px; }
 .about-tg a { color:var(--accent); }
 
 /* Bottom tab bar: four jobs, one font, pixel icons. */
@@ -547,11 +562,24 @@ html[data-naka-surface=popup]:not([data-naka-skin=mining]) .hc-caption { padding
 .raise-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .raise-head h2 { font-size:15px; font-weight:750; }
 .raise-basis { margin-top:-4px; color:var(--muted); font-size:10px; }
+.raise-basis-busy { margin-left:6px; }
 /* Which added numbers the answers count as ours: one line, so the cards stay on the first screen however many there are. */
 .raise-scope { margin-top:-4px; color:var(--muted); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .raise-body { display:flex; flex-direction:column; gap:8px; }
-/* Cards being recomputed stay readable; a dim appears only if the work takes a noticeable moment. */
-.raise-body[aria-busy=true] > * { opacity:.55; transition:opacity .2s .25s; }
+/* A card waiting for its answer stays readable: its rows dim, and the pixels after its title appear, only if the work takes
+   a noticeable moment. Placeholder rows are blank shapes where the answer goes, breathing. */
+.raise-card[aria-busy=true] > :not(.raise-card-head,.raise-row--wait) { opacity:.55; transition:opacity .2s .25s; }
+.raise-card-head .raise-busy { margin-right:auto; font-size:10px; font-weight:400; visibility:hidden; animation:busy-in 0s .25s forwards; }
+@keyframes busy-in { to { visibility:visible; } }
+.raise-row--wait { cursor:default; }
+.raise-row--wait:hover { border-color:var(--card-line); }
+.raise-row--wait .raise-art,.raise-row--wait .raise-info::before,.raise-row--wait .raise-info::after,.raise-row--wait .raise-gain::before { animation:raise-wait 1.4s ease-in-out infinite; }
+.raise-row--wait .raise-info::before,.raise-row--wait .raise-info::after,.raise-row--wait .raise-gain::before { content:''; display:block; height:9px; background:#38332d; }
+.raise-row--wait .raise-info::before { width:64%; }
+.raise-row--wait .raise-info::after { width:86%; height:6px; }
+.raise-row--wait .raise-gain::before { width:46px; height:13px; }
+@keyframes raise-wait { 50% { opacity:.45; } }
+@media (prefers-reduced-motion:reduce) { .raise-row--wait .raise-art,.raise-row--wait .raise-info::before,.raise-row--wait .raise-info::after,.raise-row--wait .raise-gain::before { animation:none; } }
 .raise-card { display:flex; flex-direction:column; gap:5px; padding:7px 10px 8px; background:var(--card); border:1px solid var(--card-line); }
 .raise-card--buy { min-height:0; }
 .raise-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:22px; }
@@ -559,7 +587,6 @@ html[data-naka-surface=popup]:not([data-naka-skin=mining]) .hc-caption { padding
 .raise-card-head h3 { margin:0; font-size:13px; font-weight:750; line-height:1.2; }
 .raise-card-head .list-link { padding:0; }
 .raise-row { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; min-height:44px; padding:4px 8px 4px 4px; background:#141312; border:1px solid var(--card-line); color:var(--text); font:inherit; text-align:left; text-decoration:none; cursor:pointer; }
-.raise-row--wait { color:#8f877c; }
 .raise-row:hover { border-color:#8a6d3d; }
 .raise-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 .raise-art { display:block; width:40px; height:40px; background:#0c0b0b; }

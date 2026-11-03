@@ -5,7 +5,7 @@
  const demo=document.body.dataset.mode==='demo';
  const version=demo?document.body.dataset.version:chrome.runtime.getManifest().version;
  const $=id=>document.getElementById(id),n=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
- let snap=B,model=P.create(B),lang='en',ids=demo?E.examples(B,model).slice(0,3):[],stored={},minimum=0,showAll=false,message='';
+ let snap=B,model=P.create(B),lang='en',ids=[],stored={},minimum=0,showAll=false,message='';
  let holdings=[],fresh=new Set();
  const A=globalThis.NakaRewards;
  const C=()=>U.pick(lang),T=()=>I.pick(lang);
@@ -78,6 +78,11 @@
  let source='bundled';
  // Whether the worker runs this code (S.BUILD): null until it answers, and always in the demo, which has no worker.
  let workerCurrent=null;
+ // The block the worker is reading now (S.SESSION_UPDATING): undefined while it reads none, and always in the demo.
+ let updating;
+ /** "Updating" pixels after the block's age, the block named in their title, and the header sigil's eyes scanning, while
+  * the worker reads a newer block. Painted on their own, so the mark coming and going never redraws the page. */
+ function paintUpdating(){const c=C(),busy=updatingMark;busy.hidden=updating===undefined;busy.title=updating===undefined?'':c.updatingTip(I.int(updating.height));busy.querySelector('.naka-busy__text').textContent=c.updating;$('brand').toggleAttribute('data-busy',updating!==undefined);}
  function adopt(){const pick=S.choose({live:stored[S.KEYS.live],closing:stored[S.KEYS.closing]},B);source=pick.source;if(snap!==pick.snap){snap=pick.snap;model=P.create(snap);}lang=I.resolveLang(stored[I.STORAGE_KEY]);ids=E.normalize(stored[E.KEY]);holdings=H.normalize(stored[H.KEY]);}
  function persist(){try{localStorage.setItem('nakaWeb',JSON.stringify({portfolio:holdings,compare:ids,lang}));}catch{message=C().addError;}}
  /** Add or remove holdings. In the extension the worker queue writes them together with their anchors (shn-holdings), so a
@@ -133,27 +138,40 @@
   const t=T(),c=C(),r=R.evaluateSnapshot(snap,id),listed=P.listingStatus(snap,id)==='listed',head=n('div','shn-pop__head'),brand=n('span','shn-inspect-brand');
   brand.append(NakaPixel.sigil('shn-badge__icon'),n('span','shn-eyebrow',t.title));head.append(brand,n('span','shn-inspect-number',`#${r.number.value}`));
   const tag=P.numberBadge(r.number.value,t);if(tag)head.append(tag);
-  const compare=n('button','shn-compare-add');compare.type='button';U.paintCompare(compare,E.compareState(ids,id),c);compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
-  const own=n('button','shn-compare-add shn-holding-add',c.inHoldings);own.type='button';own.title=c.holdingRemoveHint;own.setAttribute('aria-pressed','true');own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],true);});
+  const compare=n('button','shn-compare-add');compare.type='button';compare.dataset.cardCompare=id;compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
+  const own=n('button','shn-compare-add shn-holding-add');own.type='button';own.dataset.cardHolding=id;own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],holdings.includes(id));});
+  paintCardButtons([compare,own]);
   head.append(compare,own);const nodes=[head];
   const closing=(snap.closing??[]).find(([x])=>x===id)?.[1]??null;
   const panel=listed?P.render(cancelModel(),id,t,I,{explain:A.explainFor(snap,id,lang,'cancel'),closing,snap,id}):null;
   // What reclaiming does to my holdings — not for a listing someone is already buying: it sells at the next block.
   if(panel){if(closing!=='sale'){const x=H.impact(snap,holdings,id,'cancel');if(x.state==='ready')panel.append(U.holdingsLine(x,c));}nodes.push(panel);}
-  else nodes.push(P.renderCurrent(r,snap.snapshot,t,I,{explain:A.explainFor(snap,id,lang),listing:P.listingStatus(snap,id),closing,credits:P.relayCredits(snap,id),snap,id}));
-  const row=lastRewards?.rows.find(x=>x.id===id);if(!listed&&Number.isFinite(row?.avg))nodes.push(n('p','ws-wcard-avg',c.avgWeight(row.avg.toFixed(1),R.formatWeight(r))));
+  // Its own status, as the holdings hero read it (wallet readings and recorded intervals), not the public records alone.
+  const row=lastRewards?.rows.find(x=>x.id===id)??null;
+  if(!panel)nodes.push(P.renderCurrent(r,snap.snapshot,t,I,{explain:A.explainFor(snap,id,lang),listing:P.listingStatus(snap,id),closing,credits:P.relayCredits(snap,id),snap,id,status:row}));
+  if(!listed&&Number.isFinite(row?.avg))nodes.push(n('p','ws-wcard-avg',c.avgWeight(row.avg.toFixed(1),R.formatWeight(r))));
   return {className:tierClass(r),nodes};
  }
  const weightPopover=NakaPopover.create({selector:'.ws-holding:not(.ws-listing) .shn-badge',id:'ws-weight-tooltip',build:badge=>weightPop(badge.dataset.shnId),
-  target:badge=>badge.querySelector('.shn-buy-preview,.shn-badge__weight'),raise:()=>0,identity:badge=>`${badge.dataset.shnId}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing??[])}|${lang}`});
+  target:badge=>badge.querySelector('.shn-buy-preview,.shn-badge__weight'),raise:()=>0,identity:badge=>{const row=lastRewards?.rows.find(x=>x.id===badge.dataset.shnId);return `${badge.dataset.shnId}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing??[])}|${lang}|${row?.status}|${row?.startsWeek}`;}});
+ /** ＋/✓ Compare and ＋/✓ My holdings on a details card, from the current selection and holdings. A clicked card stays
+  * open (it is not rebuilt), so every render repaints its buttons: a press shows its result and a second press undoes it. */
+ function paintCardButtons(list=document.querySelectorAll('.shn-pop [data-card-compare], .shn-pop [data-card-holding]')){
+  const c=C();
+  for(const b of list){
+   if(b.dataset.cardCompare!==undefined)U.paintCompare(b,E.compareState(ids,b.dataset.cardCompare),c);
+   else{const held=holdings.includes(b.dataset.cardHolding),text=held?c.inHoldings:c.addHolding;if(b.textContent!==text)b.textContent=text;b.title=held?c.holdingRemoveHint:c.holdingHint;b.setAttribute('aria-pressed',String(held));}
+  }
+ }
  function listingPop(badge){
   const id=badge.dataset.shnId,priors=(badge.dataset.shnPriors||'').split(',').filter(Boolean),c=C(),t=T();
   if(holdings.includes(id))return weightPop(id);
   const impactModel=sequenceModel(priors),head=n('div','shn-pop__head'),brand=n('span','shn-inspect-brand');brand.append(NakaPixel.sigil('shn-badge__icon'),n('span','shn-eyebrow',t.title));head.append(brand,n('span','shn-inspect-number',`#${snap.items[id][0]}`));
   const tag=P.numberBadge(snap.items[id][0],t);if(tag)head.append(tag);
   // Compare and My holdings as on every other details card; the buy sequence only here, where the listings are.
-  const compare=n('button','shn-compare-add');compare.type='button';U.paintCompare(compare,E.compareState(ids,id),c);compare.addEventListener('click',async ev=>{ev.stopPropagation();await change(id);U.paintCompare(compare,E.compareState(ids,id),c);});
-  const own=n('button','shn-compare-add shn-holding-add');own.type='button';const paintOwn=()=>{const held=holdings.includes(id);own.textContent=held?c.inHoldings:c.addHolding;own.title=held?c.holdingRemoveHint:c.holdingHint;own.setAttribute('aria-pressed',String(held));};paintOwn();own.addEventListener('click',async ev=>{ev.stopPropagation();await saveHoldings([id],holdings.includes(id));paintOwn();});
+  const compare=n('button','shn-compare-add');compare.type='button';compare.dataset.cardCompare=id;compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
+  const own=n('button','shn-compare-add shn-holding-add');own.type='button';own.dataset.cardHolding=id;own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],holdings.includes(id));});
+  paintCardButtons([compare,own]);
   const seq=n('button','shn-compare-add shn-seq-add');seq.type='button';const paintSeq=()=>{const at=basket.indexOf(id),zh=lang==='zh';seq.textContent=at>=0?(zh?`✓ 连买第 ${at+1} 单`:`✓ Buy ${at+1}`):(zh?'＋ 连买':'＋ Sequence');seq.setAttribute('aria-pressed',String(at>=0));seq.disabled=at<0&&basket.length>=E.MAX;seq.title=zh?'按加入的先后假设一起买，后买的按前面成交后的权重计算；最多 4 单。只是本机计算。':'Assume buying several in the order added; each later one is valued after the earlier sales, at most 4. A local calculation.';};paintSeq();seq.addEventListener('click',ev=>{ev.stopPropagation();toggleSequence(id);paintSeq();});
   // A listing already bought (confirming) is nobody's to buy: no buy sequence, no gain for my holdings; its card says so.
   const closing=(snap.closing??[]).find(([x])=>x===id)?.[1]??null;
@@ -178,7 +196,31 @@
    copyAllSaid={until:Date.now()+1600,ok,count:numbers.length};paintCopyAll();setTimeout(paintCopyAll,1600);});
   return b;
  }
+ // The order of My holdings (NakaPortfolio sortChoice/sortFacts/sortIds), one choice shared with the popup through this
+ // extension's localStorage: chosen here or there, both pages show the same order. A new block re-sorts only while the
+ // viewer is away from the holdings and their card; while they are on them the order shown holds (new pieces join at the
+ // end) and the new order follows once they leave. A sort they choose applies at once.
+ const SORTS=H.SORTS;
+ let holdingSort=readSort(),holdingOrder=null,sortNow=false,sortWait=null;
+ /** Storage refused (a private window) reads as no choice: the order added. */
+ function readSort(){let raw=null;try{raw=localStorage.getItem(H.SORT_KEY);}catch{raw=null;}return H.sortChoice(raw);}
+ addEventListener('storage',ev=>{if(ev.key!==H.SORT_KEY)return;holdingSort=readSort();sortNow=true;render();});
+ const sortHeld=()=>portfolio.matches(':hover')||document.getElementById('ws-weight-tooltip')?.classList.contains('shn-pop--show')===true;
+ function sortLater(){if(sortWait)return;sortWait=setInterval(()=>{if(sortHeld())return;clearInterval(sortWait);sortWait=null;render();},400);}
+ function sortBar(c){
+  const bar=n('div','ws-hsort');bar.setAttribute('role','group');bar.setAttribute('aria-label',c.sortLabel);bar.append(n('span','ws-hsort-label',c.sortLabel));
+  for(const by of Object.keys(SORTS)){
+   const on=holdingSort.by===by,dir=on?holdingSort.dir:SORTS[by],b=n('button','ws-hsort-btn');b.type='button';b.dataset.sort=by;b.setAttribute('aria-pressed',String(on));
+   b.append(n('span','',c.sortBy[by]));if(on)b.append(n('span','ws-hsort-dir',dir==='asc'?'↑':'↓'));b.title=c.sortHint(by,dir)+(on?c.sortReverse:'');
+   // Storage refused (a private window): the choice lasts while this page is open.
+   b.addEventListener('click',()=>{holdingSort=on?{by,dir:dir==='asc'?'desc':'asc'}:{by,dir};try{localStorage.setItem(H.SORT_KEY,JSON.stringify(holdingSort));}catch{}sortNow=true;render();});
+   bar.append(b);
+  }
+  bar.addEventListener('keydown',ev=>{if(!['ArrowLeft','ArrowRight'].includes(ev.key))return;const list=[...bar.querySelectorAll('.ws-hsort-btn')],i=list.indexOf(document.activeElement);if(i<0)return;ev.preventDefault();list[(i+(ev.key==='ArrowRight'?1:list.length-1))%list.length].focus();});
+  return bar;
+ }
  function portfolioUI(){
+  const focusSort=document.activeElement?.closest?.('.ws-hsort-btn')?.dataset.sort??null;
   const c=C(),own=H.current(snap,holdings),a=own.allocation;portfolio.replaceChildren();
   const head=n('div','ws-portfolio-head'),title=n('div','ws-portfolio-title'),h2=n('h2','',c.holdings);h2.id='holdingsTitle';
   title.append(h2,n('span','ws-portfolio-count',c.pieces(own.ids.length)));head.append(title);
@@ -190,18 +232,24 @@
   const grid=n('div','ws-holding-grid'),add=n('button','ws-holding ws-holding-add');add.type='button';add.append(n('span','ws-add-mark','+'),n('span','',c.addHoldingTitle));
   add.addEventListener('click',()=>openAsk(add,c.addHoldingTitle,async raw=>{const r=U.resolveNumbers(snap,raw,holdings,c,c.skipHeld);if(r.empty)return {added:0,message:c.invalid};if(r.ids.length){if(!await saveHoldings(r.ids))return {added:0,message:c.addError};fresh=new Set(r.ids);}return {added:r.ids.length,message:r.skipped.length?c.addedSkipped(r.ids.length,r.skipped):null};}));
   grid.append(add);const confirm=[];
-  for(const id of own.ids){
-   const listed=P.listingStatus(snap,id)==='listed',number=snap.items[id][0],tile=n('article','ws-holding'),r=R.evaluateSnapshot(snap,id);tile.dataset.id=id;
+  // What each tile shows, read once: the sort and the tile use the same figures.
+  const facts=new Map(own.ids.map(id=>{const listed=P.listingStatus(snap,id)==='listed',r=R.evaluateSnapshot(snap,id),view=A.tile(rewards.data,id,lang),status=view.row.status,rate=listed?0:R.weeklyAllocation(R.units(r),a.all),idle=status==='idle',amount=listed?0:idle?null:view.amount;
+   return [id,{listed,number:snap.items[id][0],r,view,status,rate,idle,amount}];}));
+  const sorted=H.sortIds(own.ids,H.sortFacts(snap,own.ids,new Map(own.ids.map(id=>[id,facts.get(id).view.row])),cancelModel(),a.all),holdingSort),kept=holdingOrder?holdingOrder.filter(id=>facts.has(id)):[];
+  const order=!sortNow&&holdingOrder&&sortHeld()?[...kept,...sorted.filter(id=>!kept.includes(id))]:sorted;
+  if(order.join()!==sorted.join())sortLater();sortNow=false;holdingOrder=order;
+  for(const id of order){
+   const {listed,number,r,view,status,rate,idle,amount}=facts.get(id),tile=n('article','ws-holding');tile.dataset.id=id;
    if(listed)tile.classList.add('is-listed');if(fresh.has(id))tile.classList.add('is-new');
    const media=n('div','ws-holding-art');media.append(art(id,'holding'),holdingBadge(id));if(listed)media.append(n('span','ws-holding-tag',c.listedTag));
    const remove=n('button','ws-holding-remove','×');remove.type='button';remove.title=c.removeHolding(number);remove.setAttribute('aria-label',c.removeHolding(number));remove.addEventListener('click',()=>saveHoldings([id],true));media.append(remove);
-   const view=A.tile(rewards.data,id,lang),status=view.row.status,rate=listed?0:R.weeklyAllocation(R.units(r),a.all),idle=status==='idle';tile.dataset.status=status;
+   tile.dataset.status=status;
    // The badge on the artwork opens the market's inspection bubble; the rest of the tile opens the simulator.
    const info=n('div','ws-holding-info'),top=n('div','ws-holding-top');top.append(n('strong','',`#${number}`));info.append(top);
    // Two fixed lines under the number: this week's SHNAKAS (the weekly rate before rewards start) and the status with the
    // weekly rate. A figure still loading keeps its line and is hidden, so tiles never change height. A piece that left,
    // was paused or has no later week shows no weekly rate: it earns none.
-   const now=n('p','ws-holding-weekly'),amount=listed?0:idle?null:view.amount,value=n('b','',listed?c.earnListed:idle?U.shn(rate):amount===null?'0.0000':A.format(amount));
+   const now=n('p','ws-holding-weekly'),value=n('b','',listed?c.earnListed:idle?U.shn(rate):status==='waiting'&&view.row.startsWeek?view.label:amount===null?'0.0000':A.format(amount));
    if(!idle&&amount===null)value.classList.add('is-blank');now.append(value,n('span','',idle?c.weekUnit:c.thisWeekUnit));if(listed||['waiting','gone','paused','ended'].includes(status))now.classList.add('is-zero');
    const forecast=listed||idle?null:NakaMining.forecast(snap,id,{action:'hold',status:view.row}),rest=forecast?.state==='ready'?U.shn(forecast.remaining):'—';
    const line=listed?c.listedShort:idle?c.idleNote:['gone','paused','ended','unknown'].includes(status)?view.label:`${lang==='zh'?'每周':'Per week'} ${U.shn(rate)}\n${lang==='zh'?'剩余':'Remaining'} ${rest}`;
@@ -217,7 +265,9 @@
    tile.addEventListener('keydown',ev=>{if(ev.target!==tile||!['Enter',' '].includes(ev.key))return;ev.preventDefault();open();});
    grid.append(tile);
   }
+  if(own.ids.length>1)portfolio.append(sortBar(c));
   portfolio.append(grid);
+  if(focusSort)portfolio.querySelector(`.ws-hsort-btn[data-sort="${focusSort}"]`)?.focus({preventScroll:true});
   if(!own.ids.length)portfolio.append(n('p','ws-muted ws-holdings-how',`${c.holdingsEmpty} ${demo?c.holdingsHowDemo:c.holdingsHow}`));
   else portfolio.append(n('p','ws-muted ws-holdings-how',lang==='zh'?'悬停图片上的权重看明细。点卡片其它位置，模拟把这一枚挂出去。金库或钱包页可以一次添加整页。':'Hover the weight on a picture for its breakdown. Select the rest of the card to simulate listing it. Vault or Wallet can add the whole page.'));
   if(confirm.length)portfolio.append(confirmBox(c,confirm));
@@ -271,7 +321,10 @@
  // ---------------------------------------------------------------- Compare.
  function comparison(){
   const c=C(),t=T(),box=$('comparison');box.replaceChildren();const entries=ids.map(id=>E.entry(snap,model,id));
-  if(!ids.length){const empty=n('div','ws-blank');empty.append(n('strong','',c.empty),n('p','',c.emptyHint));const example=n('button','',c.load);example.addEventListener('click',async()=>{for(const id of E.examples(snap,model))await change(id);});empty.append(example);box.append(empty);return;}
+  if(!ids.length){const empty=n('div','ws-blank');empty.append(n('strong','',c.empty),n('p','',c.emptyHint));const example=n('button','',c.load);example.title=c.loadHint;
+   // The example is Best buy's first four: the listings that add most to my week per BTC (with no holdings, the pieces
+   // that earn most on their own per BTC).
+   example.addEventListener('click',async()=>{const best=planner.bestBuys().slice(0,E.MAX);if(!best.length){message=c.loadNone;render();return;}for(const id of best)await change(id);});empty.append(example);box.append(empty);return;}
   const table=n('table','ws-table');table.style.minWidth=`${Math.max(360,136+ids.length*235)}px`;table.setAttribute('aria-label',c.page);
   const head=n('thead'),tr=n('tr');tr.append(n('td','ws-label'));
   entries.forEach((e,index)=>{const th=n('th'),item=n('div','ws-item'),text=n('div');if(e)item.append(image(e.id,'compare'));text.append(n('strong','',e?`#${e.number}`:c.missing));if(e){const link=n('a','ws-item-link',c.colMarket);link.href=U.marketFind(snap,e.id);link.target='_blank';link.rel='noopener noreferrer';text.append(n('small','',c[e.listing]));if(e.closing!==null)text.append(closingTag(t,e.closing));text.append(link);const rank=P.numberBadge(e.number,t);if(rank)text.append(rank);}const remove=n('button','ws-remove','×');remove.title=c.remove;remove.setAttribute('aria-label',`${c.remove} ${e?'#'+e.number:''}`);remove.addEventListener('click',()=>change(ids[index]));item.append(text,remove);th.append(item);tr.append(th);});head.append(tr);table.append(head);const body=n('tbody');table.append(body);
@@ -279,12 +332,18 @@
   row(c.total,(td,e)=>{td.append(n('span','ws-caption',e.listing==='listed'?c.after:c.holding),total(e.result,true));if(e.sale.state==='no-floor')td.append(n('small','',c.noFloor));},'ws-total');
   row(c.ask,(td,e)=>{td.textContent=e.listing==='listed'?I.btc(e.sale.price):'—';td.title=c.askNote;},'ws-price');
   if(entries.some(e=>e&&P.relayCredits(snap,e.id)!==null))row(t.relayCredits,(td,e)=>{const credits=P.relayCredits(snap,e.id);td.textContent=credits===null?'—':String(credits);td.title=t.relayCreditsMeaning;},'ws-credits');
-  row(c.before,(td,e)=>td.append(e.listing==='listed'?total(e.before):n('span','','—')),'ws-before');
-  if(holdings.length){
-   // A listing already closing is nobody's to buy: no gain for my holdings.
-   row(c.forMe,(td,e)=>{if(e.closing!==null){td.textContent='—';return;}const x=H.impact(snap,holdings,e.id,'sale',model);if(x.state!=='ready'){td.textContent='—';return;}const d=x.allocation.delta;td.textContent=c.gainWeek(U.shn(d,true));td.dataset.change=trend(d);},'ws-gain');
-   row(c.weeklyAfterBuy,(td,e)=>{if(e.closing!==null){td.textContent='—';return;}const x=H.impact(snap,holdings,e.id,'sale',model);td.textContent=x.state==='ready'?`${U.shn(x.allocation.after.weekly)} SHNAKAS`:'—';},'ws-before');
-  }
+  // No before-sale formula row: a listed piece earns nothing while listed (the official endpoint reports its formula, not a
+  // reward), and what the sale changes in its own weight is in the trait rows below.
+  // What buying each listing does, from one model per listing (NakaPortfolio.impact; with no holdings, the piece alone): the
+  // piece's own weekly output once bought; with holdings, my weekly change, which also counts how the sale moves my other
+  // pieces; under the figure it divides, what each 0.001 BTC of the ask adds to my week (Best buy's measure; with no
+  // holdings, to the piece's own output); then my week after buying. None for a piece not listed, or a listing already
+  // closing (nobody's to buy). Each row's label names its unit, so the cells hold the figures alone.
+  const impacts=new Map(entries.filter(e=>e&&e.listing==='listed'&&e.closing===null).map(e=>[e.id,H.impact(snap,holdings,e.id,'sale',model)])),ready=e=>impacts.get(e.id)?.state==='ready'?impacts.get(e.id):null;
+  row(c.pieceWeek,(td,e)=>{const x=ready(e);td.textContent=x!==null&&x.allocation.pieceCounts?U.shn(x.allocation.piece,true):'—';td.title=c.pieceWeekHint;},'ws-piece');
+  if(holdings.length)row(c.forMe,(td,e)=>{const x=ready(e);if(x===null){td.textContent='—';return;}const d=x.allocation.delta;td.textContent=U.shn(d,true);td.dataset.change=trend(d);},'ws-gain');
+  row(c.perMilli,(td,e)=>{const x=ready(e);if(x===null){td.textContent='—';return;}const d=x.allocation.delta,k=1e5/e.sale.price,per={lo:d.lo*k,hi:d.hi*k};td.textContent=U.shn(per,true);td.dataset.change=trend(per);td.title=holdings.length?c.perMilliHint:c.perMilliPieceHint;},'ws-rate');
+  if(holdings.length)row(c.weeklyAfterBuy,(td,e)=>{const x=ready(e);td.textContent=x===null?'—':U.shn(x.allocation.after.weekly);},'ws-before');
   const guide=n('tr','ws-trait-guide'),cell=n('th','',c.traitGuide);cell.colSpan=entries.length+1;guide.append(cell);body.append(guide);
   const types=[...new Set(entries.flatMap(e=>e?.before.traits.map(t=>t.type)??[]))];
   for(const type of types)row(type==='Hair And Headwear'?t.headwear:type,(td,e)=>{const a=e.before.traits.find(x=>x.type===type);if(!a){td.textContent='—';return;}if(e.sale.state==='no-floor'){td.append(n('span','ws-trait-name',a.value),n('span','ws-bonus','—'));return;}const b=e.sale.state==='ready'?e.result.traits.find(x=>x.type===type):a;td.append(n('span','ws-trait-name',a.value));const pct=P.traitPct,value=n('span','ws-bonus');const changed=e.sale.state==='ready'?P.traitChange(a,b,e.sale.beforeFloor,e.sale.afterFloor):null;
@@ -320,7 +379,7 @@
    const top=n('div','ws-holding-top');top.append(n('strong','',`#${e.number}`));
    const ask=n('p','ws-listing-ask',I.btc(e.sale.price));ask.append(n('span','',' BTC'));
    const gain=n('p','ws-holding-weekly ws-listing-gain'),label=n('span',''),value=n('b','');gain.append(value,label);
-   const credits=P.relayCredits(snap,e.id),sub=n('small','ws-holding-sub',credits?`${T().relayCredits} ${credits}`:'');if(credits)sub.title=T().relayCreditsMeaning;
+   const credits=P.relayCredits(snap,e.id),sub=n('small','ws-holding-sub',credits!==null?`${T().relayCredits} ${credits}`:'');if(credits!==null)sub.title=T().relayCreditsMeaning;
    if(e.closing===null){
     // One of my own listings shows what reclaiming it does (as on My holdings), anyone else's what buying it does.
     const reclaim=mine?cancelModel().get(e.id):null,scenario=mine?reclaim:priors.length?sequenceModel(priors).get(e.id):e.sale,next=scenario.state==='ready'?scenario.result:null,shown=mine||priors.length?next:e.result;
@@ -441,25 +500,26 @@
  function render(){hideFloat();const c=C(),t=T();document.documentElement.lang=lang==='zh'?'zh-CN':'en';document.title=`Naka Sigil · ${c.page}`;for(const b of document.querySelectorAll('[data-lang]'))b.setAttribute('aria-pressed',String(b.dataset.lang===lang));
   for(const [id,key]of Object.entries({heading:'heading',intro:'intro',clear:'clear',browseTitle:'browse',filterLabel:'filter',compareTitle:'compare',compareAddLabel:'addCompareTitle',aboutTitle:'aboutTitle'}))$(id).textContent=c[key];
   // When a listing bought now starts earning is the same for every card: said once, in the section's note.
-  {const w=R.startWeek(snap.snapshot.height+1);$('browseNote').textContent=c.browseNote+(w<R.RULES.weeks?(lang==='zh'?` · 现在买入，第 ${w+1} 周起有奖励`:` · bought now, it earns from week ${w+1}`):'');}
+  {const w=R.startWeek(snap.snapshot.height+1),phase=R.rewardPhase(snap.snapshot),from=t.rateFrom(w+1,phase.state==='active'?phase.week:null);$('browseNote').textContent=c.browseNote+(w<R.RULES.weeks?(lang==='zh'?` · 现在买入，${from}有奖励`:` · bought now, it earns ${from}`):'');}
   $('version').textContent=version?`v${version}`:'';$('version').hidden=!version;
   // The previous worker still runs (files replaced, extension not reloaded): one card in place of the page's sections.
   document.body.classList.toggle('is-stale',workerCurrent===false);$('updateCard').hidden=workerCurrent!==false;
   $('updateTitle').textContent=t.updateTitle;$('updateText').replaceChildren(n('span','',t.updateText(S.BUILD)),n('span','',t.updateKeep));$('updateReload').textContent=t.updateReload;$('updateHint').textContent=t.updateHint;
-  const height=n('span','ws-block-number');height.append(n('span','ws-height-text',I.int(snap.snapshot.height)),NakaPixel.digits(I.int(snap.snapshot.height),'ws-block-digits'));$('block').replaceChildren(n('span','ws-block-label',t.snapBlock('')),height);$('block').setAttribute('aria-label',t.snapBlock(I.int(snap.snapshot.height)));$('age').textContent=I.blockAgeShort(t,snap.snapshot);$('age').title=I.blockTimeTitle(t,snap.snapshot);$('source').title=lang==='zh'?'产量按所示数据区块测算':'Output is estimated at the shown data block';$('source').textContent=demo?c.local:source==='live'?t.modeLive:t.srcBundled;
+  const height=n('span','ws-block-number');height.append(n('span','ws-height-text',I.int(snap.snapshot.height)),NakaPixel.digits(I.int(snap.snapshot.height),'ws-block-digits'));$('block').replaceChildren(n('span','ws-block-label',t.snapBlock('')),height);$('block').setAttribute('aria-label',t.snapBlock(I.int(snap.snapshot.height)));$('age').textContent=I.blockAgeShort(t,snap.snapshot);$('age').title=I.blockTimeTitle(t,snap.snapshot);$('source').title=lang==='zh'?'产量按所示数据区块测算':'Output is estimated at the shown data block';$('source').textContent=demo?c.local:source==='live'?t.modeLive:t.srcBundled;paintUpdating();
   $('pips').replaceChildren(...Array.from({length:E.MAX},(_,i)=>n('i',i<ids.length?'is-on':'')));
   $('scrollHint').textContent=c.scroll;$('legend').textContent=c.legend;$('demoNote').hidden=!demo;$('demoNote').textContent=demo?c.bundledNote:'';$('selectionCount').textContent=c.count(ids.length);$('clear').disabled=!ids.length;$('compareAdd').disabled=ids.length===E.MAX;$('compareAdd').title=ids.length===E.MAX?c.fullHere:c.addHint;$('status').textContent=message;$('assumption').textContent=c.independent;const phase=R.rewardPhase(snap.snapshot);$('limits').textContent=c.limits+' '+(['before','boundary'].includes(phase.state)?t.phaseNotStarted:phase.state==='active'?(phase.week===R.RULES.weeks?t.noFutureWeekNote:t.buyEligibilityNote):phase.state==='closed'?t.rewardClosed:t.phaseEnded)+(ids.some(id=>E.entry(snap,model,id)?.result?.unmeasured)?' '+c.unknownNote:'');$('filter').options[0].textContent=c.any;$('filter').title=c.filterNote;$('filter').value=String(minimum);
   $('market').textContent=c.market;$('market').href=`https://ord-dropz.xyz/secondary/collections/${snap.collection.slug}`;
   applyClassicSection();
-  renderTabs();portfolioUI();planner.render();comparison();catalog();about();weightPopover.validate();listingPopover.validate();if(classicRepaint&&classicContextLang!==lang)classicRepaint();
+  renderTabs();portfolioUI();planner.render();comparison();catalog();about();weightPopover.validate();listingPopover.validate();paintCardButtons();if(classicRepaint&&classicContextLang!==lang)classicRepaint();
   document.body.classList.remove('is-manage');
   {let notes=$('compareNotes');if(!notes){notes=n('details','ws-notes');notes.id='compareNotes';const sum=n('summary','');sum.id='compareNotesSum';notes.append(sum,$('legend'),$('assumption'),$('limits'));$('compare').append(notes);}$('compareNotesSum').textContent=lang==='zh'?'这些比较怎么读':'How to read this comparison';}
-  if(document.body.dataset.section==='history'&&!$('history').querySelector('.nl-select'))paintHistory();
+  if(document.body.dataset.section==='history'&&historyIdentity()!==historyKey)paintHistory();
  }
 
  $('catalog').addEventListener('click',ev=>{if($('catalog').getAttribute('aria-busy')==='true'){ev.preventDefault();ev.stopImmediatePropagation();}},true);
 
- $('brand').append(NakaPixel.sigil(''),n('span','','Naka Sigil'));$('updateSigil').append(NakaPixel.sigil(''));
+ $('brand').append(NakaPixel.sigil('',{turn:true}),n('span','','Naka Sigil'));$('updateSigil').append(NakaPixel.sigil(''));
+ const updatingMark=Object.assign(NakaPixel.busy('ws-busy',''),{hidden:true});$('age').after(updatingMark);
  $('clear').addEventListener('click',()=>change(null,true));$('filter').addEventListener('change',()=>{minimum=Number($('filter').value);showAll=false;catalog();});$('more').addEventListener('click',()=>{showAll=true;catalog();});
  document.querySelector('.ws-lang').addEventListener('click',ev=>{const b=ev.target.closest('[data-lang]');if(!b)return;if(demo){lang=b.dataset.lang;message='';persist();render();}else chrome.storage.local.set({[I.STORAGE_KEY]:b.dataset.lang});});
  // Where the popup or a link sends this page: a section, one Raise weight tab, or the simulator or the 400% plan for one
@@ -478,8 +538,33 @@
  function applyClassicSection(){if(location.hash==='#manage')history.replaceState(history.state,'',location.pathname+location.search+'#holdings');const raw=location.hash.replace('#','');const known=['holdings','planner','compare','listings','about','history'];const section=raw==='left'||raw==='manage'?'holdings':known.includes(raw)?raw:(/^(planner-(buy|plan|lock|sim)|plan-\d+|sim-\d+)$/.test(raw)?'planner':'holdings');document.body.dataset.section=section;document.body.classList.remove('is-manage');activeSection=section==='history'||section==='about'?'':section;for(const a of tabs.children)a.toggleAttribute('aria-current',a.dataset.section===activeSection);}
  // The holding history page: a header like every other section (back to holdings, the title, the week select on the right),
  // then the report.
- function paintHistory(){const box=$('history');box.replaceChildren();const head=n('div','ws-section-head nl-page-head'),back=n('a','ws-back',lang==='zh'?'我的持仓':'My holdings'),title=n('h2','',lang==='zh'?'持仓历史':'Holding history'),tools=n('div','nl-page-tools');back.href='#holdings';title.id='historyTitle';head.append(back,title,tools);box.append(head,n('div','mg-history'));NakaLedgerUI.history(snap,lang,'fleet',box.lastChild,tools);}
- addEventListener('hashchange',()=>{applyClassicSection();const section=document.body.dataset.section;if(section==='history'){document.title=`Naka Sigil · ${lang==='zh'?'持仓历史':'Holding history'}`;paintHistory();window.scrollTo(0,0);}else{document.title='Naka Sigil';scrollSection(section);}});
+ // The history page follows the language, the block and my records (holdings, recorded intervals, pieces that left):
+ // when any of them changes it is painted again, on the week that was selected.
+ let historyKey=null;
+ const historyIdentity=()=>JSON.stringify([lang,snap.snapshot.height,snap.snapshot.generatedAt,holdings,stored[NakaLedger.KEY]??null,stored[H.LEFT]??null]);
+ // Opening the page paints it from scratch (its reading shows). A repaint for newer data is read off-screen and swapped in
+ // once ready, with the week chosen, the weeks opened, the scroll place and the focused control kept: the page never
+ // empties under the viewer. Only the latest repaint is swapped in.
+ let historyTurn=0;
+ function paintHistory(fresh=false){
+  const box=$('history'),chosen=box.querySelector('.nl-select')?.value??null,turn=++historyTurn;
+  const opened=new Set([...box.querySelectorAll('details.nl-history-week[open]>summary>b')].map(b=>b.textContent)),backfill=box.querySelector('details.nl-backfill')?.open===true;
+  const active=box.contains(document.activeElement)?document.activeElement:null,cls=active&&typeof active.className==='string'&&active.className.trim()?'.'+active.className.trim().split(/\s+/).join('.'):null,at=cls?[...box.querySelectorAll(cls)].indexOf(active):-1;
+  historyKey=historyIdentity();
+  if(fresh)box.replaceChildren();
+  const head=n('div','ws-section-head nl-page-head'),back=n('a','ws-back',lang==='zh'?'我的持仓':'My holdings'),title=n('h2','',lang==='zh'?'持仓历史':'Holding history'),tools=n('div','nl-page-tools'),host=n('div','mg-history');back.href='#holdings';head.append(back,title,tools);
+  const stage=box.childNodes.length?n('div'):box;if(stage!==box){stage.hidden=true;box.append(stage);}else title.id='historyTitle';
+  stage.append(head,host);
+  NakaLedgerUI.history(snap,lang,'fleet',host,tools).then(()=>{
+   if(turn!==historyTurn){if(stage!==box)stage.remove();return;}
+   const select=tools.querySelector('.nl-select');if(chosen!==null&&select&&select.value!==chosen&&[...select.options].some(o=>o.value===chosen)){select.value=chosen;select.dispatchEvent(new Event('change'));}
+   if(stage!==box){const y=scrollY;box.replaceChildren(...stage.childNodes);title.id='historyTitle';scrollTo(scrollX,y);}
+   for(const d of host.querySelectorAll('details.nl-history-week'))if(opened.has(d.querySelector(':scope>summary>b')?.textContent))d.open=true;
+   const fold=host.querySelector('details.nl-backfill');if(fold&&backfill)fold.open=true;
+   if(cls&&at>=0)box.querySelectorAll(cls)[at]?.focus({preventScroll:true});
+  });
+ }
+ addEventListener('hashchange',()=>{applyClassicSection();const section=document.body.dataset.section;if(section==='history'){document.title=`Naka Sigil · ${lang==='zh'?'持仓历史':'Holding history'}`;paintHistory(true);window.scrollTo(0,0);}else{document.title='Naka Sigil';scrollSection(section);}});
  let classicContextStarted=false,classicContextLang=null,classicRepaint=null;
  function showClassicContext(){
   const params=new URLSearchParams(location.search);if(params.get('skin')!=='classic'||(!params.has('inspect')&&!params.has('history')))return false;if(classicContextStarted)return true;classicContextStarted=true;document.body.classList.add('has-classic-context');const panel=n('section','ws-classic-context');panel.id='classicContext';document.querySelector('main').prepend(panel);
@@ -499,15 +584,19 @@
  if(demo){
   let data=null;try{data=JSON.parse(localStorage.getItem('nakaWeb')||'null');}catch{message=C().addError;}
   if(data){holdings=H.normalize(data.portfolio);ids=E.normalize(data.compare);lang=I.resolveLang(data.lang);}
-  else holdings=exampleHoldings(snap);
+  // A first visit compares Best buy's first three for the example holdings, as the example selection would.
+  else{holdings=exampleHoldings(snap);ids=planner.bestBuys().slice(0,3);}
   render();arrive();
  }else{
   const KEYS=[S.KEYS.live,S.KEYS.closing,I.STORAGE_KEY,E.KEY,H.KEY,A.KEY,A.STATUS,A.OBSERVED,A.WEEKS,H.LEFT,H.EVENTS,H.META,H.ABSENT,NakaLedger.KEY];
   // A worker from before shn-build leaves it unanswered (undefined); a rejection means no worker took it: neither runs this code.
-  chrome.storage.local.get(KEYS).then(got=>{stored=got;adopt();render();arrive();chrome.runtime.sendMessage({type:'shn-build'}).then(a=>S.sameBuild(a),()=>false).then(same=>{workerCurrent=same;render();});});
+  // A sale's block on a card here opens the block lookup in place; one from the market arrives as ?lookup=&at= (worker).
+  P.setLookup((number,height)=>NakaLedgerUI.inspect(snap,lang,number,height));
+  const lookupFromAddress=()=>{const p=new URLSearchParams(location.search);if(!p.has('lookup'))return;const number=Number(p.get('lookup')),height=Number(p.get('at'));p.delete('lookup');p.delete('at');history.replaceState(history.state,'',location.pathname+(p.size?'?'+p:'')+location.hash);if(Number.isSafeInteger(number)&&number>=0&&Number.isSafeInteger(height)&&height>=0)NakaLedgerUI.inspect(snap,lang,number,height);};
+  Promise.all([chrome.storage.local.get(KEYS),chrome.storage.session.get(S.SESSION_UPDATING)]).then(([got,ses])=>{stored=got;updating=ses[S.SESSION_UPDATING];adopt();render();arrive();lookupFromAddress();chrome.runtime.sendMessage({type:'shn-build'}).then(a=>S.sameBuild(a),()=>false).then(same=>{workerCurrent=same;render();});});
   // Reload asks the new worker to open this page again at the same section (Chrome closes it on reload).
   $('updateReload').addEventListener('click',()=>{$('updateReload').disabled=true;chrome.storage.local.set({[S.REOPEN]:{page:'workspace',section:location.hash.slice(1),at:Date.now()}}).then(()=>chrome.runtime.reload());});
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(Object.hasOwn(changes,TEAM_KEY))planner.extrasChanged(teamOf(changes[TEAM_KEY].newValue));let relevant=false;for(const key of KEYS)if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area==='session'){if(Object.hasOwn(changes,S.SESSION_UPDATING)){updating=changes[S.SESSION_UPDATING].newValue;paintUpdating();}return;}if(area!=='local')return;if(Object.hasOwn(changes,TEAM_KEY))planner.extrasChanged(teamOf(changes[TEAM_KEY].newValue));let relevant=false;for(const key of KEYS)if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
   const beat=()=>{if(document.visibilityState==='visible'&&chrome.runtime.id)chrome.runtime.sendMessage({type:'shn-visible'}).catch(()=>{});};
   beat();setInterval(beat,S.HEARTBEAT_MS);document.addEventListener('visibilitychange',beat);
  }

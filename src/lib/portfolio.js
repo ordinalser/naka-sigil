@@ -168,5 +168,29 @@
   const notes=own.notes.map((n,i)=>i===own.notes.length-1?{...n,lastWeek:through}:n);
   return {listedAt:null,soldAt:null,weeks:runWeeks(notes,own.gaps),source:'wallet'};
  }
- return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,ABSENT,TEAM,normalize,mates,update,current,impact,rank,rankOrder,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList,absentOf};
+ /** The order of My holdings, one choice for the extension page and the popup (kept in that page's localStorage under
+  * SORT_KEY, shared by every extension page): by the order added, number, weight or this week's SHNAKAS, either way round.
+  * Each choice has the direction it starts in. A stored value that is not one of these is no choice: the order added. */
+ const SORT_KEY='nakaHoldingsSort',SORTS={added:'asc',number:'asc',weight:'desc',week:'desc'};
+ function sortChoice(raw){let v=null;try{v=typeof raw==='string'?JSON.parse(raw):raw;}catch{v=null;}return v&&Object.hasOwn(SORTS,v.by)&&['asc','desc'].includes(v.dir)?{by:v.by,dir:v.dir}:{by:'added',dir:'asc'};}
+ /** What each holding is sorted by. weight: its total weight, after delisting for a listed holding (null when no listing
+  * would be left after it; as listed while it is already closing). week: this week's SHNAKAS so far for one that earns this week (null until read), its weekly
+  * rate before rewards start, 0 for one listed, waiting, left or paused. rows: the reward rows by id (NakaRewards). */
+ function sortFacts(snap,ids,rows,cancel,all){
+  return new Map(ids.map(id=>{const r=R.evaluateSnapshot(snap,id),listed=P.listingStatus(snap,id)==='listed',row=rows.get(id),status=row?.status;
+   const after=listed?cancel.get(id):null,weight=!listed?r:after.state==='ready'?after.result:after.state==='no-floor'?null:r;
+   const week=listed?0:status==='idle'?R.weeklyAllocation(R.units(r),all).lo:status==='earning'?(row.amount??null):0;
+   return [id,{number:snap.items[id][0],weight,week}];}));
+ }
+ /** Ties go to the lower number; a holding with no figure goes after every one that has one. */
+ function sortIds(ids,facts,sort){
+  const {by,dir}=sort,sign=dir==='asc'?1:-1,at=new Map(ids.map((id,i)=>[id,i]));
+  const key=id=>{const f=facts.get(id);return by==='added'?at.get(id):by==='number'?f.number:by==='weight'?f.weight?.lo.weight??null:f.week;};
+  const next=id=>by==='weight'?facts.get(id).weight?.hi.weight??0:0;
+  return [...ids].sort((x,y)=>{const a=key(x),b=key(y);
+   if(a===null||b===null){if(a!==b)return a===null?1:-1;}else if(a!==b)return sign*(a-b);
+   const a2=next(x),b2=next(y);if(a2!==b2)return sign*(a2-b2);
+   return facts.get(x).number-facts.get(y).number;});
+ }
+ return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,ABSENT,TEAM,SORT_KEY,SORTS,normalize,mates,update,current,impact,rank,rankOrder,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList,absentOf,sortChoice,sortFacts,sortIds};
 });

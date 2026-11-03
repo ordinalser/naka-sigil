@@ -143,7 +143,7 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 /* Compact decision tools; separate workspace keeps the market inspection small. */
 .shn-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 12px;padding:6px 10px;background:#171819;color:#c1bdb2;font:12px/1.4 ui-monospace,monospace;border-left:3px solid #ffb347}
 .shn-tools label{display:flex;align-items:center;gap:8px}.shn-tools select,.shn-tools button,.shn-compare-add{font:inherit;color:#f3debc;background:#28241e;border:1px solid #77664d;padding:4px 8px;border-radius:0;cursor:pointer}.shn-tools select:focus-visible,.shn-tools button:focus-visible,.shn-compare-add:focus-visible{outline:2px solid #ffb347;outline-offset:2px}.shn-tools__open{margin-left:auto}.shn-tools__count{color:#aaa49b;font-size:11px}.shn-filtered{display:none!important}
-.shn-compare-add{font:10px/1.4 ui-monospace,monospace;white-space:nowrap;margin-left:6px}.shn-compare-add[aria-pressed=true]{color:#9ce0bc;border-color:#58866b;background:#183125}.shn-compare-add:disabled{opacity:.5;cursor:default}.shn-pop__head{gap:7px}.shn-inspect-brand{min-width:0}.shn-pop__head .shn-eyebrow{font-size:12px}.shn-pop__head .shn-inspect-number{font-size:11px}
+.shn-compare-add{font:10px/1.4 ui-monospace,monospace;white-space:nowrap;margin-left:6px}.shn-compare-add[aria-pressed=true]{color:#9ce0bc;border-color:#58866b;background:#183125}.shn-compare-add:disabled,.shn-compare-add[aria-busy=true]{opacity:.5;cursor:default}.shn-pop__head{gap:7px}.shn-inspect-brand{min-width:0}.shn-pop__head .shn-eyebrow{font-size:12px}.shn-pop__head .shn-inspect-number{font-size:11px}
 
 /* One integrated context/action bar; narrow screens use two rows. */
 .shn-scope{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:5px 10px;margin:6px 0}.shn-scope__head{flex:1;min-width:220px;height:28px}.shn-scope .shn-scope__note{display:none}.shn-scope .shn-tools{margin:0;padding:0;border:0;background:none;gap:10px;flex-wrap:nowrap;font-size:11px}.shn-scope .shn-tools__open{margin-left:6px;white-space:nowrap}.shn-scope .shn-tools label{white-space:nowrap;gap:6px}.shn-scope .shn-tools select,.shn-scope .shn-tools button{padding:3px 6px}.shn-scope__source{margin-left:8px}@media(max-width:700px){.shn-scope{gap:2px 8px}.shn-scope .shn-tools{width:100%}.shn-scope .shn-tools__open{margin-left:auto}.shn-scope__source{margin-left:auto}}@media(max-width:480px){.shn-scope .shn-tools__count{display:none}}
@@ -234,7 +234,6 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-pop__tools button{font:inherit;border:0;background:transparent;color:#f4d39b;cursor:pointer;padding:2px 3px}
 .shn-pop__tools button:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
 .shn-pop__close{margin-left:auto;white-space:nowrap}.shn-pop__gone{font-size:9px}
-.shn-pop__tools .shn-pop__refresh{margin:0;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent}
 /* Opt-in only (?shn-debug=1 or #shn-debug). Absent from the page otherwise. */
 .shn-recognize{position:fixed;right:8px;bottom:8px;z-index:2147483646;width:min(320px,calc(100vw - 16px));margin:0;padding:6px 8px;background:#1c1916;color:#e6dccb;border:1px solid #6d5b42;font:10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;pointer-events:auto}
 .shn-recognize strong{display:block;color:#f4d39b;font-size:10px}
@@ -244,7 +243,13 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-pop__tools{display:contents}
 .shn-pop__tools .shn-pop__close{position:absolute;right:5px;top:5px;z-index:2;width:22px;height:22px;padding:0;background:#24201b;border:1px solid #796345;font-size:15px;line-height:20px}
 
-.shn-pop--pinned .shn-pop__head{padding-right:24px}
+/* The close button's place is kept in every state, so a preview becoming a clicked sheet (a press inside it) moves nothing. */
+.shn-pop .shn-pop__head{padding-right:24px}
+/* Data-updated and left-the-list notices: last in the sheet, held at its bottom edge, so nothing above them moves. */
+.shn-pop__notice{position:sticky;bottom:-12px;z-index:1;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:10px -12px -12px;padding:5px 12px;background:#24201b;border-top:1px solid #796345;color:#e0cfb7;font:10px/1.5 ui-monospace,monospace}
+.shn-pop__notice .shn-pop__refresh{margin:0 0 0 auto;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent;color:#f4d39b;font:inherit;cursor:pointer}
+.shn-pop__notice .shn-pop__refresh:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
+@media(max-height:620px){.shn-pop__notice{bottom:-9px;margin:8px -9px -9px;padding:5px 9px}}
 
 </style><style>
 /* One result, with inline before/after evidence only where its inputs change. */
@@ -297,6 +302,8 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .naka-sales__row b { color:#ffcf6b; font-weight:700; }
 .naka-sales__row span { color:#bdb4a6; white-space:nowrap; }
 .naka-sales__row .naka-sales__time { color:#9f978b; }
+.naka-sales__at { padding:0; background:none; border:0; color:#bdb4a6; font:inherit; white-space:nowrap; text-decoration:underline dotted #6f675b; text-underline-offset:3px; cursor:pointer; }
+.naka-sales__at:hover, .naka-sales__at:focus-visible { color:#ffcf6b; text-decoration-color:currentColor; }
 .naka-sales__note { margin:2px 0; color:#9f978b; }
 .naka-sales__retry { margin-left:4px; padding:0 6px; background:transparent; border:1px solid #79603d; color:#ffbd62; font:inherit; font-size:10px; cursor:pointer; }
 .naka-listing { display:flex; align-items:center; flex-wrap:wrap; gap:3px 7px; margin-top:6px!important; font-size:10px; line-height:1.3; }
@@ -386,10 +393,14 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
   .naka-purchase__assumption { margin-top:3px!important; }
 }
 
-/* Shared comparison control: selected shows "In Compare", and reveals its remove action on hover or keyboard focus. */
-.naka-select__off { display:none; }
-[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__on { display:none; }
-[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__off { display:inline; }
+/* Shared comparison control: selected shows "In Compare", and reveals its remove action on hover or keyboard focus. Both
+ * labels share one grid cell, so the button keeps the wider one's width: the hover label never moves its edge out from
+ * under the pointer (which would swap the labels back and forth). */
+.naka-select__labels { display:inline-grid; justify-items:center; }
+.naka-select__labels > span { grid-area:1 / 1; }
+.naka-select__off { visibility:hidden; }
+[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__on { visibility:hidden; }
+[data-compare=selected]:not(.naka-select--fresh):is(:hover,:focus-visible) .naka-select__off { visibility:visible; }
 
 /* My holdings line under an inspection or lookup: weekly allocation before → after, change in color. */
 .naka-holdings { margin:10px 0 0; padding:8px 0 0; border-top:1px solid #3a3530; font-family:ui-monospace,SFMono-Regular,Consolas,"PingFang SC",monospace; }
@@ -402,7 +413,9 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .naka-holdings__rows dd[data-change=down],.naka-holdings__pixels[data-change=down] { color:#efb29f; }
 .naka-holdings__rows dd[data-change=same],.naka-holdings__pixels[data-change=same] { color:#a6a19b; }
 .naka-holdings__sum { margin-top:4px !important; padding-top:5px; border-top:1px dashed #3a3530; }
-.naka-holdings__total { display:inline-flex; align-items:center; gap:8px; }
+.naka-holdings__rows dd { min-width:0; }
+/* A long total wraps (before → above, after and change on the right) instead of running past a narrow card. */
+.naka-holdings__total { display:inline-flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:2px 8px; }
 .naka-holdings__before { color:#a49e95; font-weight:400; }
 .naka-holdings__pixels { display:inline-flex; color:#f0e9df; }
 .naka-holdings__pixels svg { display:block; width:auto; height:13px; }
@@ -477,6 +490,34 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .naka-reward[data-state=loading] .naka-reward__note::after{content:'';display:inline-block;width:4px;height:4px;margin-left:6px;background:#ffcf6b;vertical-align:middle;animation:naka-reward-pulse 1.2s steps(2,end) infinite}
 @keyframes naka-reward-pulse{50%{opacity:.2}}
 @media(prefers-reduced-motion:reduce){.naka-reward__bar i{transition:none}.naka-reward[data-state=loading] .naka-reward__note::after{animation:none}}
+/* Something on its way (NakaPixel.busy): three pixels lit in turn, then the word, if any. */
+.naka-busy{display:inline-flex;align-items:center;gap:5px;color:#ffcf6b;white-space:nowrap}
+.naka-busy[hidden]{display:none}
+.naka-busy__dots{display:inline-flex;gap:2px}
+.naka-busy__dots i{width:3px;height:3px;background:currentColor;opacity:.25;animation:naka-busy .9s steps(1,end) infinite}
+.naka-busy__dots i:nth-child(2){animation-delay:.3s}.naka-busy__dots i:nth-child(3){animation-delay:.6s}
+@keyframes naka-busy{0%{opacity:1}33.333%{opacity:.25}}
+/* The sigil in the header of the popup and of the extension page is alive. Its eyes switch on as the page opens; then, in a
+   30 s cycle, they blink now and then, and toward its end the sigil looks round: the eyes glance left, then right and
+   stay there, and the head turns to the right, holds its profile and turns back; a blink, the eyes glance left and the
+   head turns to the left the same way; a last blink. A turn moves its strip of views (NakaPixel.sigil with turn) one
+   24-unit view at a time: 22.5°, 45°, 67.5° and the profile, held 380 ms, then back (65–90 ms a view, about 0.8 s in all),
+   and the sigil rises one unit as it sets off and as it comes back, a small hop. The cycle starts 19.3 s in, so the
+   look-round begins 0.7 s after opening, the right turn comes at about 3.7 s and the left at about 6.7 s, and again every
+   30 s. While new data is on its way ([data-busy]) the eyes scan from side to side and the head does not turn; once it has
+   come the look-round plays again. Whole pixels only: held steps, moves of one grid unit (one unit of the SVG's own grid).
+   An animation kept in both lists runs on, so the eyes never switch on twice. */
+.naka-alive .naka-sigil__eyes{transform-box:fill-box;transform-origin:center;animation:naka-wake .7s steps(1,end) both,naka-eyes 30s -19.3s steps(1,end) infinite}
+.naka-alive>svg{overflow:hidden}
+.naka-alive .naka-sigil__strip{animation:naka-turn 30s -19.3s steps(1,end) infinite}
+.naka-alive[data-busy] .naka-sigil__eyes{animation:naka-wake .7s steps(1,end) both,naka-blink 4.7s 1.2s steps(1,end) infinite,naka-scan 1.2s steps(1,end) infinite}
+.naka-alive[data-busy] .naka-sigil__strip{animation:none}
+@keyframes naka-wake{0%{opacity:0}30%{opacity:1}45%{opacity:.2}60%{opacity:1}}
+@keyframes naka-eyes{20%{scale:1 .34}20.4%{scale:1 1}45%{scale:1 .34}45.4%{scale:1 1}66.6667%{translate:-1px 0}70%{translate:1px 0}74.6667%{scale:1 .34}75.0667%{scale:1 1}76.6667%{translate:0 0}81.3333%{scale:1 .34}81.7333%{scale:1 1}82.6667%{translate:-1px 0}86.6667%{translate:0 0}92%{scale:1 .34}92.4%{scale:1 1}}
+@keyframes naka-turn{76.6667%{translate:-24px -1px}76.9667%{translate:-48px -1px}77.2%{translate:-72px 0}77.4167%{translate:-96px 0}78.6833%{translate:-72px 0}78.9167%{translate:-48px -1px}79.1333%{translate:-24px -1px}79.4167%{translate:0 0}86.6667%{translate:-120px -1px}86.9667%{translate:-144px -1px}87.2%{translate:-168px 0}87.4167%{translate:-192px 0}88.6833%{translate:-168px 0}88.9167%{translate:-144px -1px}89.1333%{translate:-120px -1px}89.4167%{translate:0 0}}
+@keyframes naka-blink{97.4%{scale:1 .34}}
+@keyframes naka-scan{25%{translate:-1px 0}50%{translate:0 0}75%{translate:1px 0}}
+@media(prefers-reduced-motion:reduce){.naka-busy__dots i{animation:none;opacity:.7}.naka-alive .naka-sigil__eyes,.naka-alive[data-busy] .naka-sigil__eyes,.naka-alive .naka-sigil__strip{animation:none}}
 /* Extension page: one band. Figure left, stats right-aligned beside it, so a changing amount never moves the stats. */
 .ws-portfolio>.naka-reward{gap:10px;margin:14px 0 16px;padding:14px 20px 11px;background:#17150f;border-top:1px solid #3a3123}
 .ws-portfolio .naka-reward__label,.ws-portfolio .naka-reward__week{font-size:12px}
@@ -633,6 +674,14 @@ body.is-stale .ws-tabs,body.is-stale .ws-basis{visibility:hidden}
 .ws-copy-all:hover{color:var(--ink);text-decoration-color:currentColor}
 
 .ws-holding-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:0 0 12px}
+/* My holdings' sort: four choices above the tiles; the chosen one is lit and shows its direction. */
+.ws-hsort{display:flex;flex-wrap:wrap;align-items:center;gap:0;width:max-content;max-width:100%;margin:16px 0 12px;border:1px solid #56505c;font-size:11px}
+.ws-hsort-label{padding:0 10px;color:var(--muted)}
+.ws-hsort-btn{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 11px;background:#17181d;border:0;border-left:1px solid #2e2e36;color:#b9b2a7;font:inherit;cursor:pointer}
+.ws-hsort-btn:hover{color:var(--ink);background:#202128}
+.ws-hsort-btn[aria-pressed=true]{color:#ffd99c;background:#2a2519;box-shadow:inset 0 -2px 0 var(--gold)}
+.ws-hsort-btn:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.ws-hsort-dir{font-size:11px}
 .ws-holding{position:relative;display:flex;flex-direction:column;padding:0;background:var(--panel2);border:1px solid #2f3038;min-width:0;outline-offset:2px}
 .ws-holding:hover{border-color:#5d5241}
 .ws-holding-art{position:relative;aspect-ratio:1;background:#0d0e10;line-height:0}
@@ -937,9 +986,10 @@ html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:aut
 .ws-table td small{display:block;color:#86827c;font-size:10px;line-height:1.35;margin-top:2px}
 .ws-price td{font-size:19px;font-weight:700;color:#e9d3ac;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .ws-before td{font-size:12px;color:#9d9ba0}
-.ws-before .naka-weight{opacity:.75}
-.ws-gain td[data-change=up]{color:var(--mint)}
-.ws-gain td[data-change=down]{color:#efb29f}
+.ws-gain td[data-change=up],.ws-rate td[data-change=up]{color:var(--mint)}
+.ws-gain td[data-change=down],.ws-rate td[data-change=down]{color:#efb29f}
+.ws-rate td{font-size:13px;font-variant-numeric:tabular-nums}
+.ws-piece td{font-size:13px;color:#e7dccb;font-variant-numeric:tabular-nums}
 .ws-trait-guide th{font-size:10px;color:#948d80;background:#15161a;padding-top:7px;padding-bottom:7px}
 .ws-trait-name{display:block;color:#aaa59e;font-size:11px;margin-bottom:3px;line-height:1.35}
 .ws-bonus{font-size:13px;color:#d6cfc5;line-height:1.3;font-weight:600}
@@ -1099,6 +1149,7 @@ html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:aut
 .ws-listing-ask{margin:0;color:#ffd25e;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .ws-listing-ask span{color:#9e9991;font-size:10px;font-weight:600;letter-spacing:0}
 .ws-listing-gain b{color:var(--mint)}
+.ws-listing-gain span{text-wrap:balance}
 .ws-listing-gain[data-change=down] b{color:#efb29f}.ws-listing-gain[data-change=same] b{color:#a6a19b}.ws-listing-gain[data-change=unknown] b{color:#e8c58c}
 .ws-listing-gain[data-change=closing] b{color:#e8c58c;font-size:11px;font-weight:700;white-space:normal}
 .ws-listing .ws-holding-sub{min-height:14px}
@@ -1107,8 +1158,8 @@ html:not([data-naka-skin=mining]) .ws-pbuy .shn-badge{position:relative;left:aut
 .ws-pbuy .shn-badge>.naka-number-badge--inline{flex-direction:row;align-self:center;gap:0;padding:2px 5px;min-width:0}
 .ws-pbuy .shn-badge>.naka-number-badge--inline .naka-number-badge__prefix{font-size:10px;line-height:1.1}
 
-</style></head><body data-mode="demo" data-version="0.13.0">
-<header class="ws-top"><div class="ws-top-inner"><a class="ws-brand" id="brand" href="https://github.com/ordinalser/naka-sigil" target="_blank" rel="noopener noreferrer"></a><span id="version" class="ws-version"></span><nav id="tabs" class="ws-tabs" aria-label="Sections"></nav><p class="ws-basis"><span id="block" class="ws-block"></span><span id="age" class="ws-age"></span><span id="source" class="ws-source"></span></p><div class="ws-top-end"><div class="ws-lang" role="group" aria-label="Language / 语言"><button type="button" data-lang="en">EN</button><button type="button" data-lang="zh">中文</button></div><a id="market" class="ws-market" target="_blank" rel="noopener noreferrer"></a></div></div></header>
+</style></head><body data-mode="demo" data-version="0.13.1">
+<header class="ws-top"><div class="ws-top-inner"><a class="ws-brand naka-alive" id="brand" href="https://github.com/ordinalser/naka-sigil" target="_blank" rel="noopener noreferrer"></a><span id="version" class="ws-version"></span><nav id="tabs" class="ws-tabs" aria-label="Sections"></nav><p class="ws-basis"><span id="block" class="ws-block"></span><span id="age" class="ws-age"></span><span id="source" class="ws-source"></span></p><div class="ws-top-end"><div class="ws-lang" role="group" aria-label="Language / 语言"><button type="button" data-lang="en">EN</button><button type="button" data-lang="zh">中文</button></div><a id="market" class="ws-market" target="_blank" rel="noopener noreferrer"></a></div></div></header>
 <main><section id="manage" class="mg" aria-labelledby="manageTitle"></section><section id="history" class="mg" aria-labelledby="historyTitle"></section><section id="updateCard" class="ws-update" aria-labelledby="updateTitle" hidden><div id="updateSigil" class="ws-update-sigil" aria-hidden="true"></div><h2 id="updateTitle"></h2><p id="updateText"></p><button id="updateReload" type="button"></button><p id="updateHint" class="ws-update-hint"></p></section><section class="ws-hero"><h1 id="heading"></h1><p id="intro"></p><p id="demoNote" class="ws-demo-note" hidden></p></section>
 <section id="holdings" class="ws-portfolio" aria-labelledby="holdingsTitle"></section>
 <section id="planner" class="ws-planner" aria-labelledby="plannerTitle"></section>
@@ -1694,26 +1745,31 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   /** Public sales of the piece, read when opened: price, block and the block's local time, newest first. One read per piece
    * and block, shared by every card that shows it (a card rebuilt while reading picks up the same answer). */
   const salesReads=new Map();
+  // A sale's block opens that piece at that block: in place where a page offers the lookup (setLookup), otherwise on the
+  // extension page, which opens the lookup for it.
+  let lookupAt=null;
+  function setLookup(fn){lookupAt=fn;}
+  function openAt(number,height){if(lookupAt)lookupAt(number,height);else chrome.runtime.sendMessage({type:'shn-open-compare',lookup:{number,height}});}
   function readSales(id,height){
     const key=`${id}|${height}`;if(salesReads.has(key))return salesReads.get(key);
     const job=chrome.runtime.sendMessage({type:'shn-sales',id,height}).then(r=>{if(!r?.ok)throw Error(r?.error??'unavailable');return r.sales;});
     salesReads.set(key,job);job.catch(()=>salesReads.delete(key));while(salesReads.size>64)salesReads.delete(salesReads.keys().next().value);return job;
   }
-  function salesBox(snapshot,id,T,I) {
+  function salesBox(snapshot,id,number,T,I) {
     const box=node('details','naka-sales'),sum=node('summary','naka-sales__summary'),list=node('div','naka-sales__list');
     sum.append(node('span','',T.salesTitle),node('span','naka-sales__count',''));box.append(sum,list);let loaded=false;
     const load=()=>{loaded=true;list.replaceChildren(node('p','naka-sales__note',T.salesLoading));
       readSales(id,snapshot.height).then(({total,rows})=>{
         sum.lastChild.textContent=T.salesCount(I.int(total));
         if(!rows.length){list.replaceChildren(node('p','naka-sales__note',T.salesNone));return;}
-        list.replaceChildren(...rows.map(x=>{const row=node('div','naka-sales__row');row.append(node('b','',`${I.btc(x.price)} BTC`),node('span','',T.salesAt(I.int(x.height))),node('span','naka-sales__time',x.time===null?'—':I.localTime(x.time*1000)));return row;}));
+        list.replaceChildren(...rows.map(x=>{const row=node('div','naka-sales__row'),at=node('button','naka-sales__at',T.salesAt(I.int(x.height)));at.type='button';at.title=T.salesAtHint;at.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openAt(number,x.height);});row.append(node('b','',`${I.btc(x.price)} BTC`),at,node('span','naka-sales__time',x.time===null?'—':I.localTime(x.time*1000)));return row;}));
         if(total>rows.length)list.append(node('p','naka-sales__note',T.salesMore(I.int(total))));
       }).catch(()=>{loaded=false;const retry=node('button','naka-sales__retry',T.salesRetry);retry.type='button';retry.addEventListener('click',load);const p=node('p','naka-sales__note',T.salesFailed+' ');p.append(retry);list.replaceChildren(p);});};
     box.addEventListener('toggle',()=>{if(box.open&&!loaded)load();});
     return box;
   }
   function inspection(before,after,snapshot,T,I,options={}) {
-    const paired=Boolean(after),afterLabel=options.action==='cancel'?T.cancelAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
+    const paired=Boolean(after),afterLabel=options.action==='cancel'?T.cancelAfter:options.activity?T.activityAfter:T.buyAfter,box=node('section',`naka-purchase${paired?'':' naka-current'}`);
     box.dataset.action=options.action??'sale';box.dataset.state=paired?'ready':'current';box.dataset.metric='total-holding-weight';
     const listing=paired?'listed':(options.listing??'unknown'),status=T.listing[listing];
     box.dataset.listing=listing;
@@ -1731,9 +1787,12 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     state.append(node('strong','naka-listing__badge',options.closing==='sale'?T.closingSaleTag:options.closing==='cancel'?T.closingCancelTag:status.short??status.label));
     state.title=`${status.label} · ${explained.full}`;
     const basis=node('p','naka-purchase__basis');paintBasis(basis,snapshot,T,I);
-    const rates=heroRates(paired,{...options,listing}),from=rates?.from?T.rateFrom(rates.from):null;
+    // The week it starts earning, against the current week ("next week (week 4)"), so "week 4" never reads as three weeks
+    // away; the caption's hint gives that week's first block and how far off it is.
+    const rates=heroRates(paired,{...options,listing}),phase=R.rewardPhase(snapshot),now=phase.state==='active'?phase.week:null,from=rates?.from?T.rateFrom(rates.from,now):null;
     const caption=[paired?afterLabel:listing==='listed'?T.formulaOnly:null,from].filter(Boolean).join(' · ');
-    const weight=node('div','naka-hero__weight');weight.append(node('span','naka-hero__caption',caption));weight.title=[paired?(options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort):null,explained.full].filter(Boolean).join('\n');weight.append(decorateWeight(node('span','naka-hero__value'),after??before,true));
+    const weight=node('div','naka-hero__weight'),captionNode=node('span','naka-hero__caption',caption);weight.append(captionNode);
+    if(rates?.from){const first=phase.start+(rates.from-1)*R.RULES.weekBlocks+1,blocks=first-snapshot.height;if(blocks>0)captionNode.title=T.rateFromTitle(rates.from,I.int(first),I.int(blocks),(blocks*10/1440).toFixed(1));}weight.title=[paired?(options.action==='cancel'?T.cancelAssumption:T.buyAssumptionShort):null,explained.full].filter(Boolean).join('\n');weight.append(decorateWeight(node('span','naka-hero__value'),after??before,true));
     side.append(state,basis,weight);
     if(rates&&rates.weekly!==null){const dl=node('dl','naka-hero__rates'),cell=(label,value)=>{const d=node('div',''),dd=node('dd',value==='—'?'is-none':'',value);if(value!=='—')dd.append(node('span','naka-hero__unit','SHNAKAS'));d.append(node('dt','',label),dd);dl.append(d);};
       cell(T.rateWeek,shn(rates.weekly));cell(T.rateRest,shn(rates.remaining));dl.title=`${T.rateHint}\n${explained.full}`;side.append(dl);}
@@ -1778,14 +1837,14 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     box.append(table);
     if(changes.size)table.title=T.changedRows;
     // Context under the weight table, not part of it: the collection floor every ratio is measured against (and how the
-    // sale moves it), and the listing's relay credits.
+    // sale moves it), and the listing's relay credits when it has any (most have none, and the market is retiring them).
     const facts=node('dl','naka-facts'),fact=(label,value,hint)=>{const d=node('div','naka-facts__item');d.append(node('dt','',label));const dd=node('dd','');dd.append(...value);d.append(dd);if(hint)d.title=hint;facts.append(d);return d;};
     const floorBefore=options.beforeFloor??snapshot.collectionFloor,floorAfter=options.afterFloor??snapshot.collectionFloor,moved=paired&&floorBefore!==floorAfter;
     const floorItem=fact(T.collectionFloorBTC,moved?[node('span','naka-compare__old',I.btc(floorBefore)),node('span','naka-compare__arrow',' → '),node('b','',I.btc(floorAfter)),node('span','naka-change naka-change--market','◆')]:[node('b','',I.btc(floorAfter))]);
     if(moved){floorItem.dataset.change='market';changes.add('market');}
-    if(options.action!=='cancel' && options.credits!==null && options.credits!==undefined)fact(T.relayCredits,[node('b','',String(options.credits))],T.relayCreditsMeaning);
+    if(options.action!=='cancel' && Number.isSafeInteger(options.credits))fact(T.relayCredits,[node('b','',String(options.credits))],T.relayCreditsMeaning);
     box.append(facts);
-    if(options.sales!==false&&root.chrome?.runtime?.sendMessage&&options.id&&options.snap)box.append(salesBox(snapshot,options.id,T,I));
+    if(options.sales!==false&&root.chrome?.runtime?.sendMessage&&options.id&&options.snap?.items?.[options.id])box.append(salesBox(snapshot,options.id,options.snap.items[options.id][0],T,I));
     // Fine print, one line: how a ratio is read and what a private claim pays. Notes only when they apply.
     // Each part stays whole when the line wraps in a narrow card.
     const caution=node('div','naka-purchase__caution'),formula=node('p','naka-purchase__formula');[T.buyRatioNote,`${T.base} ${R.RULES.basePct}%`,`${T.capShort} ${R.RULES.capPct}%`,T.claimShort].forEach((part,i)=>{if(i)formula.append(' · ');formula.append(node('span','naka-purchase__part',part));});
@@ -1801,7 +1860,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     const scenario=model.get(id);if(scenario.state!=='ready')return null;
     const box=inspection(scenario.before,scenario.result,model.snapshot,T,I,{...scenario,scenario,...options});box.dataset.id=id;return box;
   }
-  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,paintBasis,numberTag,numberBadge,decorateWeight,traitChange,traitPct,traitRatio};
+  return {relayCredits,create,premium,listingStatus,renderLaunch,render,renderCurrent,paintBasis,numberTag,numberBadge,decorateWeight,traitChange,traitPct,traitRatio,setLookup};
 });
 
 </script><script>
@@ -1865,9 +1924,23 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
-  // A crest, shield and narrow gaze. All edges follow the same pixel grid.
+  // A crest, shield and narrow gaze. All edges follow the same pixel grid. The gaze is the eyes with their bridge, and the
+  // mouth: drawn as two paths, so a page can animate the eyes alone (purchase.css, .naka-alive).
   const SHIELD = 'M5 5h2V3h2V1h2v4h2V0h2v5h2V2h2v5h2v10h-2v3h-3v2h-3v2h-2v-2H8v-2H5v-3H3V7h2V5zm2 4v7h2v3h3v2h1v-2h3v-3h2V9H7z';
-  const GAZE = 'M6 10h5v3H6v-3zm7 0h5v3h-5v-3zm-2 1h2v1h-2v-1zm0 5h3v2h-3v-2z';
+  const EYES = 'M6 10h5v3H6v-3zm7 0h5v3h-5v-3zm-2 1h2v1h-2v-1z', MOUTH = 'M11 16h3v2h-3v-2z';
+  const GAZE = EYES + MOUTH;
+  // <turn-frames> generated by scripts/gen-sigil-turn.js; do not edit by hand
+  const TURN = [
+    '...............oo......./...........oo..oo......./...........oo..oooo...../.........oooo..oooo...../.........oooo..oooo...../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...ooooooo..........o.../...oooooovvvvvv.vvvvv.../...vvvvvvvvvvvvvvvvvv.../...oooooovvvvvv.vvvvv.../...voooooo..........o.../...voooooo..........o.../...voooooo..........o.../...ooooooooo..vvv..oo.../.....ooooooo..vvv.o...../.....ooooooo......o...../.....oooooooooo.ooo...../.........oooooooo......./.........oooooooo......./............oo........../............oo..........',
+    '................oo....../..............oooo....../..............oooo....../...........oo.oooo....../...........oo.oooo....../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...ooooooooooo........../...oooooooooovvvvvvvvv../...vvvvvvvvvvvvvvvvvvv../...oooooooooovvvvvvvvv../...oovvooooooo........../...oovvooooooo........../...oovvooooooo........../...ooooooooooooo..vv..../.....oooooooooo..vv...../......ooooooooo....o..../......oooooooooooooo..../.........oooooooo......./.........oooooooo......./............oo........../............oo..........',
+    '.................oo...../...............oooo...../.............oooooo...../.............oooooo...../.............oooooo...../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...oooooooooooooo......./...ooooooooooooovvvvvvv./...vvvvvvvvvvvvvvvvvvvv./...ooooooooooooovvvvvvv./...oooovvvooooooo......./...oooovvvooooooo......./...oooovvvooooooo......./...oooooooooooooooo...../......ooooooooooo......./......ooooooooooo......./......ooooooooooooo...../.........oooooooo......./.........oooooooo......./.............oo........./.............oo.........',
+    '.................oo...../.................oo...../...........oo....oo...../...........oo..oooo...../...........oo..oooo...../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...oooooooooooooooo...../...oooooooooooooooovvvv./...vvvvvvvvvvvvvvvvvvvv./...oooooooooooooooovvvv./...oooooooovvoooooo...../...oooooooovvoooooo...../...oooooooovvoooooo...../...ooooooooooooooooo..../......ooooooooooooo...../......ooooooooooooo...../......oooooooooooooo..../.........oooooooo......./..........oooooooo....../.............oo........./.............oo.........',
+    '...........oo.........../.......oo..oo.........../.......oo..oo....oo...../......ooo..oo....oo...../......ooo..oo....oo...../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...oo..........oooooo.../...vvvvv.vvvvvvoooooo.../...vvvvvvvvvvvvvvvvvv.../...vvvvv.vvvvvvoooooo.../...oo..........ooooov.../...oo..........oooovv.../...oo..........ooooov.../...ooo..vv...oooooooo.../.....oo.vvv..oooooo...../.....oo......oooooo...../.....oooo.ooooooooo...../.......oooooooo........./.......oooooooo........./..........oo............/..........oo............',
+    '........oo............../......oooo............../......oooo.....oo......./.....ooooo.....oo......./.....ooooo.....oo......./.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../...........oooooooooo.../..vvvvvvvvvoooooooooo.../..vvvvvvvvvvvvvvvvvvv.../..vvvvvvvvvoooooooooo.../...........ooooooovoo.../...........oooooovvvo.../...........ooooooovoo.../.....vv..oooooooooooo.../......vv..ooooooooo...../....o.....oooooooo....../....oo.ooooooooooo....../.......oooooooo........./.......oooooooo........./..........oo............/..........oo............',
+    '.......oo.............../.....oooo.............../.....oooo....oo........./.....oooo....oo........./.....oooo....oo........./.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../........ooooooooooooo.../.vvvvvvvooooooooooooo.../.vvvvvvvvvvvvvvvvvvvv.../.vvvvvvvooooooooooooo.../........ooooooovooooo.../........oooooovvvoooo.../........ooooooovooooo.../...vv.ooooooooooooooo.../........oooooooooo....../.......ooooooooooo....../....oooooooooooooo....../........ooooooo........./.......oooooooo........./.........oo............./.........oo.............',
+    '.....oo................./.....oo................./.....oo....oo.........../.....oooo..oo.........../.....oooo..oo.........../.....oooooooooooooo...../.....oooooooooooooo...../...oooooooooooooooooo.../...oooooooooooooooooo.../.....oooooooooooooooo.../.vvvvoooooooooooooooo.../.vvvvvvvvvvvvvvvvvvvv.../.vvvvoooooooooooooooo.../.....oooooovvoooooooo.../.....ooooovvvvooooooo.../.....oooooovvoooooooo.../....ooooooooooooooooo.../....oooooooooooooo....../.....ooooooooooooo....../....oooooooooooooo....../.......oooooooo........./......oooooooo........../.........oo............./.........oo.............',
+  ];
+  // </turn-frames>
   const DIGITS = {
     '0':['01110','11011','11011','11011','11011','11011','01110'],
     '1':['00100','01100','00100','00100','00100','00100','01110'],
@@ -1891,10 +1964,41 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     for (const [key, value] of Object.entries(attrs)) n.setAttribute(key, value);
     return n;
   }
-  function sigil(cls) {
+  /** The front view: shield, eyes (their own path, so a page can animate them: purchase.css, .naka-alive) and mouth. */
+  function front(eyesClass) {
+    return [node('path', { d:SHIELD, 'fill-rule':'evenodd' }), node('path', { d:EYES, fill:'#c4b5fd', class:eyesClass }), node('path', { d:MOUTH, fill:'#c4b5fd' })];
+  }
+  /** One view of the turn (TURN) at column offset `at`: the sigil colour ('o') and the visor ('v'), in runs along each row. */
+  function turnFrame(rows, at) {
+    const runs = { o:'', v:'' };
+    rows.split('/').forEach((row, y) => {
+      for (let x = 0; x < row.length;) {
+        let end = x + 1; while (end < row.length && row[end] === row[x]) end++;
+        if (row[x] !== '.') runs[row[x]] += `M${at + x} ${y}h${end - x}v1h${x - end}z`;
+        x = end;
+      }
+    });
+    return [node('path', { d:runs.o }), node('path', { d:runs.v, fill:'#c4b5fd' })];
+  }
+  /** The sigil. With `turn`, it can turn its head: a strip of nine views side by side — the front (its eyes animated), the
+   * four views of a turn to the right and the four of a turn to the left, each to the profile — which purchase.css
+   * (.naka-alive) moves one view at a time through the 24-unit window. */
+  function sigil(cls, { turn = false } = {}) {
     const svg = node('svg', { viewBox:'0 0 24 24', fill:'currentColor', 'shape-rendering':'crispEdges', 'aria-hidden':'true', class:cls });
-    svg.append(node('path', { d:SHIELD, 'fill-rule':'evenodd' }), node('path', { d:GAZE, fill:'#c4b5fd' }));
+    if (!turn) { svg.append(...front('naka-sigil__eyes')); return svg; }
+    const strip = node('g', { class:'naka-sigil__strip' });
+    strip.append(...front('naka-sigil__eyes'), ...TURN.flatMap((rows, i) => turnFrame(rows, 24 * (i + 1))));
+    svg.append(strip);
     return svg;
+  }
+  /** Something is on its way: three pixels lit in turn (purchase.css, .naka-busy), with an optional word after them. */
+  function busy(cls, text) {
+    const box = document.createElement('span'), dots = document.createElement('span');
+    box.className = cls ? `naka-busy ${cls}` : 'naka-busy'; dots.className = 'naka-busy__dots'; dots.setAttribute('aria-hidden', 'true');
+    dots.append(document.createElement('i'), document.createElement('i'), document.createElement('i'));
+    box.append(dots);
+    if (text !== undefined) { const label = document.createElement('span'); label.className = 'naka-busy__text'; label.textContent = text; box.append(label); }
+    return box;
   }
   function digitsPath(text) {
     let x = 0, d = '';
@@ -1912,7 +2016,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     svg.append(node('path', { d, fill:'currentColor' }));
     return svg;
   }
-  return { sigil, digits, digitsPath, SHIELD, GAZE };
+  return { sigil, busy, digits, digitsPath, SHIELD, GAZE, TURN };
 });
 
 </script><script>
@@ -1969,7 +2073,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     launchAt: (h)=>`启动区块 ${h}`,
     launchMethod: '按区块头时间、10分钟/块估算。奖励周为1008块；未挂单持有，完整周可领取。',
     scopeNote: '区块权重 · 非累计奖励',
-    scopeActivity: '所示区块公式值 · 非成交时权重',
+    scopeActivity: '按所示区块的现状 · 不是记录当时',
     scopeTimeUnknown: '时间未知',
     scopeTimeFuture: '时间超前',
     scopeSource: {live:'实时',bundled:'内置'},
@@ -1980,7 +2084,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     formulaTitle: '持有权重公式',
     formulaColumn: '该区块',
     listing: { listed: { label: '该区块已挂单', short: '已挂单' }, unlisted: { label: '该区块未挂单', short: '未挂单' }, unknown: { label: '挂单状态未知', short: '状态未知' } },
-    activityShort: '基于同步区块，非成交时的历史权重。',
+    activityShort: '按上方区块的现状算，和市场页一致；不是这条记录当时的权重。某笔成交当时的权重：点历史成交里那一笔的区块。',
     numberBadge: (label,pct) => `${label} · 编号加成 +${pct}%，已包含在总权重中`,
     lookupBack: '返回',
     change: {up:'加成上升',down:'加成下降',market:'计价依据变化',unknown:'价格依据缺失',known:'价格依据已知'},
@@ -1991,14 +2095,16 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     cancelScopeNote:'自己的挂单显示撤单后权重，仅移除对应挂单；奖励从下一奖励周恢复。',cancelBefore:'挂单中公式值',cancelAfter:'撤单后',cancelTitle:'撤单后持有权重',cancelAssumption:'仅撤销此挂单，其他挂单不变。',cancelNoFloor:'撤销后无剩余挂单，无法计算集合地板及权重。',
     buyTitle: '成交后持有权重',
     // Inspection hero: the piece's output at the shown weight, and its public sales (opened on request).
-    formulaOnly: '公式值', claimShort: '隐私领取按 100%', rateWeek: '每周', rateRest: '剩余', rateFrom: (n) => `第 ${n} 周起`, rateNone: '—', rateHint: '按这一区块的权重：每周是一整周的产量，剩余是到奖励结束（区块 1,050,324）还能产出的总量。',
-    salesTitle: '历史成交', salesCount: (n) => `${n} 笔`, salesLoading: '正在读取公开成交…', salesNone: '没有公开成交记录', salesFailed: '成交记录暂时读不到', salesRetry: '重试', salesMore: (n) => `只列最近 6 笔，共 ${n} 笔`, salesAt: (h) => `区块 ${h}`,
+    formulaOnly: '公式值', claimShort: '隐私领取按 100%', rateWeek: '每周', rateRest: '剩余', rateFrom: (n, now = null) => now === null ? `第 ${n} 周起` : n === now + 1 ? `下周起（第 ${n} 周）` : `第 ${n} 周起（现在第 ${now} 周）`, rateFromTitle: (n, h, blocks, days) => `第 ${n} 周从区块 ${h} 开始，距现在 ${blocks} 块，约 ${days} 天`, rateNone: '—', rateHint: '按这一区块的权重：每周是一整周的产量，剩余是从现在（或开始有奖励的那周）到奖励结束（区块 1,050,324）还能产出的总量。',
+    salesTitle: '历史成交', salesCount: (n) => `${n} 笔`, salesLoading: '正在读取公开成交…', salesNone: '没有公开成交记录', salesFailed: '成交记录暂时读不到', salesRetry: '重试', salesMore: (n) => `只列最近 6 笔，共 ${n} 笔`, salesAt: (h) => `区块 ${h}`, salesAtHint: '按这一块还原这一枚当时的权重',
     formulaBefore: '成交前公式值',
     changedRows: '高亮行：成交前 → 成交后',
     buyAfter: '成交后',
     buyRangeNote: '小型零挂单特征依据未核实，加成显示范围。',
     buyRatioNote: '比值：特征价格 ÷ 集合地板',
     buyAfterShort: '成交后',
+    // Activity rows are past events: a listing still open there is shown as bought now, not after the row's own sale.
+    activityAfter: '现在买入后',
     totalWeight: '总权重',
     buyAssumptionShort: '仅此挂单成交，其他挂单不变。',
     buyNoFloor: '移除此挂单后已无挂单，集合地板不存在，无法计算权重。',
@@ -2010,7 +2116,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     capShort: '上限',
     weightShort: '总权重',
     details: '特征明细',
-    activityNote: '总权重为含基础 100% 的持有公式值，不代表奖励。交易记录旁的数据与挂单状态基于上方同步区块，不是成交时的历史状态。',
+    activityNote: '总权重为含基础 100% 的持有公式值，不代表奖励。动态里的数字按上方区块的现状算，和市场页一致：还在挂单的显示成交后，其余显示现在的总权重；不是交易当时的状态。某笔成交当时的权重，在详情卡的历史成交里点那一笔的区块查看。',
     
     base: '基础',
     number: 'Shielded 编号',
@@ -2136,7 +2242,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     launchAt: (h)=>`Start block ${h}`,
     launchMethod: 'Header time + 10 min/block. Reward weeks are 1,008 blocks; hold unlisted and claim completed weeks.',
     scopeNote: 'Block weight · Not accrued rewards',
-    scopeActivity: 'Selected-block formula · Not sale-time weight',
+    scopeActivity: 'As things stand at the shown block · Not at the time',
     scopeTimeUnknown: 'Time unknown',
     scopeTimeFuture: 'Time ahead',
     scopeSource: {live:'Live',bundled:'Bundled'},
@@ -2147,7 +2253,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     formulaTitle: 'Holding formula',
     formulaColumn: 'At this block',
     listing: { listed: { label: 'Listed at this block', short: 'Listed' }, unlisted: { label: 'Unlisted at this block', short: 'Unlisted' }, unknown: { label: 'Listing status unknown', short: 'Status unknown' } },
-    activityShort: 'Selected-block formula, not sale-time weight.',
+    activityShort: 'As things stand at the block above, same as the market; not the weight when this happened. For a sale\'s own weight, select its block under Past sales.',
     numberBadge: (label,pct) => `${label} · number bonus +${pct}%, already included in total weight`,
     lookupBack: 'Back',
     change: {up:'Bonus up',down:'Bonus down',market:'Price basis changed',unknown:'Price basis missing',known:'Price basis known'},
@@ -2157,14 +2263,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     closingCancel:'The seller is reclaiming this listing; it leaves the market at the next block.',
     cancelScopeNote:'Owned listings show weight after delisting: only that ask is removed. Rewards resume next reward week.',cancelBefore:'Listed formula',cancelAfter:'After delisting',cancelTitle:'Holding weight after delisting',cancelAssumption:'Only this listing is cancelled; others unchanged.',cancelNoFloor:'No listings remain after cancellation; floor and weight are unavailable.',
     buyTitle: 'Holding weight after sale',
-    formulaOnly: 'Formula', claimShort: 'private claim pays 100%', rateWeek: 'Per week', rateRest: 'Remaining', rateFrom: (n) => `from week ${n}`, rateNone: '—', rateHint: 'At this block’s weights: per week is one full week; remaining is all output to the end of rewards (block 1,050,324).',
-    salesTitle: 'Past sales', salesCount: (n) => `${n}`, salesLoading: 'Reading public sales…', salesNone: 'No public sales', salesFailed: 'Sales are unavailable right now', salesRetry: 'Retry', salesMore: (n) => `Latest 6 of ${n}`, salesAt: (h) => `Block ${h}`,
+    formulaOnly: 'Formula', claimShort: 'private claim pays 100%', rateWeek: 'Per week', rateRest: 'Remaining', rateFrom: (n, now = null) => now === null ? `from week ${n}` : n === now + 1 ? `from next week (week ${n})` : `from week ${n} (now week ${now})`, rateFromTitle: (n, h, blocks, days) => `Week ${n} starts at block ${h}, ${blocks} blocks from now, about ${days} days`, rateNone: '—', rateHint: 'At this block’s weights: per week is one full week; remaining is all output from now (or the week it starts earning) to the end of rewards (block 1,050,324).',
+    salesTitle: 'Past sales', salesCount: (n) => `${n}`, salesLoading: 'Reading public sales…', salesNone: 'No public sales', salesFailed: 'Sales are unavailable right now', salesRetry: 'Retry', salesMore: (n) => `Latest 6 of ${n}`, salesAt: (h) => `Block ${h}`, salesAtHint: 'This piece\'s weight at that block',
     formulaBefore: 'Before-sale formula',
     changedRows: 'Highlighted: before → after sale',
     buyAfter: 'After sale',
     buyRangeNote: 'Unverified rare-trait sale basis: bonus shown as a range.',
     buyRatioNote: 'Trait price ÷ collection floor',
     buyAfterShort: 'After sale',
+    activityAfter: 'If bought now',
     totalWeight: 'Total weight',
     buyAssumptionShort: 'Only this listing sells; others unchanged.',
     buyNoFloor: 'No listings remain after this sale. The collection floor is undefined, so weight cannot be calculated.',
@@ -2176,7 +2283,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     capShort: 'Cap',
     weightShort: 'Weight',
     details: 'Trait breakdown',
-    activityNote: 'Holding-formula values include the 100% base, not rewards. Activity values and listing status use the synced block above, not the historical state at the time of sale.',
+    activityNote: 'Holding-formula values include the 100% base, not rewards. Activity figures use the block above as things stand, same as the market: a piece still listed shows its weight after a sale, others their total weight now; not the state at the time. For the weight at a sale, select its block under Past sales on the details card.',
     
     base: 'Base',
     number: 'Shielded #',
@@ -2351,12 +2458,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     closing: 'liveClosing',      // 同一区块内重读 /listings 得到的成交确认中 / 撤单中挂单 {height, rows}
   });
   const SESSION_VISIBLE = 'visibleAt'; // chrome.storage.session：最近一次有 ord-dropz 页面可见的时间
+  // chrome.storage.session: the block the worker is reading now, {height}, from the read of a new block until its records
+  // are in; absent otherwise. Pages show "updating" while it is there: the figures they show are about to change.
+  const SESSION_UPDATING = 'nakaLiveUpdating';
 
   /** This code's version (package.json; the build refuses a mismatch). The worker runs its upgrade step once per version.
    * After the folder's files are replaced, Chrome loads the new pages at once but keeps running the previous worker until
    * the extension is reloaded: a page asks the worker which version it runs (shn-build), and a worker from before this
    * check does not answer at all. */
-  const BUILD = '0.13.0';
+  const BUILD = '0.13.1';
   // Kept in the worker handshake beside BUILD; one release, one value.
   const REVISION = BUILD;
   /** Whether the worker runs this code, from its answer to shn-build (undefined when it sent none). */
@@ -2560,7 +2670,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     return 'network';
   }
 
-  return { KEYS, SESSION_VISIBLE, BUILD, REVISION, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, retryMinutes, classify };
+  return { KEYS, SESSION_VISIBLE, SESSION_UPDATING, BUILD, REVISION, sameBuild, REOPEN, REOPEN_MS, CHECK_MS, HEARTBEAT_MS, VISIBLE_MS, isSnapshot, compatibleSnapshot, statusOf, withClosing, choose, shouldCheck, backoffMinutes, retryMinutes, classify };
 });
 
 </script><script>
@@ -2762,7 +2872,31 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   const notes=own.notes.map((n,i)=>i===own.notes.length-1?{...n,lastWeek:through}:n);
   return {listedAt:null,soldAt:null,weeks:runWeeks(notes,own.gaps),source:'wallet'};
  }
- return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,ABSENT,TEAM,normalize,mates,update,current,impact,rank,rankOrder,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList,absentOf};
+ /** The order of My holdings, one choice for the extension page and the popup (kept in that page's localStorage under
+  * SORT_KEY, shared by every extension page): by the order added, number, weight or this week's SHNAKAS, either way round.
+  * Each choice has the direction it starts in. A stored value that is not one of these is no choice: the order added. */
+ const SORT_KEY='nakaHoldingsSort',SORTS={added:'asc',number:'asc',weight:'desc',week:'desc'};
+ function sortChoice(raw){let v=null;try{v=typeof raw==='string'?JSON.parse(raw):raw;}catch{v=null;}return v&&Object.hasOwn(SORTS,v.by)&&['asc','desc'].includes(v.dir)?{by:v.by,dir:v.dir}:{by:'added',dir:'asc'};}
+ /** What each holding is sorted by. weight: its total weight, after delisting for a listed holding (null when no listing
+  * would be left after it; as listed while it is already closing). week: this week's SHNAKAS so far for one that earns this week (null until read), its weekly
+  * rate before rewards start, 0 for one listed, waiting, left or paused. rows: the reward rows by id (NakaRewards). */
+ function sortFacts(snap,ids,rows,cancel,all){
+  return new Map(ids.map(id=>{const r=R.evaluateSnapshot(snap,id),listed=P.listingStatus(snap,id)==='listed',row=rows.get(id),status=row?.status;
+   const after=listed?cancel.get(id):null,weight=!listed?r:after.state==='ready'?after.result:after.state==='no-floor'?null:r;
+   const week=listed?0:status==='idle'?R.weeklyAllocation(R.units(r),all).lo:status==='earning'?(row.amount??null):0;
+   return [id,{number:snap.items[id][0],weight,week}];}));
+ }
+ /** Ties go to the lower number; a holding with no figure goes after every one that has one. */
+ function sortIds(ids,facts,sort){
+  const {by,dir}=sort,sign=dir==='asc'?1:-1,at=new Map(ids.map((id,i)=>[id,i]));
+  const key=id=>{const f=facts.get(id);return by==='added'?at.get(id):by==='number'?f.number:by==='weight'?f.weight?.lo.weight??null:f.week;};
+  const next=id=>by==='weight'?facts.get(id).weight?.hi.weight??0:0;
+  return [...ids].sort((x,y)=>{const a=key(x),b=key(y);
+   if(a===null||b===null){if(a!==b)return a===null?1:-1;}else if(a!==b)return sign*(a-b);
+   const a2=next(x),b2=next(y);if(a2!==b2)return sign*(a2-b2);
+   return facts.get(x).number-facts.get(y).number;});
+ }
+ return {KEY,MAX,META,LEFT,EVENTS,LEFT_SEEN,ABSENT,TEAM,SORT_KEY,SORTS,normalize,mates,update,current,impact,rank,rankOrder,anchorOf,attribution,saleToConfirm,runWeeks,covers,leftOf,leftSave,soldThisWeek,saleRun,privateRun,weekList,absentOf,sortChoice,sortFacts,sortIds};
 });
 
 </script><script>
@@ -2779,7 +2913,6 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   function entry(snap,model,id){if(!Object.hasOwn(snap.items,id))return null;const before=R.evaluateSnapshot(snap,id),sale=model.get(id);return {id,number:before.number.value,listing:P.listingStatus(snap,id),closing:(snap.closing??[]).find(([x])=>x===id)?.[1]??null,before,sale,result:sale.state==='ready'?sale.result:sale.state==='no-floor'?null:before};}
   function matches(e,minimum){return minimum===0||Number.isFinite(minimum)&&minimum>0&&Boolean(e&&e.sale.state==='ready'&&e.result.lo.weight>=minimum);}
   function candidates(snap,model,minimum=0){return (snap.offers??[]).map(([id])=>entry(snap,model,id)).filter(e=>e&&matches(e,minimum)).sort((a,b)=>a.sale.price-b.sale.price||a.number-b.number);}
-  function examples(snap,model){const all=candidates(snap,model).filter(e=>e.sale.state==='ready'&&e.result.exact&&e.before.exact);all.sort((a,b)=>(b.result.lo.weight-b.before.lo.weight)-(a.result.lo.weight-a.before.lo.weight)||a.number-b.number);const out=[];for(const e of all){if(!out.some(x=>x.result.lo.weight===e.result.lo.weight)){out.push(e);if(out.length===MAX)break;}}return out.map(e=>e.id);}
   // Lowest ask for each reachable after-sale weight: walking asks upward, keep a listing only when its
   // conservative (lower-bound) after-sale weight beats every cheaper listing. Equal asks keep the lower number.
   function ladder(snap,model){
@@ -2787,7 +2920,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     for(const e of candidates(snap,model)){if(e.sale.state==='ready'&&e.result.lo.weight>best){best=e.result.lo.weight;out.push(e);}}
     return out;
   }
-  return {KEY,MAX,normalize,compareState,toggle,entry,matches,candidates,examples,ladder};
+  return {KEY,MAX,normalize,compareState,toggle,entry,matches,candidates,ladder};
 });
 
 </script><script>
@@ -2801,15 +2934,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   full:'Compare already holds four Nakas. Remove one there to add another.',fullHere:'Four selected. Remove one above to add another.',
   addError:'Could not save. Try again.',
   lookup:'Add by Shielded number',find:'Add',placeholder:'Shielded number, e.g. 379',invalid:'Enter a valid Shielded number.',missing:'Not in the selected snapshot.',
-  remove:'Remove',clear:'Clear',count:n=>`${n} / 4 selected`,load:'Use example selection',
+  remove:'Remove',clear:'Clear',count:n=>`${n} / 4 selected`,load:'Use example selection',loadHint:'Best buy’s first four: the listings that add most to my week per BTC',loadNone:'No listing at this block adds to the weekly reward',
   empty:'Choose up to four Nakas to compare',emptyHint:'Use ＋ Add to Compare above, or ＋ Compare in a market inspection or the popup.',
   scroll:'Scroll sideways to see every column',preview:n=>`Enlarge Shielded #${n}`,
-  total:'Total weight',after:'After sale',holding:'Holding formula',before:'Before-sale formula',ask:'Ask · BTC',askNote:'Selected-block ask, excluding fees; not a live quote.',
+  total:'Total weight',after:'After sale',holding:'Holding formula',ask:'Ask · BTC',askNote:'Selected-block ask, excluding fees; not a live quote.',
   noFloor:'No collection floor after sale',unavailable:'Unavailable',number:'Number bonus',price:'BTC',
   traitGuide:'Trait bonuses',legend:'↑ Bonus rises · ↓ Bonus falls · ◆ Price basis changes',
   listed:'Listed',unlisted:'Unlisted',unknown:'Listing unknown',
-  independent:'Each column: one sale, other listings unchanged. Base 100% · cap 400%.',
-  limits:'Block weight, not accrued rewards. No rewards while listed.',unknownNote:'Ranges reflect missing evidence; the upper end is not guaranteed.',
+  independent:'Each column assumes only that sale; listings already selling or being reclaimed count as gone. Base 100% · cap 400%.',
+  limits:'Block weight, not accrued rewards. Listing forfeits that whole week; rewards resume the week after a reclaim.',unknownNote:'Ranges reflect missing evidence; the upper end is not guaranteed.',
   filter:'After sale ≥',any:'Any weight',filterNote:'Listed NFTs in this loaded view only. A range passes only if its lower bound meets the minimum.',
   shown:(n,t)=>`${n} / ${t} loaded`,noMatches:'No matches loaded. Browse all in Compare.',
   browse:'Market listings',browseNote:'Lowest ask first, fees excluded · hover a card for its weekly gain',
@@ -2819,11 +2952,14 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   holdings:'My holdings',holdingsNote:'Saved only on this device. You maintain it, and it can include Nakas held in other accounts.',
   
   holdingsEmpty:'Add your holdings to see your weekly allocation and how a purchase or delisting changes it.',
-  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,gainWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of each block's pool at current weights`,
+  sortLabel:'Sort',sortBy:{added:'Date added',number:'Number',weight:'Weight',week:'This week'},
+  sortHint:(by,dir)=>({added:{asc:'By date added: oldest first',desc:'By date added: newest first'},number:{asc:'Number, low to high: Sub 10, Sub 100 and Sub 1K come first',desc:'Number, high to low'},weight:{desc:'Total weight, high to low',asc:'Total weight, low to high'},week:{desc:'This week\'s SHNAKAS, most first; listed and waiting pieces come last',asc:'This week\'s SHNAKAS, least first'}})[by][dir],
+  sortReverse:' · select again to reverse',
+  weekly:'Est. weekly allocation',perWeek:v=>`${v} SHNAKAS / week`,ofPool:v=>`${v} of each block's pool at current weights`,
   listedNoEarn:'Listed · earns nothing while listed',
   allocationBasis:'Official formula basis: 266,640 SHNAKAS a week shared by the weight units of all 3,333 pieces (100% = 4 units). Listed holdings earn nothing; a new holding counts from the next reward week. Not a payout guarantee.',
   boost:'Raise my weight',boostHint:'Listings that raise your weekly allocation if bought',boostEmpty:'Add holdings to use Raise my weight.',
-  forMe:'For my holdings',weeklyAfterBuy:'Weekly after buying',
+  forMe:'For my holdings · SHNAKAS / week',weeklyAfterBuy:'Weekly after buying · SHNAKAS',pieceWeek:'This NFT per week · SHNAKAS',pieceWeekHint:'What this piece earns each week once bought, at this block’s conditions; For my holdings also counts how the sale moves my other pieces',perMilli:'Per 0.001 BTC · SHNAKAS / week',perMilliHint:'For my holdings each week, per 0.001 BTC of the ask (fees excluded): the value Best buy ranks by',perMilliPieceHint:'This NFT per week, per 0.001 BTC of the ask (fees excluded): with no holdings, the value Best buy ranks by',
   affected:'Weight changes in your holdings',close:'Close',
   addHolding:'＋ My holdings',inHoldings:'✓ My holdings',holdingHint:'Add to My holdings (saved on this device)',holdingRemoveHint:'In My holdings. Select to remove it.',
   addVisible:n=>`＋ Add these ${n} Nakas to My holdings`,addRest:(n,k)=>`＋ Add the other ${n} (${k} already added)`,addedVisible:n=>`✓ All ${n} on this page are in My holdings`,openHoldings:'My holdings ↗',pieces:n=>`${n} ${n===1?'Naka':'Nakas'}`,
@@ -2839,7 +2975,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     ['Sell','Nobody earns that week for the piece','The seller keeps the full weeks before the listing week; the buyer starts next week','no'],
     ['Buy','Nothing, even when bought in a week’s last block','From next week','no'],
    ]},
-   {title:'Private actions · not in public records',rows:[
+   {title:'Private actions · public records cannot tell which piece',rows:[
     ['Send it to someone','Nothing','Full weeks before the send stay claimable','no'],
     ['Receive it privately','Nothing','From next week','no'],
     ['Send to yourself, or Add relay credits','Nothing: adding credits sends the piece to yourself','From next week, as before','no'],
@@ -2864,9 +3000,9 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   formulaWeek:'Weekly SHNAKAS = weight units × v × 1,008 ÷ 10⁸',formulaRate:'v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)',
   allocLines:['100% weight = 4 units; K is the units of all 3,333 catalog pieces, minted or not, listed pieces included','Weights are re-scored every block from the listings active after it; a week pays the sum of its 1,008 blocks','Matches the official weights endpoint block by block; not a payout promise'],
   rulesFormula:'Total weight = base 100% + every trait bonus + the highest number bonus, capped at 400%',traitTitle:'Trait bonus · trait floor ÷ collection floor',numberTitle:'Number bonus · highest tier only',
-  zeroRule:'A trait with no listing: at least 20 pieces +100%; fewer than 20 uses the median of its last 3 sales against the collection floor (two sales: their mean; one: that sale; none: +0%).',
+  zeroRule:'A trait with no listing: at least 20 pieces +100%; fewer than 20 takes the bonus the official data gives now (by sales, no sales or lastBlock). After an assumed sale it is worked out from the median of its last 3 sales against the collection floor (two sales: their mean; one: that sale; none: +0%); this matches the official data, but the exact method is not published.',
   scheduleRule:(start,blocks,weeks)=>`Rewards run from block ${start}, ${blocks} blocks a week for ${weeks} weeks.`,pieceRow:w=>`This Naka · ${w}`,pieceRowCancel:w=>`This Naka once delisted · ${w}`,othersRow:'Your other holdings',unchanged:'unchanged',totalRow:'Total',navRaise:'Raise weight',searchOpen:'Look up a number · Compare',subSearch:'Look up · Compare',navAbout:'About',safeTitle:'Read-only by design',forMeShort:v=>`For my holdings ${v} / week`,compareAddShort:'＋ Add',readOnlyTag:'Read-only, no signing',
-  raiseFull:'Full page ↗',raiseFullHint:'Open Raise weight on the extension page: every listing, every piece, combined plans',raiseBasis:h=>`Listings at block ${h} · fees excluded`,raiseScope:(n,list)=>`Includes ${n} added number${n===1?'':'s'}: ${list.join(', ')}${n>list.length?` and ${n-list.length} more`:''}`,raiseRunning:'Computing…',
+  raiseFull:'Full page ↗',raiseFullHint:'Open Raise weight on the extension page: every listing, every piece, combined plans',raiseBasis:h=>`Listings at block ${h} · fees excluded`,raiseScope:(n,list)=>`Includes ${n} added number${n===1?'':'s'}: ${list.join(', ')}${n>list.length?` and ${n-list.length} more`:''}`,raiseStageListings:(i,n)=>`listings ${i}/${n}`,raiseStagePlans:(i,n)=>`plans ${i}/${n}`,raiseStageTraits:(i,n)=>`traits ${i}/${n}`,
   raiseEmpty:'Add your holdings first: then this tab shows which listing to buy and how to reach 400%.',raiseEnded:'The reward period is over; no week is left to earn.',
   raiseBuyTitle:'Best buy',raisePlanTitle:'Reach 400%',raiseLockTitle:'Own a trait',raiseSimTitle:'Simulate',raiseAllBuys:n=>`All ${n} ↗`,raiseAllPlans:n=>`All ${n} ↗`,raiseAllTraits:n=>`All ${n} ↗`,
   raiseBuyNone:'No listing raises your weekly SHNAKAS right now.',raisePlanDone:'Nothing to take to 400%: every piece is there already or being sold.',raisePlanNone:'Current listings cannot take any piece to 400%.',raisePlanAuto:n=>`${n===1?'One piece reaches':`${n} pieces reach`} 400% once listings already closing close: nothing to do.`,
@@ -2878,7 +3014,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   compareEmptyPopup:'Nothing to compare yet',compareHowPopup:'Tap here to enter numbers (comma- or space-separated), or add from a market inspection.',compareOpen:'Full comparison with traits ↗',
   lookupHow:'Listed Nakas show their after-sale weight; unlisted ones show their holding weight.',blockChip:h=>`Block ${h}`,sharedTrait:n=>`Shared by ${n} held ${n===1?'Naka':'Nakas'}`,showAll:'Show all',zeroSupplement:'Zero-listing supplement',
   addHoldingTitle:'Add a holding',addCompareTitle:'Add to Compare',confirmAdd:'Add',cancel:'Cancel',
-  expandAll:n=>`Show all ${n}`,collapse:'Show less',networkTitle:'Block tab · network output',networkLines:['Full output: the week’s output if all 3,333 pieces earned — the official per-piece accruals summed, listed and unminted ones included. Its gap to the rule’s 266,640 a week is per-block rounding.','Earnable (≤): full output less forfeited, the most holders can claim.','Forfeited (≥): what listing, moving or not minting left unclaimable; never issued. A private move cannot be matched to a piece, so it is a lower bound; its share of the full output sits under it. The bar is earnable on the left, forfeited on the right.','Claimed: public claim receipts for that week. It shows once the week ends and can still grow; it is neither the claimable maximum nor an unclaimed balance.'],tileHint:n=>`Click to inspect #${n}`,tileWeekly:'Per week',tileRemaining:'Remaining',tileAccrued:'This week',tileOpen:'Click to inspect',noReward:'Not earning',blockLabel:'Block',floorBtc:'Floor · BTC',listingsShort:'Listings',rewardWeekShort:'Reward week',weeksOver:'Over',weeksBefore:'Not started',weekBlocksHint:'Blocks into this week / 1,008 a week',liveChecking:'Checking',livePausedShort:'Paused',weekOf:(w,n)=>`Week ${w} / ${n}`,floorLabel:'Floor',scheduleCard:'Reward schedule',weeksDoneShort:(a,b)=>`${a} / ${b} weeks done`,blocksInto:(a,b)=>`${a} / ${b} blocks`,per100Week:'100% · week',per100Hint:'What 100% weight earns in a full week at the current network weight.',listedShort:'Listed · not earning',
+  expandAll:n=>`Show all ${n}`,collapse:'Show less',networkTitle:'Block tab · network output',networkLines:['Full output: the week’s output if all 3,333 pieces earned — the official per-piece accruals summed, listed and unminted ones included. Its gap to the rule’s 266,640 a week is per-block rounding.','Earnable (≤): full output less forfeited, the most holders can claim.','Forfeited (≥): what listing, moving or not minting left unclaimable; it goes to no one else, and what becomes of it is not stated officially. A private move cannot be matched to a piece, so it is a lower bound; its share of the full output sits beside it. The bar is earnable on the left, forfeited on the right.','Claimed: public claim receipts for that week. It shows once the week ends and can still grow; it is neither the claimable maximum nor an unclaimed balance.'],tileHint:n=>`Click to inspect #${n}`,tileWeekly:'Per week',tileRemaining:'Remaining',tileAccrued:'This week',tileOpen:'Click to inspect',noReward:'Not earning',blockLabel:'Block',floorBtc:'Floor · BTC',listingsShort:'Listings',rewardWeekShort:'Reward week',weeksOver:'Over',weeksBefore:'Not started',weekBlocksHint:'Blocks into this week / 1,008 a week',liveChecking:'Checking',updating:'Updating',updatingTip:h=>`Reading block ${h}: the figures are current once it is in`,livePausedShort:'Paused',weekOf:(w,n)=>`Week ${w} / ${n}`,floorLabel:'Floor',scheduleCard:'Reward schedule',weeksDoneShort:(a,b)=>`${a} / ${b} weeks done`,blocksInto:(a,b)=>`${a} / ${b} blocks`,per100Week:'100% · week',per100Hint:'What 100% weight earns in a full week at the current network weight.',listedShort:'Listed · not earning',
   buyLead:n=>`If you buy #${n}`,
   tabListings:'Listings',aboutTitle:'About',aboutSafe:'Read-only and safe',aboutAlloc:'How the weekly figure is calculated',aboutRules:'Weight rules',aboutData:'Data and privacy',
   
@@ -2889,7 +3025,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   openSource:'Open source ↗',weekUnit:'SHNAKAS / week',
   manage:'Holdings ↗',manageHint:'Open My holdings on the full page. Add and remove stay on that page',listedTag:'Listed',blockBasis:h=>`Block ${h} · official weights basis`,
   copyAll:'Copy all numbers',copyAllDone:n=>`Copied ${n} number${n===1?'':'s'}`,copyAllFailed:'Copy failed',copyAllHint:'Numbers only, comma-separated: paste them into Add to import',
-  wantPrefix:'Want to buy',wantCopy:'Copy wanted post',wantCopied:n=>`Copied a wanted post for ${n}: paste it in the group`,wantHint:'“Want to buy” and the numbers, comma-separated: post it in the group; pasted into Add, the numbers import',tgWanted:'Post it in the Naka Telegram group ↗',tgJoin:'Join the Telegram group ↗',
+  wantPrefix:'Want to buy',wantCopy:'Copy wanted post',wantCopied:n=>`Copied a wanted post for ${n}: paste it in the group`,wantHint:'“Want to buy” and the numbers, comma-separated: post it in the group; pasted into Add, the numbers import',tgWanted:'Post it in the Naka Telegram Chinese group ↗',guideLink:'How SHORD works ↗',tgJoin:'Join the Naka Telegram Chinese group ↗',
   
   pageHoldings:'Held on this page',pageWeekly:n=>`${n} ${n===1?'Naka':'Nakas'} on this page`,myHoldingsLine:(n,v)=>`My holdings: ${n} · ${v} SHNAKAS / week`,
   avgWeight:(avg,now)=>`This week’s average weight ${avg}% (official accumulator) · now ${now}`,weightDetail:n=>`Weight breakdown of #${n}`,hoverWeight:'Hover the weight badge on a Naka for its breakdown, as on the market; select the rest of the card to simulate listing it.',
@@ -2914,15 +3050,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   full:'比较已满四枚，在比较页移除一枚后才能加入新的。',fullHere:'已选满四枚，移除上方一枚后可继续加入。',
   addError:'保存失败，请重试。',
   lookup:'输入 Shielded 编号加入比较',find:'加入比较',placeholder:'输入 Shielded 编号，如 379',invalid:'请输入有效的 Shielded 编号。',missing:'所选区块快照未收录该编号。',
-  remove:'移除',clear:'清空',count:n=>`已选 ${n} / 4`,load:'载入示例',
+  remove:'移除',clear:'清空',count:n=>`已选 ${n} / 4`,load:'载入示例',loadHint:'“买哪单划算”的前四单：每 BTC 给我的持仓每周加得最多的挂单',loadNone:'这个区块没有能增加每周奖励的挂单',
   empty:'选择至多四枚 Naka 进行比较',emptyHint:'点击上方“＋ 加入比较”输入编号，或在市场悬浮明细、插件弹窗中加入。',
   scroll:'横向滑动查看全部列',preview:n=>`放大 Shielded #${n}`,
-  total:'总权重',after:'成交后',holding:'持有公式值',before:'成交前公式值',ask:'挂单价格 · BTC',askNote:'所选区块挂单价格，不含费用；不是实时报价。',
+  total:'总权重',after:'成交后',holding:'持有公式值',ask:'挂单价格 · BTC',askNote:'所选区块挂单价格，不含费用；不是实时报价。',
   noFloor:'成交后集合地板不存在',unavailable:'无法计算',number:'编号加成',price:'BTC',
   traitGuide:'特征加成',legend:'↑ 加成上升 · ↓ 加成下降 · ◆ 价格依据变化',
   listed:'已挂单',unlisted:'未挂单',unknown:'挂单状态未知',
-  independent:'每列仅成交该挂单，其他挂单不变。含基础 100%，封顶 400%。',
-  limits:'区块权重，非累计奖励；挂单期间奖励为零。',unknownNote:'区间包含缺失的成交依据，不保证达到上限。',
+  independent:'每列只假设成交这一单；已在成交或撤单中的挂单按离开市场计算。含基础 100%，封顶 400%。',
+  limits:'区块权重，非累计奖励；挂单那一周整周没有奖励，撤单后下一周起恢复。',unknownNote:'区间包含缺失的成交依据，不保证达到上限。',
   filter:'成交后 ≥',any:'不限权重',filterNote:'仅筛选当前已加载的挂单 NFT；区间按下限判断是否达标。',
   shown:(n,t)=>`${n} / ${t} 已加载`,noMatches:'已加载项无匹配，请在比较页查看全部快照挂单。',
   browse:'市场挂单',browseNote:'挂价从低到高，不含手续费 · 悬停查看买入后的每周增量',
@@ -2932,11 +3068,14 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   holdings:'我的持仓',holdingsNote:'只保存在本机，由你手动维护，可以包含其他账号里的 NFT。',
   
   holdingsEmpty:'添加你的持仓，查看每周分配，以及买入或撤单后的变化。',
-  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,gainWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`按当前权重占每块奖池 ${v}`,
+  sortLabel:'排序',sortBy:{added:'加入时间',number:'编号',weight:'权重',week:'本周'},
+  sortHint:(by,dir)=>({added:{asc:'按加入持仓的时间：先加的在前',desc:'按加入持仓的时间：后加的在前'},number:{asc:'编号从小到大：Sub10、Sub100、Sub1K 排在最前',desc:'编号从大到小'},weight:{desc:'总权重从高到低',asc:'总权重从低到高'},week:{desc:'本周 SHNAKAS 从多到少，挂单中和还在等待的排在最后',asc:'本周 SHNAKAS 从少到多'}})[by][dir],
+  sortReverse:' · 再点一次反过来',
+  weekly:'预计每周分配',perWeek:v=>`每周 ${v} SHNAKAS`,ofPool:v=>`按当前权重占每块奖池 ${v}`,
   listedNoEarn:'挂单中 · 挂单期间没有奖励',
   allocationBasis:'按官方公式：每周 266,640 SHNAKAS 按全部 3,333 枚的权重单位分配（100% = 4 单位）。挂单中的持仓没有奖励；新买入的持仓从下一个奖励周开始有奖励。不构成发放承诺。',
   boost:'增加我的权重',boostHint:'买入后能增加你每周分配的挂单',boostEmpty:'先加入持仓，才能使用“增加我的权重”。',
-  forMe:'对我的持仓',weeklyAfterBuy:'买入后每周',
+  forMe:'对我的持仓 · SHNAKAS / 周',weeklyAfterBuy:'买入后每周 · SHNAKAS',pieceWeek:'该 NFT 每周产量 · SHNAKAS',pieceWeekHint:'买下后这一枚自己每周的产量，按这一区块的条件；“对我的持仓”还算上成交对我其他持仓的影响',perMilli:'每 0.001 BTC · SHNAKAS / 周',perMilliHint:'挂单价格每 0.001 BTC 换来的我的持仓每周增量（不含费用）：“买哪单划算”按它排序',perMilliPieceHint:'挂单价格每 0.001 BTC 换来的该 NFT 每周产量（不含费用）：没有持仓时“买哪单划算”按它排序',
   affected:'持仓中权重有变化的',close:'关闭',
   addHolding:'＋ 我的持仓',inHoldings:'✓ 我的持仓',holdingHint:'添加到我的持仓（只保存在本机）',holdingRemoveHint:'已在我的持仓中，点击移出。',
   addVisible:n=>`＋ 将本页 ${n} 枚添加到我的持仓`,addRest:(n,k)=>`＋ 添加其余 ${n} 枚（已添加 ${k} 枚）`,addedVisible:n=>`✓ 本页 ${n} 枚都在我的持仓`,openHoldings:'我的持仓 ↗',pieces:n=>`${n} 枚`,
@@ -2952,7 +3091,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     ['卖出','这一周这一枚谁都没有奖励','卖家保留挂单那一周之前完整周的奖励；买家下一周起有奖励','no'],
     ['买入','没有奖励，哪怕在一周的最后一块买入','下一周起有奖励','no'],
    ]},
-   {title:'私下操作 · 公开记录里看不到',rows:[
+   {title:'私下操作 · 公开记录认不出是哪一枚',rows:[
     ['私下转给别人','没有奖励','转出前完整的周仍可领取','no'],
     ['私下收到','没有奖励','下一周起有奖励','no'],
     ['转给自己、加中继额度（Add relay credits）','没有奖励：加中继额度会把这一枚转给自己','下一周起照常有奖励','no'],
@@ -2977,9 +3116,9 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   formulaWeek:'每周 SHNAKAS = 权重单位 × v × 1,008 ÷ 10⁸',formulaRate:'v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)',
   allocLines:['100% 权重 = 4 个权重单位；K 是全部 3,333 枚（含未铸造、含挂单中）的权重单位合计','权重逐块计算：每个区块按该块确认后的有效挂单重算，一周 1,008 块逐块累加','与官方权重接口逐块一致；不构成发放承诺'],
   rulesFormula:'总权重 = 基础 100% + 各特征加成 + 编号加成（只取最高一档），封顶 400%',traitTitle:'特征加成 · 特征地板价 ÷ 集合地板价',numberTitle:'编号加成 · 只取最高一档',
-  zeroRule:'特征没有挂单时：至少 20 件 +100%；不足 20 件按最近 3 笔成交价的中位数对比集合地板（两笔取平均、一笔取该笔、无成交 +0%）。',
+  zeroRule:'特征没有挂单时：至少 20 件 +100%；不足 20 件用官方当前给出的加成（按成交、无成交或 lastBlock）。假设成交之后，按最近 3 笔成交价的中位数对比集合地板推算（两笔取平均、一笔取该笔、无成交 +0%）；这一口径与官方数据一致，但官方没有公布具体算法。',
   scheduleRule:(start,blocks,weeks)=>`奖励自区块 ${start} 起，每周 ${blocks} 块，共 ${weeks} 周。`,pieceRow:w=>`这一枚 · ${w}`,pieceRowCancel:w=>`这一枚撤单后 · ${w}`,othersRow:'原有持仓',unchanged:'不变',totalRow:'合计',navRaise:'增加权重',searchOpen:'查询编号 · 比较',subSearch:'查询 · 比较',navAbout:'说明',safeTitle:'只读观察，天生安全',forMeShort:v=>`对我的持仓 每周 ${v}`,compareAddShort:'＋ 加入',readOnlyTag:'只读 · 无需登录、授权、签名',
-  raiseFull:'完整页 ↗',raiseFullHint:'在插件独立页打开“增加权重”：全部挂单、全部持仓、合并方案',raiseBasis:h=>`按区块 ${h} 的挂单计算 · 不含手续费`,raiseScope:(n,list)=>`含添加的编号 ${n} 枚：${list.join('、')}${n>list.length?' 等':''}`,raiseRunning:'计算中…',
+  raiseFull:'完整页 ↗',raiseFullHint:'在插件独立页打开“增加权重”：全部挂单、全部持仓、合并方案',raiseBasis:h=>`按区块 ${h} 的挂单计算 · 不含手续费`,raiseScope:(n,list)=>`含添加的编号 ${n} 枚：${list.join('、')}${n>list.length?' 等':''}`,raiseStageListings:(i,n)=>`挂单 ${i}/${n}`,raiseStagePlans:(i,n)=>`方案 ${i}/${n}`,raiseStageTraits:(i,n)=>`特征 ${i}/${n}`,
   raiseEmpty:'先添加持仓：这里会告诉你买哪单划算、怎么冲到 400%。',raiseEnded:'奖励期已结束，没有还能拿奖励的周。',
   raiseBuyTitle:'买哪单划算',raisePlanTitle:'冲 400%',raiseLockTitle:'垄断特征',raiseSimTitle:'模拟',raiseAllBuys:n=>`全部 ${n} 单 ↗`,raiseAllPlans:n=>`全部 ${n} 枚 ↗`,raiseAllTraits:n=>`全部 ${n} 个 ↗`,
   raiseBuyNone:'现在没有能让你每周增加的挂单。',raisePlanDone:'没有要冲 400% 的：持仓都已到 400%，或正在卖出。',raisePlanNone:'现有挂单不够把任何一枚冲到 400%。',raisePlanAuto:n=>`${n} 枚在已成交或撤单中的挂单关闭后会自动到 400%，无需操作。`,
@@ -2991,7 +3130,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   compareEmptyPopup:'还没有选择比较的 Naka',compareHowPopup:'点这里输入编号（多个用逗号或空格分隔），也可以在市场悬浮明细中加入。',compareOpen:'查看完整比较（含特征）↗',
   lookupHow:'已挂单显示成交后权重，未挂单显示持有权重。',blockChip:h=>`区块 ${h}`,sharedTrait:n=>`持仓中 ${n} 枚共享此特征`,showAll:'显示全部',zeroSupplement:'零挂单补充规则',
   addHoldingTitle:'添加持仓',addCompareTitle:'加入比较',confirmAdd:'添加',cancel:'取消',
-  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',networkTitle:'区块页 · 网络产出',networkLines:['满额产出：3,333 枚都有资格时这一周的产出，即官方逐枚累计之和（含挂单和未铸造的）；它和规则每周 266,640 的差额来自逐块取整。','可产出（≤）：满额产出减去流失，是持有人最多能领到的部分。','流失（≥）：因挂单、转移或未铸造而没人能领的部分，不会发行；私密转移认不出是哪一件，所以是下限，右边写它占满额产出的比例。色条左段是可产出，右段是流失。','已领取：公开领取回执里属于这一周的数量，周结束后才显示，之后还会增加；它不是可领取的上限，也不是未领取余额。'],tileHint:n=>`点击查看 #${n}`,tileWeekly:'每周',tileRemaining:'剩余',tileAccrued:'本周已产出',tileOpen:'点击查看',noReward:'没有奖励',blockLabel:'区块',floorBtc:'地板 · BTC',listingsShort:'挂单',rewardWeekShort:'奖励周',weeksOver:'已结束',weeksBefore:'未开始',weekBlocksHint:'本周已过的区块 / 每周 1,008 块',liveChecking:'检查中',livePausedShort:'已暂停',weekOf:(w,n)=>`第 ${w} / ${n} 周`,floorLabel:'集合地板',scheduleCard:'奖励时间表',weeksDoneShort:(a,b)=>`已完成 ${a} / ${b} 周`,blocksInto:(a,b)=>`${a} / ${b} 块`,per100Week:'100% 每周',per100Hint:'按当前全网权重，100% 权重一整周能分到的 SHNAKAS。',listedShort:'挂单中 · 没有奖励',
+  expandAll:n=>`展开全部 ${n} 枚`,collapse:'收起',networkTitle:'区块页 · 网络产出',networkLines:['满额产出：3,333 枚都有资格时这一周的产出，即官方逐枚累计之和（含挂单和未铸造的）；它和规则每周 266,640 的差额来自逐块取整。','可产出（≤）：满额产出减去流失，是持有人最多能领到的部分。','流失（≥）：因挂单、转移或未铸造而没人能领的部分，也不分给别人，去向官方没有说明；私密转移认不出是哪一件，所以是下限，右边写它占满额产出的比例。色条左段是可产出，右段是流失。','已领取：公开领取回执里属于这一周的数量，周结束后才显示，之后还会增加；它不是可领取的上限，也不是未领取余额。'],tileHint:n=>`点击查看 #${n}`,tileWeekly:'每周',tileRemaining:'剩余',tileAccrued:'本周已产出',tileOpen:'点击查看',noReward:'没有奖励',blockLabel:'区块',floorBtc:'地板 · BTC',listingsShort:'挂单',rewardWeekShort:'奖励周',weeksOver:'已结束',weeksBefore:'未开始',weekBlocksHint:'本周已过的区块 / 每周 1,008 块',liveChecking:'检查中',updating:'更新中',updatingTip:h=>`正在读取区块 ${h}，读完后数字才是最新`,livePausedShort:'已暂停',weekOf:(w,n)=>`第 ${w} / ${n} 周`,floorLabel:'集合地板',scheduleCard:'奖励时间表',weeksDoneShort:(a,b)=>`已完成 ${a} / ${b} 周`,blocksInto:(a,b)=>`${a} / ${b} 块`,per100Week:'100% 每周',per100Hint:'按当前全网权重，100% 权重一整周能分到的 SHNAKAS。',listedShort:'挂单中 · 没有奖励',
   buyLead:n=>`如果买入 #${n}`,
   tabListings:'挂单',aboutTitle:'说明',aboutSafe:'只读与安全',aboutAlloc:'每周分配怎么算',aboutRules:'权重规则',aboutData:'数据与隐私',
   
@@ -3002,7 +3141,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   openSource:'开源代码 ↗',weekUnit:'SHNAKAS / 周',
   manage:'持仓页 ↗',manageHint:'打开独立页的我的持仓。添加和移出都在这一页',listedTag:'挂单中',blockBasis:h=>`区块 ${h} · 官方权重口径`,
   copyAll:'复制全部编号',copyAllDone:n=>`已复制 ${n} 个编号`,copyAllFailed:'复制失败',copyAllHint:'纯数字、逗号分隔；对方在“添加”里粘贴即可导入',
-  wantPrefix:'求购',wantCopy:'复制求购信息',wantCopied:n=>`已复制 ${n} 个编号的求购信息，进群粘贴即可`,wantHint:'“求购”加逗号分隔的编号：发到群里求购；粘贴进“添加”也能直接导入这些编号',tgWanted:'进入 Naka Telegram 群求购 ↗',tgJoin:'进入 Telegram 交流群 ↗',
+  wantPrefix:'求购',wantCopy:'复制求购信息',wantCopied:n=>`已复制 ${n} 个编号的求购信息，进群粘贴即可`,wantHint:'“求购”加逗号分隔的编号：发到群里求购；粘贴进“添加”也能直接导入这些编号',tgWanted:'到 Naka Telegram 中文交流群求购 ↗',guideLink:'协议原理图解 ↗',tgJoin:'进入 Naka Telegram 中文交流群 ↗',
   
   pageHoldings:'本页持仓',pageWeekly:n=>`本页 ${n} 枚`,myHoldingsLine:(n,v)=>`我的持仓 ${n} 枚 · 每周 ${v} SHNAKAS`,
   avgWeight:(avg,now)=>`本周平均权重 ${avg}%（官方累计表）· 当前 ${now}`,weightDetail:n=>`#${n} 的权重明细`,hoverWeight:'鼠标移到图片右下角的权重标签查看明细（与市场相同）；点卡片其它位置模拟挂单。',
@@ -3023,6 +3162,8 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  const GITHUB='https://github.com/ordinalser/naka-sigil';
  /** The Naka community group on Telegram: where wanted posts go, and the popup's About links to it. */
  const TELEGRAM='https://t.me/+fRT4yVcxZ6VlNTBl';
+ // The illustrated guide to the protocol (served from this repository's GitHub Pages), one page per language.
+ const GUIDE={zh:'https://ordinalser.github.io/naka-sigil/learn/shord/',en:'https://ordinalser.github.io/naka-sigil/learn/shord/en.html'};
  /** Official snapshot artwork, then legacy public art and the inscription. Failures are bounded per image. */
  function art(snap,id,fallbackClass){
   const img=document.createElement('img'),asset=snap.items[id][0]-snap.collection.numberStart;
@@ -3048,7 +3189,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    button.addEventListener('mouseleave',settle,{once:true});button.addEventListener('blur',settle,{once:true});
   }else if(state!=='selected')button.classList.remove('naka-select--fresh');
   button.dataset.compare=state;button.setAttribute('aria-pressed',String(state==='selected'));button.disabled=false;
-  if(state==='selected')button.replaceChildren(span('naka-select__on',c.inCompare),span('naka-select__off',c.removeCompare));
+  if(state==='selected'){const labels=span('naka-select__labels','');labels.append(span('naka-select__on',c.inCompare),span('naka-select__off',c.removeCompare));button.replaceChildren(labels);}
   else if(state==='full')button.replaceChildren(span('',c.fullShort));
   else if(state==='add')button.replaceChildren(span('',c.add));
   else throw new Error(`Unknown comparison state: ${state}`);
@@ -3143,7 +3284,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   * fails for a piece just bought).
   */
  function marketFind(snap,id){return `https://ord-dropz.xyz/secondary/collections/${snap.collection.slug}#naka-find=${snap.items[id][0]}`;}
- root.NakaExploreUI={pick,paintCompare,shn,trend,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM};
+ root.NakaExploreUI={pick,paintCompare,shn,trend,percent,holdingsLine,art,artStore,about,resolveNumbers,listField,wantText,marketFind,GITHUB,TELEGRAM,GUIDE};
 })(globalThis);
 
 </script><script>
@@ -3178,6 +3319,12 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  function weeks(raw){
   if(!raw||raw.format!==1||!raw.weeks||typeof raw.weeks!=='object'||Array.isArray(raw.weeks))return null;
   const out={};for(const [k,row] of Object.entries(raw.weeks)){const w=Number(k);if(Number.isInteger(w)&&row?.week===w&&row.complete===true&&table(row))out[w]=row;}
+  return out;
+ }
+ /** The same tables as they stand in one chain epoch: a row read in another epoch is left out, so it is read again. A row
+  * an older version saved without an epoch, or an unknown epoch, keeps every row. Every reader uses this one test. */
+ function weeksAt(raw,epoch){
+  const out=weeks(raw);if(out&&epoch!==undefined&&epoch!==null)for(const [w,row] of Object.entries(out))if(row.epoch!==undefined&&row.epoch!==epoch)delete out[w];
   return out;
  }
  /**
@@ -3311,15 +3458,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   return {weeks:out,left:sold,total:out.length?total:null};
  }
  const copy=lang=>lang==='zh'?{
-  accrued:'本周已产出',reference:'本周已产出 · 参考',projected:'本周预计',toLaunch:'距第 1 周',blocksLeft:n=>`${n} 块`,weekly:'预计每周',weeklyAfter:'开始后每周',remaining:'预计剩余',netShare:'全网占比',netShareAfter:'开始后全网占比',netShareHint:'预计每周 ÷ 每周奖池 266,640：全网每周产出里你分到的比例。',lastBlock:'最新一块',share:'占应发',rest:'本周剩余',unitShare:'权重占比',past:'往周合计',
+  accrued:'本周已产出',reference:'本周已产出 · 参考',projected:'本周预计',toLaunch:'距第 1 周',blocksLeft:n=>`${n} 块`,weekly:'预计每周',remaining:'预计剩余',netShare:'全网占比',netShareHint:'预计每周 ÷ 每周奖池 266,640：按当前权重，全网每周产出里你分到的比例，口径和预计每周相同。',lastBlock:'最新一块',share:'占应发',rest:'本周剩余',unitShare:'权重占比',past:'往周合计',
   week:(n,b)=>`第 ${n} 周 · ${b} / 1008 块`,weekOnly:n=>`第 ${n} 周`,before:'奖励启动前',ended:'奖励已结束',launchAt:h=>`第 1 周起点 区块 ${h}`,claimBy:h=>`领取截止区块 ${h}`,
   loading:'正在读取本周累计…',error:'累计读取失败，下次检查时重试',notYet:'官方累计表尚未更新到本块，下次检查再读',endedNote:h=>`78 周奖励已结束；已完成的周在官方钱包领取，协议领取截止区块 ${h}`,closedNote:h=>`已过协议领取截止区块 ${h}`,
   counts:c=>[c.earning?`${c.earning} 枚本周有奖励`:'',c.idle?`${c.idle} 枚第 1 周起有奖励`:'',c.waiting?`${c.waiting} 枚下周起有奖励`:'',c.listed?`${c.listed} 枚挂单中`:'',c.paused?`${c.paused} 枚暂停`:'',c.gone?`${c.gone} 枚已转出（钱包页）`:'',c.ended?`${c.ended} 枚没有后续周`:'',c.unknown?`${c.unknown} 枚本周无法确认`:''].filter(Boolean).join(' · ')||'本周没有持仓有奖励',
   leftCount:n=>`已离手 ${n} 枚`,
   shareHint:cur=>`本周已产出 ÷ 本周已过区块的规则应发（每周 266,640 SHNAKAS × 已过块数 ÷ 1,008）。分母是规则应发，不是理论分配，也不是没有奖励的占比。当前区块本周有奖励的持仓占全部 3,333 枚权重单位 K 的 ${cur}。`,
   unitShareHint:'未挂单持仓的权重单位 ÷ 全部 3,333 枚的权重单位 K；第 1 周起每块按这个比例分',
-  weeklyHint:'按当前权重，一整周能产出的数量。',
-  remainingHint:'未来还能产出的总量：按当前权重，从现在算到奖励结束（区块 1,050,324）。',
+  weeklyHint:'按当前权重，一整周能产出的数量：持有的都算，下周才开始有奖励的也算，挂单中的不算。',
+  remainingHint:'未来还能产出的总量：按当前权重，从现在（还没开始的从它开始有奖励的那周）算到奖励结束（区块 1,050,324）。',
   accruedHint:'本周截至当前区块已产出的数量（官方逐块累计）。',referenceHint:'资格按公开记录判断。',restHint:(n,v)=>`本周还剩 ${n} 块，约再产出 ${v}。`,
   pastHint:'已结束各周之和，含已领取和已离手的部分，不含本周。点开看每一周。',pastIncomplete:'记录未齐。',pastReference:'含按公开记录推算的部分。',
   restOfWeek:v=>`本周剩余大约还有 ${v}（只到本周结束，不是预计剩余产量）`,
@@ -3330,15 +3477,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   tracked:'资格已按钱包页核对。',
   status:{earning:'本周',waiting:'下周起',listed:'挂单中',paused:'暂停',gone:'已转出',ended:'无后续周',idle:'',unknown:'无法确认'},startsWeek:n=>`第 ${n} 周起`,
  }:{
-  accrued:'Accrued this week',reference:'Accrued this week · reference',projected:'Projected',toLaunch:'To week 1',blocksLeft:n=>`${n} block${n==='1'?'':'s'}`,weekly:'Per week',weeklyAfter:'Per week once started',remaining:'Remaining',netShare:'Network share',netShareAfter:'Network share once started',netShareHint:'Per week ÷ the weekly pool of 266,640: your part of the network’s output.',lastBlock:'Last block',share:'Of pool',rest:'This week left',unitShare:'Weight share',past:'Past weeks',
+  accrued:'Accrued this week',reference:'Accrued this week · reference',projected:'Projected',toLaunch:'To week 1',blocksLeft:n=>`${n} block${n==='1'?'':'s'}`,weekly:'Per week',remaining:'Remaining',netShare:'Network share',netShareHint:'Per week ÷ the weekly pool of 266,640: at the current weights, your part of the network’s output, counted as per week is.',lastBlock:'Last block',share:'Of pool',rest:'This week left',unitShare:'Weight share',past:'Past weeks',
   week:(n,b)=>`Week ${n} · ${b} / 1008 blocks`,weekOnly:n=>`Week ${n}`,before:'Before rewards start',ended:'Accrual ended',launchAt:h=>`Week 1 starts at block ${h}`,claimBy:h=>`Claim deadline block ${h}`,
   loading:'Reading this week’s accumulator…',error:'Reward data unavailable; retried at the next check',notYet:'The official accumulator has not reached this block yet; read again at the next check',endedNote:h=>`The 78 reward weeks are over; claim completed weeks in the official wallet (programme claim deadline: block ${h})`,closedNote:h=>`Past the programme claim deadline, block ${h}`,
   counts:c=>[c.earning?`${c.earning} earning this week`:'',c.idle?`${c.idle} count${c.idle===1?'s':''} from week 1`:'',c.waiting?`${c.waiting} start${c.waiting===1?'s':''} next week`:'',c.listed?`${c.listed} listed`:'',c.paused?`${c.paused} paused`:'',c.gone?`${c.gone} sent away (Wallet)`:'',c.ended?`${c.ended} with no later week`:'',c.unknown?`${c.unknown} undecided this week`:''].filter(Boolean).join(' · ')||'No holding earns this week',
   leftCount:n=>`${n} left your vault`,
   shareHint:cur=>`Accrued this week ÷ the rule’s issuance so far (266,640 SHNAKAS a week × blocks so far ÷ 1,008). The denominator is that issuance, not the theoretical allocation and not an unrewarded share. Holdings earning this week currently hold ${cur} of all 3,333 pieces’ units K.`,
   unitShareHint:'Weight units of unlisted holdings ÷ all 3,333 pieces’ units K; from week 1 each block is split this way',
-  weeklyHint:'One full week at the current weights.',
-  remainingHint:'All future output: at the current weights, from now to the end of rewards (block 1,050,324).',
+  weeklyHint:'One full week at the current weights: every holding counts, those that start next week included, listed ones not.',
+  remainingHint:'All future output: at the current weights, from now (or the week a piece starts earning) to the end of rewards (block 1,050,324).',
   accruedHint:'This week so far, through the current block (official per-block accrual).',referenceHint:' Eligibility read from public records.',restHint:(n,v)=>` ${n} blocks left this week: about ${v} more.`,
   pastHint:'Completed weeks, claimed and departed pieces included, this week excluded. Open each week.',pastIncomplete:' Records are incomplete.',pastReference:' Includes public-record estimates.',
   restOfWeek:v=>`About ${v} still to accrue this week (through this week only, not estimated remaining output)`,
@@ -3444,11 +3591,11 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   // that share as SHNAKAS a week, and those weeks to the end of rewards. The share has the same scope as per week (pieces
   // that start next week included), so share × 266,640 = per week, and the same caption before rewards start; the page
   // has room for it, the popup does not. After the end there is no weekly output to share.
-  if(options.network&&!ended){const f=x=>`${(x*100).toFixed(2)}%`,sh=view?.weekly?{lo:view.weekly.lo/R.RULES.poolPerWeek,hi:view.weekly.hi/R.RULES.poolPerWeek}:null;stat('share',view?.waiting?c.netShareAfter:c.netShare,sh===null?null:f(sh.lo)===f(sh.hi)?f(sh.lo):`${f(sh.lo)}–${f(sh.hi)}`,c.netShareHint);}
-  stat('weekly',view?.waiting&&!ended?c.weeklyAfter:c.weekly,view?U.shn(view.weekly):null,c.weeklyHint);
+  if(options.network&&!ended){const f=x=>`${(x*100).toFixed(2)}%`,sh=view?.weekly?{lo:view.weekly.lo/R.RULES.poolPerWeek,hi:view.weekly.hi/R.RULES.poolPerWeek}:null;stat('share',c.netShare,sh===null?null:f(sh.lo)===f(sh.hi)?f(sh.lo):`${f(sh.lo)}–${f(sh.hi)}`,c.netShareHint);}
+  stat('weekly',c.weekly,view?U.shn(view.weekly):null,c.weeklyHint);
   stat('remaining',c.remaining,view?U.shn(view.remaining):null,c.remainingHint);
   if(phase.state==='active'&&data.state==='ready'){const left=W-data.blocks,rest=U.shn({lo:rate.lo*left/W,hi:rate.hi*left/W});label.title+=c.restHint(int(left),rest);}
-  const past=n('button','naka-reward__past naka-reward__stat'),pastLabel=lang==='zh'?'历史累计':'Past total',evidence=!report?'':report.total===null?c.pastIncomplete:report.reference?c.pastReference:'';past.type='button';past.dataset.key='past';past.append(n('span','',pastLabel),n('b','',report?(report.total===null?'—':U.shn({lo:report.total,hi:report.total})):'—'));past.title=c.pastHint+evidence;past.addEventListener('click',()=>{const surface=document.documentElement.dataset.nakaSurface;if(surface==='popup'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'history'});return;}if(surface==='workspace'){location.hash='history';return;}globalThis.NakaLedgerUI?.history(snap,lang);});
+  const past=n('button','naka-reward__past naka-reward__stat'),pastLabel=(lang==='zh'?'历史累计':'Past total')+(report?.reference&&report.total!==null?(lang==='zh'?' · 参考':' · reference'):''),evidence=!report?'':report.total===null?c.pastIncomplete:report.reference?c.pastReference:'';past.type='button';past.dataset.key='past';past.append(n('span','',pastLabel),n('b','',report?(report.total===null?'—':U.shn({lo:report.total,hi:report.total})):'—'));past.title=c.pastHint+evidence;past.addEventListener('click',()=>{const surface=document.documentElement.dataset.nakaSurface;if(surface==='popup'){chrome.runtime.sendMessage({type:'shn-open-compare',section:'history'});return;}if(surface==='workspace'){location.hash='history';return;}globalThis.NakaLedgerUI?.history(snap,lang);});
   stats.insertBefore(past,stats.firstChild);main.append(figure,stats);box.append(main);
   const bar=n('div','naka-reward__bar'),fill=n('i','');fill.style.width=(phase.state==='active'?Math.min(1,data.blocks/W)*100:ended?100:0)+'%';
   bar.setAttribute('role','progressbar');bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(W));bar.setAttribute('aria-valuenow',String(phase.state==='active'?data.blocks:ended?W:0));bar.append(fill);box.append(bar);
@@ -3459,8 +3606,8 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   return {element:box,data};
  }
  /** Caption parts for one holding tile: amount this week (null while loading), its status words and the exact reason. */
- function tile(data,id,lang){const c=copy(lang),row=data.rows.find(r=>r.id===id);if(!row)return null;const e=explain(row.reason,lang);return {row,amount:row.amount,label:row.status==='waiting'&&row.startsWeek?c.startsWeek(row.startsWeek):c.status[row.status],explain:e};}
- return {KEY,STATUS,OBSERVED,WEEKS,normalize,table,piece,weeks,reason,explain,explainFor,portfolio,currentRate,blockRate,steadyRate,shareNow,projection,weekShare,history,rangeText,render,tile,format,blockText,statusLine,copy,weekNo,listedWhen};
+ function tile(data,id,lang){const c=copy(lang),row=data.rows.find(r=>r.id===id);if(!row)return null;const e=explain(row.reason,lang);return {row,amount:row.amount,label:row.status==='waiting'&&row.startsWeek&&!(data.week!==null&&row.startsWeek===data.week+1)?c.startsWeek(row.startsWeek):c.status[row.status],explain:e};}
+ return {KEY,STATUS,OBSERVED,WEEKS,normalize,table,piece,weeks,weeksAt,reason,explain,explainFor,portfolio,currentRate,blockRate,steadyRate,shareNow,projection,weekShare,history,rangeText,render,tile,format,blockText,statusLine,copy,weekNo,listedWhen};
 });
 
 </script><script>
@@ -3693,7 +3840,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  'use strict';const L=root.NakaLedger,R=root.ShnakasRules,A=root.NakaRewards,H=root.NakaPortfolio,I=root.ShnakasI18n,M=root.NakaMining;
  const n=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;},t=(lang,zh,en)=>lang==='zh'?zh:en,fmt=v=>v===null||v===undefined?'—':v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
  const button=(label,fn,cls='nl-button')=>{const b=n('button',cls,label);b.type='button';b.addEventListener('click',fn);return b;};
- const reports=new Map(),jobs=new Map(),panels=new Set();let modal=null,restore=null,cacheEpoch='',generation=0;
+ const AUTO_TRIES=3,reports=new Map(),jobs=new Map(),panels=new Set();let modal=null,restore=null,cacheEpoch='',generation=0;
  function rpc(scope,week,snap){const key=[scope,week??'all',snap.snapshot.height,snap.snapshot.generatedAt??'',cacheEpoch].join('|');if(reports.has(key))return Promise.resolve(reports.get(key));if(jobs.has(key))return jobs.get(key);
   if(!root.chrome?.runtime?.sendMessage)return Promise.reject(Error('demo'));
   const revision=generation;const task=chrome.runtime.sendMessage({type:'shn-ledger',scope,height:snap.snapshot.height,...(week===undefined?{}:{week})}).then(r=>{if(revision!==generation)throw Error('block-changed');if(!r?.ok)throw Error(r?.error??'unavailable');reports.set(key,r.report);while(reports.size>32)reports.delete(reports.keys().next().value);return r.report;}).finally(()=>jobs.delete(key));jobs.set(key,task);return task;
@@ -3702,21 +3849,21 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  function busy(box,lang,scope){const label=n('p','nl-loading',t(lang,'正在读取周累计与公开记录…','Reading weekly totals and public records…')),meter=n('progress','nl-progress');label.setAttribute('role','status');meter.setAttribute('aria-label',t(lang,'读取进度','Read progress'));box.replaceChildren(label,meter);box.setAttribute('aria-busy','true');const token={};box.nlBusyToken=token;
   const listener=(changes,area)=>{const p=changes.nakaLedgerProgress?.newValue;if(area!=='session'||p?.scope!==scope||!box.isConnected)return;meter.max=Math.max(1,p.total);meter.value=p.loaded;label.textContent=p.stage==='records'?t(lang,'正在核对公开挂单、转移和领取…','Checking public listings, moves and claims…'):t(lang,`已读取 ${p.loaded}/${p.total} 周`,`Loaded ${p.loaded}/${p.total} weeks`);};root.chrome?.storage?.onChanged?.addListener(listener);return()=>{if(box.nlBusyToken===token){box.removeAttribute('aria-busy');delete box.nlBusyToken;}root.chrome?.storage?.onChanged?.removeListener(listener);};
  }
- function fail(box,lang,retry,error){box.replaceChildren(n('p','nl-note',error?.message==='demo'?t(lang,'演示数据未包含历史记录','Historical records are not included in this demo'):error?.message==='block-changed'?t(lang,'区块已更新，点击重试读取新数据','Block changed. Retry with updated data.'):t(lang,'记录暂不可用，已保存的编号不受影响','Records unavailable. Saved NFT IDs are unchanged.')),button(t(lang,'重试','Retry'),retry));}
+ function fail(box,lang,retry,error,auto=false){box.replaceChildren(n('p','nl-note',error?.message==='demo'?t(lang,'演示数据未包含历史记录','Historical records are not included in this demo'):error?.message==='block-changed'?(auto?t(lang,'索引器正在更新，新区块到了会自动重读，也可以点重试','The indexer is updating; this reads again on the next block, or retry now'):t(lang,'区块已更新，点重试按最新区块重读','Block changed. Retry to read at the latest block.')):t(lang,'记录暂不可用，已保存的编号不受影响','Records unavailable. Saved NFT IDs are unchanged.')),button(t(lang,'重试','Retry'),retry));}
  function close(){if(!modal)return;modal.remove();modal=null;restore?.focus({preventScroll:true});restore=null;}
  function dialog(title,lang){close();restore=document.activeElement;const box=n('dialog','nl-dialog'),head=n('header','nl-dialog-head');head.append(n('h2','',title),button('×',close,'nl-dismiss'));head.lastChild.setAttribute('aria-label',t(lang,'关闭','Close'));const body=n('div','nl-dialog-body');box.append(head,body);document.body.append(box);modal=box;box.addEventListener('cancel',e=>{e.preventDefault();close();});box.addEventListener('click',e=>{if(e.target===box&&((e.clientX<box.getBoundingClientRect().left)||(e.clientX>box.getBoundingClientRect().right)||(e.clientY<box.getBoundingClientRect().top)||(e.clientY>box.getBoundingClientRect().bottom)))close();});box.showModal();return body;}
- function weekSelect(snap,lang,all=false){const phase=R.rewardPhase(snap.snapshot),last=phase.state==='active'?phase.index:['ended','closed'].includes(phase.state)?R.RULES.weeks-1:-1,s=n('select','nl-select');s.setAttribute('aria-label',t(lang,'奖励周期','Reward period'));if(all){const o=n('option','',t(lang,'全部已结束周','All completed weeks'));o.value='all';s.append(o);}for(let w=last;w>=0;w--){const p=L.period(w),o=n('option','',t(lang,`第 ${w+1} 周${w===last&&phase.state==='active'?(snap.snapshot.height>=phase.last?' · 已结束':' · 进行中'):''}`,`Week ${w+1}${w===last&&phase.state==='active'?(snap.snapshot.height>=phase.last?' · completed':' · in progress'):''}`));o.value=String(w);o.title=`${I.int(p.first)}–${I.int(p.last)}`;s.append(o);}return s;}
+ function weekSelect(snap,lang,all=false){const phase=R.rewardPhase(snap.snapshot),last=phase.state==='active'?phase.index:['ended','closed'].includes(phase.state)?R.RULES.weeks-1:-1,s=n('select','nl-select');s.setAttribute('aria-label',t(lang,'奖励周期','Reward period'));if(all){const o=n('option','',t(lang,'全部已结束周','All completed weeks'));o.value='all';s.append(o);}for(let w=last;w>=0;w--){const p=L.period(w),o=n('option','',t(lang,`第 ${w+1} 周${w===last&&phase.state==='active'?(snap.snapshot.height>=phase.last?' · 最后一块':' · 进行中'):''}`,`Week ${w+1}${w===last&&phase.state==='active'?(snap.snapshot.height>=phase.last?' · final block':' · in progress'):''}`));o.value=String(w);o.title=`${I.int(p.first)}–${I.int(p.last)}`;s.append(o);}return s;}
  function intervalText(row,lang){return t(lang,`区块 ${I.int(row.first)}–${I.int(row.last)}`,`Blocks ${I.int(row.first)}–${I.int(row.last)}`)+(row.complete?'':t(lang,` · 已累计至 ${I.int(row.through)}`,` · accrued through ${I.int(row.through)}`));}
  // Block tab: three dates, then the selected week's four figures. The figures keep their places while they load (blank
  // values in the same grid) and before rewards start; what each one means is on the About tab, the exact basis in its tooltip.
  function network({snap,lang,clock=snap.snapshot,parent}){
   if(!parent)return;parent.classList.add('nl-network-host');let c=parent.nlController;
-  if(!c){const box=n('section','nl-network'),sched=n('section','block-card nl-card'),schedHead=n('div','nl-card-head'),schedTitle=n('h3','px-title'),schedCount=n('span','nl-card-count'),schedule=n('dl','nl-calendar'),net=n('section','block-card nl-card'),header=n('div','nl-section-head'),named=n('div','nl-section-name'),title=n('h3','px-title'),range=n('p','nl-period'),select=weekSelect(snap,lang),content=n('div','nl-network-body');schedHead.append(schedTitle,schedCount);sched.append(schedHead,schedule);named.append(title,range);header.append(named,select);net.append(header,content);box.append(sched,net);parent.prepend(box);c={box,header,title,range,select,content,schedule,schedTitle,schedCount,selected:null,userSelected:false,key:'',snap,lang,clock};parent.nlController=c;panels.add(c);select.addEventListener('change',()=>{c.userSelected=true;c.selected=Number(select.value);c.key='';loadNetwork(c);});}
+  if(!c){const box=n('section','nl-network'),sched=n('section','block-card nl-card'),schedHead=n('div','nl-card-head'),schedTitle=n('h3','px-title'),schedCount=n('span','nl-card-count'),schedule=n('dl','nl-calendar'),net=n('section','block-card nl-card'),header=n('div','nl-section-head'),named=n('div','nl-section-name'),title=n('h3','px-title'),busy=root.NakaPixel.busy('nl-busy'),titleRow=n('div','nl-title-row'),range=n('p','nl-period'),select=weekSelect(snap,lang),content=n('div','nl-network-body');busy.hidden=true;titleRow.append(title,busy);schedHead.append(schedTitle,schedCount);sched.append(schedHead,schedule);named.append(titleRow,range);header.append(named,select);net.append(header,content);box.append(sched,net);parent.prepend(box);c={box,header,title,busy,range,select,content,schedule,schedTitle,schedCount,selected:null,userSelected:false,key:'',snap,lang,clock};parent.nlController=c;panels.add(c);select.addEventListener('change',()=>{c.userSelected=true;c.selected=Number(select.value);c.key='';loadNetwork(c);});}
   c.snap=snap;c.lang=lang;c.clock=clock;c.title.textContent=t(lang,'网络产出','Network output');const options=weekSelect(snap,lang),latest=options.value;c.select.replaceChildren(...options.children);c.select.disabled=!c.select.options.length;const keep=c.userSelected&&c.selected!==null&&[...c.select.options].some(o=>Number(o.value)===c.selected);const pick=keep?String(c.selected):latest!==''?latest:(c.select.options[0]?.value??'');if(pick!=='')c.select.value=pick;c.selected=c.select.value===''?null:Number(c.select.value);
   if(c.selected===null){c.key='';paintWeek(c,null,t(lang,'奖励尚未开始','Rewards have not started'));}else loadNetwork(c);
   calendar(c);return c.box;
  }
- function completedReport(snap,ids,stored){const tables=A.weeks(stored?.[A.WEEKS])??{},current=stored?.[A.KEY];if(A.table(current))tables[current.week]=current;const events=stored?.[H.EVENTS],records=Object.entries(events?.rows??{}).flatMap(([,rows])=>rows),report=L.fleet(snap,ids,Object.values(tables),records,events?.height??0,stored?.[H.META],stored?.[L.KEY],stored?.[H.LEFT],{details:null});const saved=[...new Set([...ids,...Object.keys(stored?.[L.KEY]?.runs??{}),...Object.keys(H.leftOf(stored?.[H.LEFT]))])];if(saved.some(id=>!Object.hasOwn(events?.rows??{},id)))report.total=null;return report;}
+ function completedReport(snap,ids,stored){const current=stored?.[A.KEY],tables=A.weeksAt(stored?.[A.WEEKS],current?.epoch)??{};if(A.table(current))tables[current.week]=current;const events=stored?.[H.EVENTS],records=Object.entries(events?.rows??{}).flatMap(([,rows])=>rows),report=L.fleet(snap,ids,Object.values(tables),records,events?.height??0,stored?.[H.META],stored?.[L.KEY],stored?.[H.LEFT],{details:null});const saved=[...new Set([...ids,...Object.keys(stored?.[L.KEY]?.runs??{}),...Object.keys(H.leftOf(stored?.[H.LEFT]))])];if(saved.some(id=>!Object.hasOwn(events?.rows??{},id)))report.total=null;return report;}
  // The schedule card: one row per date, its label left; on the right the blocks left (exact) and the estimated local date
  // (the nearest to the minute, the far ones to the day: 10 minutes a block is only an estimate).
  function calendar(c){const {snap,clock,lang}=c,model=M.networkModel(snap,clock),phase=model.phase,rows=[];
@@ -3724,13 +3871,20 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   c.schedTitle.textContent=t(lang,'奖励时间表','Reward schedule');c.schedCount.textContent=t(lang,`已完成 ${done} / ${R.RULES.weeks} 周`,`${done} / ${R.RULES.weeks} weeks done`);
   for(const p of model.nodes.filter(p=>['launch','week','end','claim'].includes(p.kind))){
    const label={launch:t(lang,'奖励开始','Rewards start'),week:t(lang,'本周结束','Week ends'),end:t(lang,'奖励结束','Rewards end'),claim:t(lang,'领取截止','Claim deadline')}[p.kind],item=n('div','nl-when-row'),when=p.eta===null||p.eta===undefined?null:I.localTime(p.eta);
-   const value=n('dd','');value.append(n('b','',p.reached?t(lang,'已到','Reached'):t(lang,`${I.int(p.blocks)} 块`,`${I.int(p.blocks)} blocks`)),n('span','',p.reached?`#${I.int(p.height)}`:when===null?'—':p.kind==='week'||p.kind==='launch'?when.slice(5):when.slice(0,10)));
-   item.append(n('dt','',label),value);item.title=t(lang,`区块 ${I.int(p.height)}`,`Block ${I.int(p.height)}`);rows.push(item);}
+   const value=n('dd','');value.append(n('b','',p.reached?t(lang,'已到','Reached'):t(lang,`${I.int(p.blocks)} 块`,`${I.int(p.blocks)} blocks`)),n('span','',p.reached?`#${I.int(p.height)}`:when===null?'—':t(lang,'约 ','~')+(p.kind==='week'||p.kind==='launch'?when.slice(5):when.slice(0,10))));
+   item.append(n('dt','',label),value);item.title=p.reached?t(lang,`区块 ${I.int(p.height)}`,`Block ${I.int(p.height)}`):t(lang,`区块 ${I.int(p.height)} · 日期按每块约 10 分钟估算`,`Block ${I.int(p.height)} · date estimated at about 10 minutes a block`);rows.push(item);}
   c.schedule.replaceChildren(...rows);}
  async function loadNetwork(c){if(!c.box.isConnected||!c.box.getClientRects().length||c.selected===null)return;const {snap,lang}=c,w=c.selected,key=[w,snap.snapshot.height,snap.snapshot.generatedAt??'',cacheEpoch,lang].join('|');if(key===c.key)return;c.key=key;
-  // The figures stay where they are while the week loads: the last ones dim, or blank places when there are none yet.
-  const reading=t(lang,'正在读取…','Loading…');if(c.content.querySelector('.nl-out')&&c.range)c.range.textContent=reading;else paintWeek(c,null,reading);c.content.setAttribute('aria-busy','true');c.content.classList.add('is-loading');
-  try{const r=await rpc('network',w,snap);if(c.key!==key)return;paintWeek(c,r);}catch(e){if(c.key===key)fail(c.content,lang,()=>{c.key='';reports.clear();loadNetwork(c);},e);}finally{if(c.key===key){c.content.removeAttribute('aria-busy');c.content.classList.remove('is-loading');}}}
+  // The figures stay where they are while the week loads: the last ones dim, or blank places when there are none yet; pixels
+  // after the title say the week is being read. The line under the title keeps the blocks they cover while the same week is
+  // read again (a newer block), and says it is reading when another week was chosen.
+  const reading=t(lang,'正在读取…','Loading…');if(!c.content.querySelector('.nl-out'))paintWeek(c,null,reading);else if(c.painted!==w)c.range.textContent=reading;c.content.setAttribute('aria-busy','true');c.content.classList.add('is-loading');c.busy.hidden=false;c.busy.title=reading;
+  // A newer block or chain epoch during the read is not a failure: the week is read again at the block the worker holds
+  // now, up to AUTO_TRIES times. If the indexer keeps moving (it is resyncing), the panel says so; the next block the popup
+  // shows reads it again by itself, and Retry reads at the latest block too.
+  try{const r=await rpc('network',w,snap);if(c.key!==key)return;paintWeek(c,r);c.painted=w;c.tries=0;}catch(e){if(c.key!==key)return;
+   if(e.message==='block-changed'&&(c.tries??0)<AUTO_TRIES){c.tries=(c.tries??0)+1;c.key='';const now=await latest(c.snap);if(now.snapshot.height>=c.snap.snapshot.height)c.snap=now;setTimeout(()=>loadNetwork(c),700*c.tries);return;}
+   c.tries=0;c.range.textContent=t(lang,'暂未读到','Not read yet');fail(c.content,lang,async()=>{c.snap=await latest(c.snap);c.key='';loadNetwork(c);},e,true);}finally{if(c.key===key){c.content.removeAttribute('aria-busy');c.content.classList.remove('is-loading');c.busy.hidden=true;}}}
  /** The selected week, quieter than the block above it, read top down as one sum: the full output (all 3,333 pieces
   * earning) on one line; under it a hairline split in two; under each half its part — what can be earned (at most, left)
   * and what listing, moving or not minting forfeited (at least, right, with its share). What has been claimed is a separate
@@ -3738,13 +3892,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  function paintWeek(c,r,message){
   const {lang}=c,ready=r?.state==='ready',share=ready&&r.theoretical>0?r.knownUnrewarded/r.theoretical:null;
   // The open week's progress is in the hero above; here only the selected week's blocks.
-  c.range.textContent=ready?t(lang,`区块 ${I.int(r.first)} – ${I.int(r.last)}`,`Blocks ${I.int(r.first)} – ${I.int(r.last)}`):r&&!ready?t(lang,'该周数据尚未齐全','This week is not yet available'):message??'';
+  // An open week's figures run only to the block shown: Chinese gives the full range and where they stop; English, which
+  // has room for one of them on the line, the blocks they cover.
+  c.range.textContent=ready?(r.complete?t(lang,`区块 ${I.int(r.first)} – ${I.int(r.last)}`,`Blocks ${I.int(r.first)} – ${I.int(r.last)}`):t(lang,`区块 ${I.int(r.first)} – ${I.int(r.last)} · 累计至 ${I.int(r.through)}`,`Blocks ${I.int(r.first)} – ${I.int(r.through)} so far`)):r&&!ready?t(lang,'该周数据尚未齐全','This week is not yet available'):message??'';
   const card=n('div','nl-out'),line=(cls,label,value,hint)=>{const d=n('div',`nl-out__line ${cls}`);d.append(n('span','',label),n('b','',value));if(hint)d.title=hint;return d;};
-  const whole=line('nl-out__whole',t(lang,'满额产出','Full output'),ready?fmt(r.theoretical):'—',ready?t(lang,`3,333 枚都有资格时这一周的产出（官方逐枚累计之和）；与规则 ${fmt(r.scheduled)} 的差额是逐块取整。`,`The week’s output if all 3,333 pieces earned (official accruals summed); the gap to the rule’s ${fmt(r.scheduled)} is per-block rounding.`):null);
+  const whole=line('nl-out__whole',t(lang,'满额产出','Full output'),ready?fmt(r.theoretical):'—',ready?t(lang,`3,333 枚都有资格时这一周${r.complete?'':'到目前为止'}的产出（官方逐枚累计之和）；与规则 ${fmt(r.scheduled)} 的差额是逐块取整。`,`The week’s output${r.complete?'':' so far'} if all 3,333 pieces earned (official accruals summed); the gap to the rule’s ${fmt(r.scheduled)} is per-block rounding.`):null);
   const bar=n('div','nl-split'),earned=n('i','nl-split__earned'),lost=n('i','nl-split__missed');earned.style.width=share===null?'0%':`${(1-share)*100}%`;lost.style.width=share===null?'0%':`${share*100}%`;bar.append(earned,lost);bar.setAttribute('aria-hidden','true');
   const split=n('dl','nl-out__pair'),cell=(cls,label,value,extra,hint)=>{const d=n('div',`nl-part ${cls}`),dd=n('dd','',value);if(extra)dd.append(n('span','nl-part__extra',extra));d.append(n('dt','',label),dd);if(hint)d.title=hint;split.append(d);};
   cell('nl-part--earned',t(lang,'可产出 ≤','Earnable ≤'),ready?fmt(r.eligibleUpper):'—',null,ready?t(lang,'满额产出减去流失：持有人最多能领的部分。','Full output less forfeited: the most holders can claim.'):null);
-  cell('nl-part--missed',t(lang,'流失 ≥','Forfeited ≥'),ready?fmt(r.knownUnrewarded):'—',share===null?null:`${(share*100).toFixed(2)}%`,ready?t(lang,'因挂单、转移或未铸造没人能领、不会发行的部分；私密转移认不出是哪件，所以是下限。','What listing, moving or not minting left unclaimable; never issued. A lower bound: private moves cannot be matched.'):null);
+  cell('nl-part--missed',t(lang,'流失 ≥','Forfeited ≥'),ready?fmt(r.knownUnrewarded):'—',share===null?null:`${(share*100).toFixed(2)}%`,ready?t(lang,'因挂单、转移或未铸造没人能领的部分，也不分给别人；私密转移认不出是哪件，所以是下限。','What listing, moving or not minting left unclaimable; it goes to no one else. A lower bound: private moves cannot be matched.'):null);
   const claimed=line('nl-out__claimed',t(lang,'已领取','Claimed'),ready&&r.complete?fmt(r.claimed):ready?t(lang,'周结束后显示','After the week'):'—',t(lang,'公开领取回执里属于这一周的数量，之后还会增加。','Public claim receipts for this week; it can still grow.'));
   if(ready&&!r.complete)claimed.classList.add('is-pending');
   const sum=n('div','nl-out__sum');sum.append(whole,bar,split);card.append(sum,claimed);c.content.replaceChildren(card);
@@ -3794,7 +3950,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   form.addEventListener('submit',async e=>{e.preventDefault();const by=new Map(Object.entries(snap.items).map(([id,r])=>[r[0],id]));const nums=numbers.value.trim().split(/[\s,]+/).filter(Boolean).map(v=>/^\d+$/.test(v)?Number(v):NaN);const ids=[...new Set(nums.map(v=>by.get(v)).filter(Boolean))],start=Number(from.value),end=to.value===''?null:Number(to.value);if(!ids.length||nums.some(v=>!Number.isSafeInteger(v)||!by.has(v))||!from.value||!Number.isSafeInteger(start)||start<0||start>snap.snapshot.height||end!==null&&(!Number.isSafeInteger(end)||end<=start||end>snap.snapshot.height)||!confirm.checked){message.textContent=t(lang,'请核对编号、已确认区块与持续持有确认。','Check the NFT numbers, confirmed blocks and ownership confirmation.');return;}submit.disabled=true;message.textContent=t(lang,'正在保存记录…','Saving records…');try{const r=await chrome.runtime.sendMessage({type:'shn-ledger-save',ids,from:start,to:end,confirmed:true});if(!r?.ok)throw Error('save');reports.clear();dispatchEvent(new CustomEvent('naka-ledger-change'));history(snap,lang);}catch{message.textContent=t(lang,'保存失败，原有数据未更改。请重试。','Save failed; existing data is unchanged. Retry.');}finally{submit.disabled=false;}});numbers.focus();
  }
  function summary(snap,ids,stored,lang){const box=n('section','nl-fleet-summary'),report=completedReport(snap,ids,stored),label=report.total===null?t(lang,'历史累计','Past total'):report.reference?t(lang,'历史累计 · 公开记录参考','Past total · public-record reference'):t(lang,'历史累计 · 按持有记录','Past total · holding records');box.append(n('span','',label),n('b','',fmt(report.total)),button(t(lang,'周期明细','By reward week'),()=>history(snap,lang),'nl-text-button'));return box;}
- function inspect(snap,lang,number=null){const body=dialog(t(lang,'历史区块查询','Historical block lookup'),lang),form=n('form','nl-inline-form'),num=n('input'),height=n('input'),go=n('button','nl-button',t(lang,'查询','Inspect')),result=n('div');num.type=height.type='number';num.min=height.min='0';height.max=String(snap.snapshot.height);num.placeholder=t(lang,'编号','Number');height.placeholder=t(lang,'区块高度','Block height');num.setAttribute('aria-label',num.placeholder);height.setAttribute('aria-label',height.placeholder);if(number!==null)num.value=String(number);height.value=String(snap.snapshot.height);form.append(num,height,go);body.append(n('p','nl-note',t(lang,'只用于本次查询，不改变实时区块或市场。','This lookup does not change Live data or the market.')),form,result);form.addEventListener('submit',async e=>{e.preventDefault();const h=Number(height.value),v=Number(num.value);if(!num.value||!height.value||!Number.isSafeInteger(h)||h<0||h>snap.snapshot.height||!Number.isSafeInteger(v))return;go.disabled=true;result.replaceChildren(n('p','nl-loading',t(lang,'正在还原区块…','Reconstructing block…')));try{const r=h===snap.snapshot.height?{ok:true,snapshot:snap}:await chrome.runtime.sendMessage({type:'shn-history',height:h});if(!r?.ok)throw Error('history');const s=r.snapshot,id=Object.keys(s.items).find(id=>s.items[id][0]===v);if(!id)throw Error('missing');const p=root.NakaPurchase,box=p.renderCurrent(R.evaluateSnapshot(s,id),s.snapshot,I.pick(lang),I,{listing:p.listingStatus(s,id),explain:A.explainFor(s,id,lang),snap:s,id});result.replaceChildren(n('h3','',`#${v} · #${I.int(h)}`),box);}catch{result.replaceChildren(n('p','nl-note',t(lang,'记录暂不可用，请重试。','Record unavailable. Retry.')));}finally{go.disabled=false;}});num.focus();}
+ function inspect(snap,lang,number=null,at=null){const body=dialog(t(lang,'历史区块查询','Historical block lookup'),lang),form=n('form','nl-inline-form'),num=n('input'),height=n('input'),go=n('button','nl-button',t(lang,'查询','Inspect')),result=n('div');num.type=height.type='number';num.min=height.min='0';height.max=String(snap.snapshot.height);num.placeholder=t(lang,'编号','Number');height.placeholder=t(lang,'区块高度','Block height');num.setAttribute('aria-label',num.placeholder);height.setAttribute('aria-label',height.placeholder);if(number!==null)num.value=String(number);height.value=String(at===null?snap.snapshot.height:at);form.append(num,height,go);body.append(n('p','nl-note',t(lang,'只用于本次查询，不改变实时区块或市场。','This lookup does not change Live data or the market.')),form,result);form.addEventListener('submit',async e=>{e.preventDefault();const h=Number(height.value),v=Number(num.value);if(!num.value||!height.value||!Number.isSafeInteger(h)||h<0||h>snap.snapshot.height||!Number.isSafeInteger(v))return;go.disabled=true;result.replaceChildren(n('p','nl-loading',t(lang,'正在还原区块…','Reconstructing block…')));try{const r=h===snap.snapshot.height?{ok:true,snapshot:snap}:await chrome.runtime.sendMessage({type:'shn-history',height:h});if(!r?.ok)throw Error('history');const s=r.snapshot,id=Object.keys(s.items).find(id=>s.items[id][0]===v);if(!id)throw Error('missing');const p=root.NakaPurchase,box=p.renderCurrent(R.evaluateSnapshot(s,id),s.snapshot,I.pick(lang),I,{listing:p.listingStatus(s,id),explain:A.explainFor(s,id,lang),snap:s,id});result.replaceChildren(n('h3','',`#${v} · #${I.int(h)}`),box);}catch{result.replaceChildren(n('p','nl-note',t(lang,'记录暂不可用，请重试。','Record unavailable. Retry.')));}finally{go.disabled=false;}});num.focus();if(number!==null&&at!==null)form.requestSubmit();}
  if(root.chrome?.storage?.onChanged)chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;const reorg=changes.liveStatus&&changes.liveStatus.oldValue?.epoch!==changes.liveStatus.newValue?.epoch;if(reorg)cacheEpoch=String(changes.liveStatus.newValue?.epoch??'');if(reorg||[L.KEY,H.KEY,H.META,H.LEFT].some(k=>changes[k])){generation++;reports.clear();for(const c of panels){if(!c.box.isConnected)panels.delete(c);else c.key='';}if(reorg)refreshVisible();}});
  const refreshVisible=()=>setTimeout(()=>{for(const c of panels)if(c.box.isConnected&&c.box.getClientRects().length)loadNetwork(c);},0);document.addEventListener('click',e=>{if(e.target.closest('[data-view=block],[data-section=network],#statusStrip'))refreshVisible();});
  root.NakaLedgerUI={network,history,manage,summary,completedReport,inspect,close};
@@ -4307,13 +4463,25 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
 </script><script>
 /**
  * The weight inspection bubble, shared by the market pages (content script) and the extension page so both behave the
- * same: it opens for the anchor under the pointer, under keyboard focus or tapped; it touches its anchor, so the pointer
- * moves straight onto it and it stays open while the pointer is on either; it takes the side with room and draws a tail
- * toward the anchor; Hover previews close on leave; clicked sheets stay fixed until dismissed, including during async updates. Styles: content/content.css (.shn-pop).
+ * same: it opens for the anchor under the pointer, under keyboard focus or tapped; it touches its anchor, takes the side
+ * with room and draws a tail toward the anchor.
+ * A hover card is for a look: it closes once the pointer has left both the anchor and the card, and the next anchor the
+ * pointer reaches opens its own card. On its way from the anchor to the card the pointer may cut across what lies beside
+ * the anchor: while it stays inside the corridor from where it left the anchor to the card (the convex hull of that exit
+ * point and the card), the card stays open and nothing on the way opens; leaving the corridor ends the crossing at once,
+ * resting in it ends it after REST ms. Once the pointer is on the card (or a press or the focus is in it), the card stays
+ * where it is: what the viewer does there or what the page redraws (a fold opening, rows arriving, a button relabelled,
+ * newer data) changes its content, never its place. It grows downward, and newer data waits behind a notice at its
+ * bottom edge instead of replacing what is being read. A clicked card (the anchor clicked, or Enter or Space on it)
+ * stays until dismissed (×, Escape, a click outside). Styles: content/content.css (.shn-pop).
  */
 (function(root){
  'use strict';
  const SVG='http://www.w3.org/2000/svg';
+ // The corridor: the exit point widened by PAD px along the anchor's edge, as Radix Tooltip's grace area does; a pointer
+ // resting in it for REST ms is not heading for the card (Floating UI's safePolygon closes after 40 ms at rest, Radix
+ // never while inside; REST lets a hand slow down near the card and still feels immediate).
+ const PAD=5,REST=100;
  function viewportRect(){
   const view=root.visualViewport;
   const v={left:view?.offsetLeft??0,top:view?.offsetTop??0,
@@ -4321,25 +4489,61 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    height:Math.min(document.documentElement.clientHeight,innerHeight,view?.height??Infinity)};
   v.right=v.left+v.width;v.bottom=v.top+v.height;return v;
  }
+ /** Convex hull of [x, y] points (Andrew's monotone chain). */
+ function hull(points){
+  const p=[...points].sort((a,b)=>a[0]-b[0]||a[1]-b[1]),cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),lower=[],upper=[];
+  for(const q of p){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],q)<=0)lower.pop();lower.push(q);}
+  for(const q of p.reverse()){while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],q)<=0)upper.pop();upper.push(q);}
+  return lower.slice(0,-1).concat(upper.slice(0,-1));
+ }
+ /** Whether [x, y] lies inside the polygon (even-odd rule). */
+ function within([x,y],poly){
+  let hit=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)hit=!hit;}
+  return hit;
+ }
  /**
   * options: selector (anchors), id (bubble element id), build(anchor) → {className, nodes} (null: nothing to show),
   * target(anchor) → element the tail centres on, raise(anchor) → px the anchor's hover area extends above it,
-  * identity(anchor) → string; validate() closes the bubble when its anchor left the page or now shows another piece.
+  * identity(anchor) → string (the piece first, before a '|'); validate() follows the page's redraws: a card in use (clicked,
+  * or the pointer or focus on it) keeps its view (offering newer data, or saying its piece left the list); a hover card
+  * not yet reached moves to the badge redrawn in its anchor's place for the same piece, and closes when its anchor left
+  * the page or now shows another piece.
   */
  function create({selector,id,build,target,raise,identity}){
-  let pop=null,anchor=null,key=null,viewport=null,pinned=false,origin=null,restoring=false,suppressPreview=false,rebuilding=false;
+  let pop=null,anchor=null,key=null,viewport=null,pinned=false,restoring=false,suppressPreview=false,rebuilding=false,held=null,lastRect=null;
+  // still: the place a card keeps once the viewer uses it (left, top, its height limit and content height then, its side
+  // and its anchor's place then); null while a hover card follows its anchor. transit: the pointer crossing from the anchor
+  // to the card (the padded exit points, where the pointer is, the rest timer).
+  let still=null,transit=null,last=null;
   const resize=new ResizeObserver(()=>{if(anchor)position();});
+  const shown=()=>Boolean(pop?.classList.contains('shn-pop--show'));
+  function arrive(){if(transit){clearTimeout(transit.timer);transit=null;}}
   function hide(){
+   arrive();
    if(!pop)return;
    pop.classList.remove('shn-pop--show');anchor?.removeAttribute('aria-describedby');anchor?.removeAttribute('data-shn-open');
-   resize.disconnect();anchor=null;key=null;viewport=null;pinned=false;origin=null;
+   resize.disconnect();anchor=null;key=null;viewport=null;pinned=false;still=null;held=null;lastRect=null;
+  }
+  /** Moves an open bubble to the badge the page drew for its piece in place of its anchor. */
+  function retarget(next){
+   anchor.removeAttribute('data-shn-open');anchor.removeAttribute('aria-describedby');anchor=next;anchor.setAttribute('data-shn-open','true');anchor.setAttribute('aria-describedby',pop.id);
+   resize.disconnect();resize.observe(pop.querySelector('.shn-pop__surface'));resize.observe(anchor);
   }
   const zh=()=>document.documentElement.lang.startsWith('zh');
+  const contentHeight=surface=>{const css=getComputedStyle(surface);return Math.ceil(surface.scrollHeight+parseFloat(css.borderTopWidth)+parseFloat(css.borderBottomWidth));};
   function dismiss(){const restore=anchor,inside=pop?.contains(document.activeElement);restoring=true;suppressPreview=true;hide();if(inside&&restore?.isConnected)restore.focus({preventScroll:true});restoring=false;}
-  function pin(){pinned=true;if(pop){pop.setAttribute('role','dialog');pop.setAttribute('aria-label',zh()?'藏品详情':'Piece details');pop.classList.add('shn-pop--pinned');pop.querySelector('.shn-pop__pointer')?.setAttribute('hidden','');pop.querySelector('.shn-pop__tools').hidden=false;position();}}
-  function show(a,{pin:keep=true,at:stay=null}={}){
-   if(anchor===a&&key===identity(a)&&pop?.classList.contains('shn-pop--show')){if(keep)pin();return;}
+  /** From now on the card keeps its place: the viewer is on it, pressed in it, moved the focus into it or clicked its anchor. */
+  function hold(){
+   if(still||!anchor)return;
+   const surface=pop.querySelector('.shn-pop__surface');
+   still={left:parseFloat(pop.style.left),top:parseFloat(pop.style.top),cap:parseFloat(surface.style.maxHeight),base:contentHeight(surface),height:pop.offsetHeight,side:held,anchorRect:anchor.getBoundingClientRect()};
+  }
+  function pin(){arrive();pinned=true;if(pop){pop.setAttribute('role','dialog');pop.setAttribute('aria-label',zh()?'藏品详情':'Piece details');pop.classList.add('shn-pop--pinned');pop.querySelector('.shn-pop__tools').hidden=false;hold();position();}}
+  function show(a,{pin:keep=true,at:place=null,side:keepSide=null}={}){
+   if(anchor===a&&key===identity(a)&&shown()){if(keep)pin();return;}
    if(anchor)hide();
+   held=keepSide;
    const content=build(a);if(!content)return;
    if(!pop){pop=document.createElement('div');pop.id=id;pop.setAttribute('role','tooltip');pop.tabIndex=0;document.body.appendChild(pop);}
    a.setAttribute('aria-describedby',pop.id);anchor=a;key=identity(a);
@@ -4349,21 +4553,45 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    for(const cls of ['shn-pop__pointer-fill','shn-pop__pointer-edge']){const path=document.createElementNS(SVG,'path');path.setAttribute('class',cls);group.append(path);}
    svg.append(group);pointer.append(svg);const tools=document.createElement('div');tools.className='shn-pop__tools';tools.hidden=true;const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label',zh()?'关闭':'Close');close.className='shn-pop__close';close.addEventListener('click',dismiss);tools.append(close);rebuilding=true;pop.replaceChildren(surface,pointer,tools);rebuilding=false;
    pop.setAttribute('role','tooltip');pop.className=`shn-pop ${content.className}`;a.setAttribute('data-shn-open','true');
-   if(keep&&stay){pinned=true;origin=stay;}
+   // A card refreshed to newer data keeps the place it had.
+   still=place;
    if(!position())return;
    pop.classList.add('shn-pop--show');if(keep)pin();resize.disconnect();resize.observe(surface);resize.observe(a);
   }
+  /** The badge among these nearest to where the anchor last was. */
+  function nearest(list){
+   const x=(lastRect.left+lastRect.right)/2,y=(lastRect.top+lastRect.bottom)/2;let best=null,d=Infinity;
+   for(const b of list){const r=b.getBoundingClientRect(),dd=((r.left+r.right)/2-x)**2+((r.top+r.bottom)/2-y)**2;if(dd<d){d=dd;best=b;}}
+   return best;
+  }
   function validate(){
    if(!anchor)return;
-   if(pinned){
-    const asset=key.split('|')[0],replacement=[...document.querySelectorAll(selector)].find(a=>identity(a).split('|')[0]===asset);
-    if(replacement&&replacement!==anchor){anchor.removeAttribute('data-shn-open');anchor.removeAttribute('aria-describedby');anchor=replacement;anchor.setAttribute('data-shn-open','true');anchor.setAttribute('aria-describedby',pop.id);}
-    // An interactive sheet keeps its displayed block until explicitly refreshed or dismissed.
-    if(replacement&&identity(replacement)!==key&&!pop.querySelector('.shn-pop__refresh')){const refresh=document.createElement('button');refresh.type='button';refresh.className='shn-pop__refresh';refresh.textContent=document.documentElement.lang.startsWith('zh')?'数据已更新 · 刷新此卡':'Data updated · refresh this card';refresh.addEventListener('click',()=>{const open=[...pop.querySelectorAll('details[open]')].map(d=>d.className),scroll=pop.querySelector('.shn-pop__surface').scrollTop,at=origin;show(anchor,{at});for(const d of pop.querySelectorAll('details'))if(open.includes(d.className))d.open=true;position();pop.querySelector('.shn-pop__surface').scrollTop=scroll;});pop.querySelector('.shn-pop__surface').prepend(refresh);}
-    const tools=pop.querySelector('.shn-pop__surface');let gone=tools.querySelector('.shn-pop__gone');if(!replacement&&!gone){gone=document.createElement('span');gone.className='shn-pop__gone';gone.textContent=zh()?'已离开当前列表 · 保留此卡':'No longer in this list · saved view';tools.prepend(gone);}else if(replacement)gone?.remove();
+   const asset=key.split('|')[0];
+   if(pinned||still){
+    // A card in use keeps its displayed block until explicitly refreshed or dismissed, and stays with its piece: with the
+    // anchor while that still shows the piece, else with the piece's badge nearest the anchor's last place.
+    const all=[...document.querySelectorAll(selector)].filter(b=>identity(b).split('|')[0]===asset);
+    const replacement=all.includes(anchor)?anchor:all.length?nearest(all):null;
+    if(replacement&&replacement!==anchor)retarget(replacement);
+    // The notices go at the end of the card and stick to its bottom edge: nothing the viewer may be about to click moves.
+    const surface=pop.querySelector('.shn-pop__surface'),notice=()=>{let box=surface.querySelector(':scope>.shn-pop__notice');if(!box){box=document.createElement('div');box.className='shn-pop__notice';surface.append(box);}return box;};
+    if(replacement&&identity(replacement)!==key&&!pop.querySelector('.shn-pop__refresh')){const refresh=document.createElement('button');refresh.type='button';refresh.className='shn-pop__refresh';refresh.textContent=zh()?'数据已更新 · 刷新此卡':'Data updated · refresh this card';refresh.addEventListener('click',()=>{const open=[...pop.querySelectorAll('details[open]')].map(d=>d.className),scroll=pop.querySelector('.shn-pop__surface').scrollTop;show(anchor,{pin:pinned,at:still,side:still.side});for(const d of pop.querySelectorAll('details'))if(open.includes(d.className))d.open=true;position();pop.querySelector('.shn-pop__surface').scrollTop=scroll;});notice().append(refresh);}
+    let gone=surface.querySelector('.shn-pop__gone');if(!replacement&&!gone){gone=document.createElement('span');gone.className='shn-pop__gone';gone.textContent=zh()?'已离开当前列表 · 保留此卡':'No longer in this list · saved view';notice().prepend(gone);}else if(replacement)gone?.remove();
+    const box=surface.querySelector(':scope>.shn-pop__notice');if(box&&!box.childElementCount)box.remove();
     position();return;
    }
-   if(!anchor.isConnected||identity(anchor)!==key)hide();else position();
+   if(anchor.isConnected&&identity(anchor)===key){position();return;}
+   // The page redrew the badge (a list re-render, newer data) before the pointer reached the card: the card stays with the
+   // same piece when it was drawn in the same place, showing that badge's card; anything else (another piece there, the
+   // piece moved away or gone) closes it.
+   const at=lastRect,inPlace=b=>{const r=b.getBoundingClientRect(),x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;return x>=at.left-2&&x<=at.right+2&&y>=at.top-2&&y<=at.bottom+2;};
+   const next=[...document.querySelectorAll(selector)].find(b=>identity(b).split('|')[0]===asset&&inPlace(b));
+   if(!next){hide();return;}
+   if(identity(next)===key){if(next!==anchor)retarget(next);position();return;}
+   // Redrawn with newer data: the new card opens in the same place, and a crossing toward it goes on.
+   const crossing=transit;transit=null;
+   show(next,{pin:false,side:held});
+   if(crossing&&shown()){transit=crossing;track(crossing.x,crossing.y);}
   }
   function closeOnViewportChange(){
    if(!anchor||!viewport)return;
@@ -4382,20 +4610,37 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
     }
     return out;
    };
-   if(pinned&&origin){
-    const width=Math.max(1,Math.floor(Math.min(420,v.width-2*M))),left=clamp(origin.left,v.left+M,v.right-width-M),top=clamp(origin.top,v.top+M,v.bottom-M-60);
-    pop.style.width=width+'px';pop.style.left=left+'px';pop.style.top=top+'px';pop.querySelector('.shn-pop__surface').style.maxHeight=Math.max(1,v.bottom-M-top)+'px';viewport=v;return true;
+   const surface=pop.querySelector('.shn-pop__surface');
+   if(anchor.isConnected)lastRect=anchor.getBoundingClientRect();
+   if(still){
+    // A card in use stays where it was (a clicked card is only kept inside a changed viewport).
+    const width=Math.max(1,Math.floor(Math.min(420,v.width-2*M))),left=pinned?clamp(still.left,v.left+M,v.right-width-M):still.left,top=pinned?clamp(still.top,v.top+M,v.bottom-M-60):still.top;
+    pop.style.width=width+'px';pop.style.left=left+'px';pop.style.top=top+'px';pop.dataset.shnSide=still.side;
+    // It grows downward to the viewport's edge once its content grows (a fold opened, rows arrived), never before: taking
+    // hold of a card changes nothing about it. Nor while growing would pull the viewer's scrolled place back (a scrolled
+    // card with too little content below to fill the extra height): then it grows later, once there is content to show.
+    const room=Math.max(1,Math.floor(v.bottom-M-top)),limit=contentHeight(surface)>still.base?room:Math.min(still.cap,room),was=surface.style.maxHeight,scroll=surface.scrollTop;
+    surface.style.maxHeight=limit+'px';if(parseFloat(was)<limit&&surface.scrollTop!==scroll){surface.style.maxHeight=was;surface.scrollTop=scroll;}
+    // The tail stays while the card still meets its anchor as it did: both where they were, and a card above its anchor not
+    // grown down over it.
+    const r=anchor.getBoundingClientRect(),was0=still.anchorRect,h=pop.offsetHeight;
+    const meets=anchor.isConnected&&left===still.left&&top===still.top&&Math.abs(r.left-was0.left)<0.5&&Math.abs(r.top-was0.top)<0.5&&Math.abs(r.right-was0.right)<0.5&&Math.abs(r.bottom-was0.bottom)<0.5&&(still.side!=='bottom'||Math.abs(h-still.height)<0.5);
+    if(meets){const a=visibleRect(anchor);a.top=Math.max(v.top,a.top-raise(anchor));drawTail(still.side,a,pop.offsetWidth,h);}
+    else{pop.querySelector('.shn-pop__pointer').style.display='none';pop.dataset.shnTail='none';}
+    return true;
    }
    const a=visibleRect(anchor),centre=target(anchor);let t=visibleRect(centre??anchor);
    if(a.right<=a.left||a.bottom<=a.top){hide();return false;}
    a.top=Math.max(v.top,a.top-raise(anchor));
    if(t.right<=t.left||t.bottom<=t.top)t=a;
-   const surface=pop.querySelector('.shn-pop__surface');
    pop.style.width=`${Math.max(1,Math.floor(Math.min(420,v.width-2*M)))}px`;
-   const w=pop.offsetWidth,css=getComputedStyle(surface);
-   const natural=Math.ceil(surface.scrollHeight+parseFloat(css.borderTopWidth)+parseFloat(css.borderBottomWidth));
+   const w=pop.offsetWidth,natural=contentHeight(surface);
    const room={bottom:a.top-v.top-M-G,top:v.bottom-M-a.bottom-G,right:a.left-v.left-M-G,left:v.right-M-a.right-G};
-   const side=natural<=room.bottom?'bottom':natural<=room.top?'top':w<=room.right?'right':w<=room.left?'left':room.bottom>=room.top?'bottom':'top';
+   // An open preview keeps the side it opened on while its content changes size (artwork decoding, rows arriving), so the
+   // part under the pointer does not jump across the anchor; it moves only when that side has no usable room left.
+   const KEEP=120,usable=s=>s==='top'||s==='bottom'?room[s]>=Math.min(natural,KEEP):w<=room[s];
+   const side=held!==null&&usable(held)?held:natural<=room.bottom?'bottom':natural<=room.top?'top':w<=room.right?'right':w<=room.left?'left':room.bottom>=room.top?'bottom':'top';
+   held=side;
    const limit=Math.max(1,Math.floor(Math.min(v.height-2*M,side==='top'||side==='bottom'?room[side]:v.height-2*M)));
    surface.style.maxHeight=`${limit}px`;
    const h=pop.offsetHeight,cx=(t.left+t.right)/2,cy=(t.top+t.bottom)/2;
@@ -4403,7 +4648,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    const left=side==='right'?Math.ceil(a.left-w):side==='left'?Math.floor(a.right):Math.round(clamp(cx-w/2,v.left+M,v.right-w-M));
    const top=side==='bottom'?Math.ceil(a.top-h):side==='top'?Math.floor(a.bottom):Math.round(clamp(cy-h/2,v.top+M,v.bottom-h-M));
    pop.style.left=`${left}px`;pop.style.top=`${top}px`;pop.dataset.shnSide=side;
-   origin={left,top};drawTail(side,a,w,h);
+   drawTail(side,a,w,h);
    return true;
   }
   /**
@@ -4430,20 +4675,76 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    pop.dataset.shnTail=dir===1?'before':'after';
   }
   const anchorOf=node=>node instanceof Element?node.closest(selector):null;
-  document.addEventListener('pointermove',e=>{if(e.movementX||e.movementY)suppressPreview=false;},{passive:true});
+  // ---------------------------------------------------------------- crossing from the anchor to the card
+  /**
+   * The pointer left the anchor, not onto the card, and is at (x1, y1). Where it crossed the anchor's edge: on the way
+   * from its last place inside the anchor's hover area (its box and the part raised above it) to (x1, y1); when it crossed
+   * the whole anchor between two moves, the nearest point of that area. The event's own point lies already past the edge,
+   * by as much as one move.
+   */
+  function depart(x1,y1){
+   const b=anchor.getBoundingClientRect(),r={left:b.left,right:b.right,top:b.top-raise(anchor),bottom:b.bottom},clamp=(n,lo,hi)=>Math.max(lo,Math.min(n,hi));
+   let x,y;
+   if(last&&last[0]>=r.left&&last[0]<=r.right&&last[1]>=r.top&&last[1]<=r.bottom){
+    const [x0,y0]=last,dx=x1-x0,dy=y1-y0;let t=1;
+    if(dx>0)t=Math.min(t,(r.right-x0)/dx);else if(dx<0)t=Math.min(t,(r.left-x0)/dx);
+    if(dy>0)t=Math.min(t,(r.bottom-y0)/dy);else if(dy<0)t=Math.min(t,(r.top-y0)/dy);
+    x=x0+dx*t;y=y0+dy*t;
+   }else{x=clamp(x1,r.left,r.right);y=clamp(y1,r.top,r.bottom);}
+   const d={left:Math.abs(x-r.left),right:Math.abs(x-r.right),top:Math.abs(y-r.top),bottom:Math.abs(y-r.bottom)};
+   const edge=['left','right','top','bottom'].reduce((m,s)=>d[s]<d[m]?s:m);
+   const pad=edge==='top'?[[x-PAD,y+PAD],[x+PAD,y+PAD]]:edge==='bottom'?[[x-PAD,y-PAD],[x+PAD,y-PAD]]:edge==='left'?[[x+PAD,y-PAD],[x+PAD,y+PAD]]:[[x-PAD,y-PAD],[x-PAD,y+PAD]];
+   transit={pad,x:x1,y:y1,timer:0};track(x1,y1);
+  }
+  /** The pointer at (x, y) during a crossing: still heading for the card, or not. */
+  function track(x,y){
+   clearTimeout(transit.timer);transit.x=x;transit.y=y;
+   const c=pop.getBoundingClientRect();
+   if(within([x,y],hull([...transit.pad,[c.left,c.top],[c.right,c.top],[c.right,c.bottom],[c.left,c.bottom]])))transit.timer=setTimeout(settle,REST);
+   else settle();
+  }
+  /** The crossing is over short of the card: the badge the pointer stopped on opens its card; anywhere else closes it. */
+  function settle(){
+   const {x,y}=transit;arrive();
+   const under=document.elementFromPoint(x,y);
+   if(under&&pop.contains(under)){hold();return;}
+   const b=anchorOf(under);
+   if(b===anchor)return;
+   if(b&&!suppressPreview)show(b,{pin:false});else hide();
+  }
+  document.addEventListener('pointermove',e=>{
+   if(e.movementX||e.movementY)suppressPreview=false;
+   // Where the pointer is after this move; mouseout comes before the move's own pointermove, so it still finds the
+   // pointer's place before the move here.
+   last=[e.clientX,e.clientY];
+   if(!transit)return;
+   if(pop.contains(e.target)){arrive();hold();return;}
+   if(anchor.contains(e.target)){arrive();return;}
+   track(e.clientX,e.clientY);
+  },{passive:true});
   document.addEventListener('mouseover',e=>{
+   if(shown()&&pop.contains(e.target)){arrive();hold();return;}
    if(suppressPreview||pinned||pop?.contains(e.target))return;
-   const b=anchorOf(e.target);if(b===anchor)return;
+   const b=anchorOf(e.target);if(b===anchor){arrive();return;}
+   // What the pointer passes over on its way to the card waits: the crossing decides when it ends.
+   if(transit)return;
    if(b)show(b,{pin:false});else hide();
   },true);
   document.addEventListener('mouseout',e=>{
    if(rebuilding||pinned)return;
    if(e.relatedTarget===null){hide();return;}
-   const fromAnchor=anchorOf(e.target)===anchor;
-   if((fromAnchor||pop?.contains(e.target))&&!anchor?.contains(e.relatedTarget)&&!pop?.contains(e.relatedTarget))hide();
+   if(!anchor||anchor.contains(e.relatedTarget)||pop.contains(e.relatedTarget))return;
+   if(anchorOf(e.target)===anchor){if(!transit)depart(e.clientX,e.clientY);return;}
+   // Off the card: it closes, unless onto its anchor (above).
+   if(pop.contains(e.target))hide();
   },true);
-  document.addEventListener('focusin',e=>{if(!restoring&&!suppressPreview&&!pinned&&e.target.matches?.(selector))show(e.target,{pin:false});});
-  document.addEventListener('focusout',e=>{if(!rebuilding&&!pinned&&((e.target.matches?.(selector)||pop?.contains(e.target))&&!pop?.contains(e.relatedTarget)))hide();});
+  document.addEventListener('focusin',e=>{
+   if(shown()&&pop.contains(e.target)){hold();return;}
+   if(!restoring&&!suppressPreview&&!pinned&&e.target.matches?.(selector))show(e.target,{pin:false});
+  });
+  // The focus leaving the card or its anchor closes a hover card, unless the pointer is still on one of them (the focus was
+  // lost to nothing, or the viewer tabbed away while pointing at the card): a hover card closes once neither holds it.
+  document.addEventListener('focusout',e=>{if(!rebuilding&&!pinned&&((e.target.matches?.(selector)||pop?.contains(e.target))&&!pop?.contains(e.relatedTarget))&&!pop?.matches(':hover')&&!anchor?.matches(':hover'))hide();});
   // The anchor is its own inspection target, also inside a card link or button.
   document.addEventListener('click',e=>{
    const b=anchorOf(e.target);
@@ -4455,11 +4756,12 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    if(e.key==='Escape')dismiss();
    if(e.target.matches?.(selector)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();e.stopPropagation();show(e.target);}
   },true);
-  // A press on an action inside a preview keeps it (the page may redraw under it); opening or closing a fold only reads, so
-  // the preview still closes when the pointer leaves.
-  document.addEventListener('pointerdown',e=>{if(pop?.contains(e.target)&&!e.target.closest?.('summary'))pin();},true);
+  // A press inside a card holds it in place before the press takes effect (also a touch or a pen, which sends no hover):
+  // a fold opening or a button relabelling then changes the card's content, never its place.
+  document.addEventListener('pointerdown',e=>{if(shown()&&pop.contains(e.target))hold();},true);
   root.addEventListener('scroll',e=>{if(!pinned&&!pop?.contains(e.target))hide();},true);
-  root.addEventListener('blur',hide);
+  // Leaving the window (another app, a link opened in a new tab) closes a hover card; a clicked card stays until dismissed.
+  root.addEventListener('blur',()=>{if(!pinned)hide();});
   root.addEventListener('resize',closeOnViewportChange);
   // Pinch zoom moves the visual viewport without a window resize.
   root.visualViewport?.addEventListener('resize',closeOnViewportChange);
@@ -4489,7 +4791,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    goal:{buy:'针对我的持仓，我想花最少的钱，让每周 SHNAKAS 增加最多',plan:'针对我的持仓，在当前区块把它们冲到 400%',lock:'我想垄断一个特征：带它的 Naka 全在我们手里',sim:'我想知道挂单、成交或撤单会对我和全网有什么影响'},
    how:{buy:'按每 0.001 BTC 换来的每周增量排序。买到的这一枚下周起有奖励；现有持仓的变化从成交那一块起生效。正在成交确认的挂单买不到，不列出。',
     plan:'每行是这一枚单独冲到 400% 最省钱的做法，按每 0.001 BTC 换来的每周增量排序，点一行看步骤。勾选两枚以上，合起来算一份方案：共用的挂单只买一次（合并方案不一定最省）。',
-    lock:'垄断后，没人能再挂低价单拉低它的加成。点一行看做法：在售的买下；没挂单的私下收购，复制求购信息发到 Naka Telegram 群。持仓和队友的编号加得越全，越能找到最接近垄断的特征：每多一枚，就少找一枚。',
+    lock:'垄断后，没人能再挂低价单拉低它的加成。点一行看做法：在售的买下；没挂单的私下收购，复制求购信息发到 Naka Telegram 中文交流群。持仓和队友的编号加得越全，越能找到最接近垄断的特征：每多一枚，就少找一枚。',
     sim:'在持仓旁输入挂价，或点“地板 / 1.5× / 2× / 3×”快捷挂价，结果马上算出；点 × 清空。也可以输入任意编号，假设它挂单、成交或撤单。'},
    needHoldings:'先在上面的“我的持仓”添加你的 Naka。',
    sort:{rate:'每 0.001 BTC 最划算',gain:'每周增加最多',ask:'挂价最低'},
@@ -4542,7 +4844,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    goal:{buy:'For my holdings: the most weekly SHNAKAS for the least BTC',plan:'For my holdings: take them to 400% at this block',lock:'I want to own a trait: every Naka with it in our hands',sim:'I want to see what a listing, sale or reclaim does to me and everyone'},
    how:{buy:'Sorted by weekly gain per 0.001 BTC. The piece you buy counts from next week; your other holdings change from the block of the sale. Listings already being bought cannot be bought and are left out.',
     plan:'Each row is that piece’s own cheapest way to 400%, sorted by weekly gain per 0.001 BTC; select a row for its steps. Tick two or more for one combined plan: a listing they share is bought once (not necessarily the cheapest combination).',
-    lock:'Once it is all ours, nobody can list one cheaply to pull its bonus down. Select a row for the way there: buy what is listed; for the rest, copy a wanted post into the Naka Telegram group. Add all your holdings and teammates’ numbers to find the traits you are closest to owning: each piece added is one fewer to find.',
+    lock:'Once it is all ours, nobody can list one cheaply to pull its bonus down. Select a row for the way there: buy what is listed; for the rest, copy a wanted post into the Naka Telegram Chinese group. Add all your holdings and teammates’ numbers to find the traits you are closest to owning: each piece added is one fewer to find.',
     sim:'Type an ask next to a holding, or pick Floor / 1.5× / 2× / 3×, and the result appears at once; × clears it. Or enter any number and assume it lists, sells or is reclaimed.'},
    needHoldings:'Add your Nakas under My holdings above first.',
    sort:{rate:'Best per 0.001 BTC',gain:'Largest gain',ask:'Lowest ask'},
@@ -4705,17 +5007,23 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
 
   // ---------------------------------------------------------------- Best buy.
   let rankCache={key:'',rows:null};
+  /** Every listing that raises the weekly allocation of `held` (with none held, what the piece earns on its own), in the
+   * order asked: best value first (weekly gain per BTC, conservative bound), the lowest ask, or the largest gain. Each
+   * listing's effect is computed in the next block's world (NakaPortfolio.rank), so the ranking is keyed on the closing
+   * listings too; the ones closing are left out, since nobody can buy them. */
+  function buyRows(s,held,sort){
+   const key=`${blockKey(s)}|${held.join()}`,closing=closingSet(s);
+   if(rankCache.key!==key)rankCache={key,rows:H.rank(s,held).filter(x=>x.impact.allocation.delta.lo>0)};
+   const value=x=>x.impact.allocation.delta.lo/x.price;
+   return rankCache.rows.filter(x=>!closing.has(x.id)).sort(sort==='ask'?(a,b)=>a.price-b.price:sort==='gain'?(a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo:(a,b)=>value(b)-value(a));
+  }
   function buyPanel(c,s){
    for(const b of sortBox.children){b.textContent=c.sort[b.dataset.sort];b.setAttribute('aria-pressed',String(b.dataset.sort===state.sort));}
    const held=mine();buyMore.hidden=true;buyCount.textContent='';
    if(!held.length){buyOut.replaceChildren(n('p','ws-muted',c.needHoldings));return;}
    if(['ended','closed'].includes(R.rewardPhase(s.snapshot).state)){buyOut.replaceChildren(n('p','ws-muted',c.ended));return;}
-   // Each listing's effect is computed in the next block's world (NakaPortfolio.rank), so the ranking is keyed on the closing
-   // listings too; the ones closing are also left out of the rows, since nobody can buy them.
-   const key=`${blockKey(s)}|${held.join()}`,closing=closingSet(s);
-   if(rankCache.key!==key)rankCache={key,rows:H.rank(s,held).filter(x=>x.impact.allocation.delta.lo>0)};
-   const value=x=>x.impact.allocation.delta.lo/x.price;
-   const rows=rankCache.rows.filter(x=>!closing.has(x.id)).sort(state.sort==='ask'?(a,b)=>a.price-b.price:state.sort==='gain'?(a,b)=>b.impact.allocation.delta.lo-a.impact.allocation.delta.lo:(a,b)=>value(b)-value(a));
+   const value=x=>x.impact.allocation.delta.lo/x.price,closing=closingSet(s);
+   const rows=buyRows(s,held,state.sort);
    buyCount.textContent=c.buyCount(rows.length,s.offers.length,s.offers.filter(([id])=>closing.has(id)).length);
    if(!rows.length){buyOut.replaceChildren(n('p','ws-muted',c.buyNone));return;}
    const SHOW=15,shown=state.buyAll?rows:rows.slice(0,SHOW);
@@ -5040,13 +5348,15 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    // it back by its key.
    const focused=section.contains(document.activeElement)?document.activeElement.dataset.focus:undefined;
    const c=C(),s=snap();title.textContent=c.title;basis.textContent=c.basis;goalText.textContent=c.goal[state.tab];howText.textContent=c.how[state.tab];
-   if(state.tab==='buy'){const rules=root.ShnakasRules,w=rules.startWeek(s.snapshot.height+1);if(w<rules.RULES.weeks){const n=String(w+1);howText.textContent=c.how.buy.includes('下周')?c.how.buy.replace('下周起','第 '+n+' 周起'):c.how.buy.replace('next week','week '+n);}}
+   if(state.tab==='buy'){const rules=root.ShnakasRules,w=rules.startWeek(s.snapshot.height+1);if(w<rules.RULES.weeks){const phase=rules.rewardPhase(s.snapshot),from=I.pick(api.lang()).rateFrom(w+1,phase.state==='active'?phase.week:null);howText.textContent=c.how.buy.includes('下周起')?c.how.buy.replace('下周起',from):c.how.buy.replace('from next week',from);}}
    for(const [k,b] of tabButtons){b.textContent=c.tabs[k];b.setAttribute('aria-selected',String(k===state.tab));}
    for(const [k,p] of panels)p.hidden=k!==state.tab;
    ({buy:buyPanel,plan:planPanel,lock:lockPanel,sim:simPanel})[state.tab](c,s);
    if(focused!==undefined)panels.get(state.tab).querySelector(`[data-focus="${focused}"]`)?.focus({preventScroll:true});
   }
   return {render,tabLabel:()=>C().tab,
+   /** Best buy's listings for my holdings, best value first (Compare's example selection); none once rewards have ended. */
+   bestBuys:()=>{const s=snap();return ['ended','closed'].includes(R.rewardPhase(s.snapshot).state)?[]:buyRows(s,mine(),'rate').map(x=>x.id);},
    openTab:k=>{if(KEYS.includes(k)){state.tab=k;render();}},
    /** The simulator for one piece: a holding's own row (focused, its ask field ready, or a listed one's reclaim chosen), or
     * any other number in the top row. */
@@ -5071,7 +5381,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  const demo=document.body.dataset.mode==='demo';
  const version=demo?document.body.dataset.version:chrome.runtime.getManifest().version;
  const $=id=>document.getElementById(id),n=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
- let snap=B,model=P.create(B),lang='en',ids=demo?E.examples(B,model).slice(0,3):[],stored={},minimum=0,showAll=false,message='';
+ let snap=B,model=P.create(B),lang='en',ids=[],stored={},minimum=0,showAll=false,message='';
  let holdings=[],fresh=new Set();
  const A=globalThis.NakaRewards;
  const C=()=>U.pick(lang),T=()=>I.pick(lang);
@@ -5144,6 +5454,11 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  let source='bundled';
  // Whether the worker runs this code (S.BUILD): null until it answers, and always in the demo, which has no worker.
  let workerCurrent=null;
+ // The block the worker is reading now (S.SESSION_UPDATING): undefined while it reads none, and always in the demo.
+ let updating;
+ /** "Updating" pixels after the block's age, the block named in their title, and the header sigil's eyes scanning, while
+  * the worker reads a newer block. Painted on their own, so the mark coming and going never redraws the page. */
+ function paintUpdating(){const c=C(),busy=updatingMark;busy.hidden=updating===undefined;busy.title=updating===undefined?'':c.updatingTip(I.int(updating.height));busy.querySelector('.naka-busy__text').textContent=c.updating;$('brand').toggleAttribute('data-busy',updating!==undefined);}
  function adopt(){const pick=S.choose({live:stored[S.KEYS.live],closing:stored[S.KEYS.closing]},B);source=pick.source;if(snap!==pick.snap){snap=pick.snap;model=P.create(snap);}lang=I.resolveLang(stored[I.STORAGE_KEY]);ids=E.normalize(stored[E.KEY]);holdings=H.normalize(stored[H.KEY]);}
  function persist(){try{localStorage.setItem('nakaWeb',JSON.stringify({portfolio:holdings,compare:ids,lang}));}catch{message=C().addError;}}
  /** Add or remove holdings. In the extension the worker queue writes them together with their anchors (shn-holdings), so a
@@ -5199,27 +5514,40 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   const t=T(),c=C(),r=R.evaluateSnapshot(snap,id),listed=P.listingStatus(snap,id)==='listed',head=n('div','shn-pop__head'),brand=n('span','shn-inspect-brand');
   brand.append(NakaPixel.sigil('shn-badge__icon'),n('span','shn-eyebrow',t.title));head.append(brand,n('span','shn-inspect-number',`#${r.number.value}`));
   const tag=P.numberBadge(r.number.value,t);if(tag)head.append(tag);
-  const compare=n('button','shn-compare-add');compare.type='button';U.paintCompare(compare,E.compareState(ids,id),c);compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
-  const own=n('button','shn-compare-add shn-holding-add',c.inHoldings);own.type='button';own.title=c.holdingRemoveHint;own.setAttribute('aria-pressed','true');own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],true);});
+  const compare=n('button','shn-compare-add');compare.type='button';compare.dataset.cardCompare=id;compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
+  const own=n('button','shn-compare-add shn-holding-add');own.type='button';own.dataset.cardHolding=id;own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],holdings.includes(id));});
+  paintCardButtons([compare,own]);
   head.append(compare,own);const nodes=[head];
   const closing=(snap.closing??[]).find(([x])=>x===id)?.[1]??null;
   const panel=listed?P.render(cancelModel(),id,t,I,{explain:A.explainFor(snap,id,lang,'cancel'),closing,snap,id}):null;
   // What reclaiming does to my holdings — not for a listing someone is already buying: it sells at the next block.
   if(panel){if(closing!=='sale'){const x=H.impact(snap,holdings,id,'cancel');if(x.state==='ready')panel.append(U.holdingsLine(x,c));}nodes.push(panel);}
-  else nodes.push(P.renderCurrent(r,snap.snapshot,t,I,{explain:A.explainFor(snap,id,lang),listing:P.listingStatus(snap,id),closing,credits:P.relayCredits(snap,id),snap,id}));
-  const row=lastRewards?.rows.find(x=>x.id===id);if(!listed&&Number.isFinite(row?.avg))nodes.push(n('p','ws-wcard-avg',c.avgWeight(row.avg.toFixed(1),R.formatWeight(r))));
+  // Its own status, as the holdings hero read it (wallet readings and recorded intervals), not the public records alone.
+  const row=lastRewards?.rows.find(x=>x.id===id)??null;
+  if(!panel)nodes.push(P.renderCurrent(r,snap.snapshot,t,I,{explain:A.explainFor(snap,id,lang),listing:P.listingStatus(snap,id),closing,credits:P.relayCredits(snap,id),snap,id,status:row}));
+  if(!listed&&Number.isFinite(row?.avg))nodes.push(n('p','ws-wcard-avg',c.avgWeight(row.avg.toFixed(1),R.formatWeight(r))));
   return {className:tierClass(r),nodes};
  }
  const weightPopover=NakaPopover.create({selector:'.ws-holding:not(.ws-listing) .shn-badge',id:'ws-weight-tooltip',build:badge=>weightPop(badge.dataset.shnId),
-  target:badge=>badge.querySelector('.shn-buy-preview,.shn-badge__weight'),raise:()=>0,identity:badge=>`${badge.dataset.shnId}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing??[])}|${lang}`});
+  target:badge=>badge.querySelector('.shn-buy-preview,.shn-badge__weight'),raise:()=>0,identity:badge=>{const row=lastRewards?.rows.find(x=>x.id===badge.dataset.shnId);return `${badge.dataset.shnId}|${snap.snapshot.height}|${snap.snapshot.generatedAt}|${JSON.stringify(snap.closing??[])}|${lang}|${row?.status}|${row?.startsWeek}`;}});
+ /** ＋/✓ Compare and ＋/✓ My holdings on a details card, from the current selection and holdings. A clicked card stays
+  * open (it is not rebuilt), so every render repaints its buttons: a press shows its result and a second press undoes it. */
+ function paintCardButtons(list=document.querySelectorAll('.shn-pop [data-card-compare], .shn-pop [data-card-holding]')){
+  const c=C();
+  for(const b of list){
+   if(b.dataset.cardCompare!==undefined)U.paintCompare(b,E.compareState(ids,b.dataset.cardCompare),c);
+   else{const held=holdings.includes(b.dataset.cardHolding),text=held?c.inHoldings:c.addHolding;if(b.textContent!==text)b.textContent=text;b.title=held?c.holdingRemoveHint:c.holdingHint;b.setAttribute('aria-pressed',String(held));}
+  }
+ }
  function listingPop(badge){
   const id=badge.dataset.shnId,priors=(badge.dataset.shnPriors||'').split(',').filter(Boolean),c=C(),t=T();
   if(holdings.includes(id))return weightPop(id);
   const impactModel=sequenceModel(priors),head=n('div','shn-pop__head'),brand=n('span','shn-inspect-brand');brand.append(NakaPixel.sigil('shn-badge__icon'),n('span','shn-eyebrow',t.title));head.append(brand,n('span','shn-inspect-number',`#${snap.items[id][0]}`));
   const tag=P.numberBadge(snap.items[id][0],t);if(tag)head.append(tag);
   // Compare and My holdings as on every other details card; the buy sequence only here, where the listings are.
-  const compare=n('button','shn-compare-add');compare.type='button';U.paintCompare(compare,E.compareState(ids,id),c);compare.addEventListener('click',async ev=>{ev.stopPropagation();await change(id);U.paintCompare(compare,E.compareState(ids,id),c);});
-  const own=n('button','shn-compare-add shn-holding-add');own.type='button';const paintOwn=()=>{const held=holdings.includes(id);own.textContent=held?c.inHoldings:c.addHolding;own.title=held?c.holdingRemoveHint:c.holdingHint;own.setAttribute('aria-pressed',String(held));};paintOwn();own.addEventListener('click',async ev=>{ev.stopPropagation();await saveHoldings([id],holdings.includes(id));paintOwn();});
+  const compare=n('button','shn-compare-add');compare.type='button';compare.dataset.cardCompare=id;compare.addEventListener('click',ev=>{ev.stopPropagation();change(id);});
+  const own=n('button','shn-compare-add shn-holding-add');own.type='button';own.dataset.cardHolding=id;own.addEventListener('click',ev=>{ev.stopPropagation();saveHoldings([id],holdings.includes(id));});
+  paintCardButtons([compare,own]);
   const seq=n('button','shn-compare-add shn-seq-add');seq.type='button';const paintSeq=()=>{const at=basket.indexOf(id),zh=lang==='zh';seq.textContent=at>=0?(zh?`✓ 连买第 ${at+1} 单`:`✓ Buy ${at+1}`):(zh?'＋ 连买':'＋ Sequence');seq.setAttribute('aria-pressed',String(at>=0));seq.disabled=at<0&&basket.length>=E.MAX;seq.title=zh?'按加入的先后假设一起买，后买的按前面成交后的权重计算；最多 4 单。只是本机计算。':'Assume buying several in the order added; each later one is valued after the earlier sales, at most 4. A local calculation.';};paintSeq();seq.addEventListener('click',ev=>{ev.stopPropagation();toggleSequence(id);paintSeq();});
   // A listing already bought (confirming) is nobody's to buy: no buy sequence, no gain for my holdings; its card says so.
   const closing=(snap.closing??[]).find(([x])=>x===id)?.[1]??null;
@@ -5244,7 +5572,31 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    copyAllSaid={until:Date.now()+1600,ok,count:numbers.length};paintCopyAll();setTimeout(paintCopyAll,1600);});
   return b;
  }
+ // The order of My holdings (NakaPortfolio sortChoice/sortFacts/sortIds), one choice shared with the popup through this
+ // extension's localStorage: chosen here or there, both pages show the same order. A new block re-sorts only while the
+ // viewer is away from the holdings and their card; while they are on them the order shown holds (new pieces join at the
+ // end) and the new order follows once they leave. A sort they choose applies at once.
+ const SORTS=H.SORTS;
+ let holdingSort=readSort(),holdingOrder=null,sortNow=false,sortWait=null;
+ /** Storage refused (a private window) reads as no choice: the order added. */
+ function readSort(){let raw=null;try{raw=localStorage.getItem(H.SORT_KEY);}catch{raw=null;}return H.sortChoice(raw);}
+ addEventListener('storage',ev=>{if(ev.key!==H.SORT_KEY)return;holdingSort=readSort();sortNow=true;render();});
+ const sortHeld=()=>portfolio.matches(':hover')||document.getElementById('ws-weight-tooltip')?.classList.contains('shn-pop--show')===true;
+ function sortLater(){if(sortWait)return;sortWait=setInterval(()=>{if(sortHeld())return;clearInterval(sortWait);sortWait=null;render();},400);}
+ function sortBar(c){
+  const bar=n('div','ws-hsort');bar.setAttribute('role','group');bar.setAttribute('aria-label',c.sortLabel);bar.append(n('span','ws-hsort-label',c.sortLabel));
+  for(const by of Object.keys(SORTS)){
+   const on=holdingSort.by===by,dir=on?holdingSort.dir:SORTS[by],b=n('button','ws-hsort-btn');b.type='button';b.dataset.sort=by;b.setAttribute('aria-pressed',String(on));
+   b.append(n('span','',c.sortBy[by]));if(on)b.append(n('span','ws-hsort-dir',dir==='asc'?'↑':'↓'));b.title=c.sortHint(by,dir)+(on?c.sortReverse:'');
+   // Storage refused (a private window): the choice lasts while this page is open.
+   b.addEventListener('click',()=>{holdingSort=on?{by,dir:dir==='asc'?'desc':'asc'}:{by,dir};try{localStorage.setItem(H.SORT_KEY,JSON.stringify(holdingSort));}catch{}sortNow=true;render();});
+   bar.append(b);
+  }
+  bar.addEventListener('keydown',ev=>{if(!['ArrowLeft','ArrowRight'].includes(ev.key))return;const list=[...bar.querySelectorAll('.ws-hsort-btn')],i=list.indexOf(document.activeElement);if(i<0)return;ev.preventDefault();list[(i+(ev.key==='ArrowRight'?1:list.length-1))%list.length].focus();});
+  return bar;
+ }
  function portfolioUI(){
+  const focusSort=document.activeElement?.closest?.('.ws-hsort-btn')?.dataset.sort??null;
   const c=C(),own=H.current(snap,holdings),a=own.allocation;portfolio.replaceChildren();
   const head=n('div','ws-portfolio-head'),title=n('div','ws-portfolio-title'),h2=n('h2','',c.holdings);h2.id='holdingsTitle';
   title.append(h2,n('span','ws-portfolio-count',c.pieces(own.ids.length)));head.append(title);
@@ -5256,18 +5608,24 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   const grid=n('div','ws-holding-grid'),add=n('button','ws-holding ws-holding-add');add.type='button';add.append(n('span','ws-add-mark','+'),n('span','',c.addHoldingTitle));
   add.addEventListener('click',()=>openAsk(add,c.addHoldingTitle,async raw=>{const r=U.resolveNumbers(snap,raw,holdings,c,c.skipHeld);if(r.empty)return {added:0,message:c.invalid};if(r.ids.length){if(!await saveHoldings(r.ids))return {added:0,message:c.addError};fresh=new Set(r.ids);}return {added:r.ids.length,message:r.skipped.length?c.addedSkipped(r.ids.length,r.skipped):null};}));
   grid.append(add);const confirm=[];
-  for(const id of own.ids){
-   const listed=P.listingStatus(snap,id)==='listed',number=snap.items[id][0],tile=n('article','ws-holding'),r=R.evaluateSnapshot(snap,id);tile.dataset.id=id;
+  // What each tile shows, read once: the sort and the tile use the same figures.
+  const facts=new Map(own.ids.map(id=>{const listed=P.listingStatus(snap,id)==='listed',r=R.evaluateSnapshot(snap,id),view=A.tile(rewards.data,id,lang),status=view.row.status,rate=listed?0:R.weeklyAllocation(R.units(r),a.all),idle=status==='idle',amount=listed?0:idle?null:view.amount;
+   return [id,{listed,number:snap.items[id][0],r,view,status,rate,idle,amount}];}));
+  const sorted=H.sortIds(own.ids,H.sortFacts(snap,own.ids,new Map(own.ids.map(id=>[id,facts.get(id).view.row])),cancelModel(),a.all),holdingSort),kept=holdingOrder?holdingOrder.filter(id=>facts.has(id)):[];
+  const order=!sortNow&&holdingOrder&&sortHeld()?[...kept,...sorted.filter(id=>!kept.includes(id))]:sorted;
+  if(order.join()!==sorted.join())sortLater();sortNow=false;holdingOrder=order;
+  for(const id of order){
+   const {listed,number,r,view,status,rate,idle,amount}=facts.get(id),tile=n('article','ws-holding');tile.dataset.id=id;
    if(listed)tile.classList.add('is-listed');if(fresh.has(id))tile.classList.add('is-new');
    const media=n('div','ws-holding-art');media.append(art(id,'holding'),holdingBadge(id));if(listed)media.append(n('span','ws-holding-tag',c.listedTag));
    const remove=n('button','ws-holding-remove','×');remove.type='button';remove.title=c.removeHolding(number);remove.setAttribute('aria-label',c.removeHolding(number));remove.addEventListener('click',()=>saveHoldings([id],true));media.append(remove);
-   const view=A.tile(rewards.data,id,lang),status=view.row.status,rate=listed?0:R.weeklyAllocation(R.units(r),a.all),idle=status==='idle';tile.dataset.status=status;
+   tile.dataset.status=status;
    // The badge on the artwork opens the market's inspection bubble; the rest of the tile opens the simulator.
    const info=n('div','ws-holding-info'),top=n('div','ws-holding-top');top.append(n('strong','',`#${number}`));info.append(top);
    // Two fixed lines under the number: this week's SHNAKAS (the weekly rate before rewards start) and the status with the
    // weekly rate. A figure still loading keeps its line and is hidden, so tiles never change height. A piece that left,
    // was paused or has no later week shows no weekly rate: it earns none.
-   const now=n('p','ws-holding-weekly'),amount=listed?0:idle?null:view.amount,value=n('b','',listed?c.earnListed:idle?U.shn(rate):amount===null?'0.0000':A.format(amount));
+   const now=n('p','ws-holding-weekly'),value=n('b','',listed?c.earnListed:idle?U.shn(rate):status==='waiting'&&view.row.startsWeek?view.label:amount===null?'0.0000':A.format(amount));
    if(!idle&&amount===null)value.classList.add('is-blank');now.append(value,n('span','',idle?c.weekUnit:c.thisWeekUnit));if(listed||['waiting','gone','paused','ended'].includes(status))now.classList.add('is-zero');
    const forecast=listed||idle?null:NakaMining.forecast(snap,id,{action:'hold',status:view.row}),rest=forecast?.state==='ready'?U.shn(forecast.remaining):'—';
    const line=listed?c.listedShort:idle?c.idleNote:['gone','paused','ended','unknown'].includes(status)?view.label:`${lang==='zh'?'每周':'Per week'} ${U.shn(rate)}\n${lang==='zh'?'剩余':'Remaining'} ${rest}`;
@@ -5283,7 +5641,9 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    tile.addEventListener('keydown',ev=>{if(ev.target!==tile||!['Enter',' '].includes(ev.key))return;ev.preventDefault();open();});
    grid.append(tile);
   }
+  if(own.ids.length>1)portfolio.append(sortBar(c));
   portfolio.append(grid);
+  if(focusSort)portfolio.querySelector(`.ws-hsort-btn[data-sort="${focusSort}"]`)?.focus({preventScroll:true});
   if(!own.ids.length)portfolio.append(n('p','ws-muted ws-holdings-how',`${c.holdingsEmpty} ${demo?c.holdingsHowDemo:c.holdingsHow}`));
   else portfolio.append(n('p','ws-muted ws-holdings-how',lang==='zh'?'悬停图片上的权重看明细。点卡片其它位置，模拟把这一枚挂出去。金库或钱包页可以一次添加整页。':'Hover the weight on a picture for its breakdown. Select the rest of the card to simulate listing it. Vault or Wallet can add the whole page.'));
   if(confirm.length)portfolio.append(confirmBox(c,confirm));
@@ -5337,7 +5697,10 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  // ---------------------------------------------------------------- Compare.
  function comparison(){
   const c=C(),t=T(),box=$('comparison');box.replaceChildren();const entries=ids.map(id=>E.entry(snap,model,id));
-  if(!ids.length){const empty=n('div','ws-blank');empty.append(n('strong','',c.empty),n('p','',c.emptyHint));const example=n('button','',c.load);example.addEventListener('click',async()=>{for(const id of E.examples(snap,model))await change(id);});empty.append(example);box.append(empty);return;}
+  if(!ids.length){const empty=n('div','ws-blank');empty.append(n('strong','',c.empty),n('p','',c.emptyHint));const example=n('button','',c.load);example.title=c.loadHint;
+   // The example is Best buy's first four: the listings that add most to my week per BTC (with no holdings, the pieces
+   // that earn most on their own per BTC).
+   example.addEventListener('click',async()=>{const best=planner.bestBuys().slice(0,E.MAX);if(!best.length){message=c.loadNone;render();return;}for(const id of best)await change(id);});empty.append(example);box.append(empty);return;}
   const table=n('table','ws-table');table.style.minWidth=`${Math.max(360,136+ids.length*235)}px`;table.setAttribute('aria-label',c.page);
   const head=n('thead'),tr=n('tr');tr.append(n('td','ws-label'));
   entries.forEach((e,index)=>{const th=n('th'),item=n('div','ws-item'),text=n('div');if(e)item.append(image(e.id,'compare'));text.append(n('strong','',e?`#${e.number}`:c.missing));if(e){const link=n('a','ws-item-link',c.colMarket);link.href=U.marketFind(snap,e.id);link.target='_blank';link.rel='noopener noreferrer';text.append(n('small','',c[e.listing]));if(e.closing!==null)text.append(closingTag(t,e.closing));text.append(link);const rank=P.numberBadge(e.number,t);if(rank)text.append(rank);}const remove=n('button','ws-remove','×');remove.title=c.remove;remove.setAttribute('aria-label',`${c.remove} ${e?'#'+e.number:''}`);remove.addEventListener('click',()=>change(ids[index]));item.append(text,remove);th.append(item);tr.append(th);});head.append(tr);table.append(head);const body=n('tbody');table.append(body);
@@ -5345,12 +5708,18 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
   row(c.total,(td,e)=>{td.append(n('span','ws-caption',e.listing==='listed'?c.after:c.holding),total(e.result,true));if(e.sale.state==='no-floor')td.append(n('small','',c.noFloor));},'ws-total');
   row(c.ask,(td,e)=>{td.textContent=e.listing==='listed'?I.btc(e.sale.price):'—';td.title=c.askNote;},'ws-price');
   if(entries.some(e=>e&&P.relayCredits(snap,e.id)!==null))row(t.relayCredits,(td,e)=>{const credits=P.relayCredits(snap,e.id);td.textContent=credits===null?'—':String(credits);td.title=t.relayCreditsMeaning;},'ws-credits');
-  row(c.before,(td,e)=>td.append(e.listing==='listed'?total(e.before):n('span','','—')),'ws-before');
-  if(holdings.length){
-   // A listing already closing is nobody's to buy: no gain for my holdings.
-   row(c.forMe,(td,e)=>{if(e.closing!==null){td.textContent='—';return;}const x=H.impact(snap,holdings,e.id,'sale',model);if(x.state!=='ready'){td.textContent='—';return;}const d=x.allocation.delta;td.textContent=c.gainWeek(U.shn(d,true));td.dataset.change=trend(d);},'ws-gain');
-   row(c.weeklyAfterBuy,(td,e)=>{if(e.closing!==null){td.textContent='—';return;}const x=H.impact(snap,holdings,e.id,'sale',model);td.textContent=x.state==='ready'?`${U.shn(x.allocation.after.weekly)} SHNAKAS`:'—';},'ws-before');
-  }
+  // No before-sale formula row: a listed piece earns nothing while listed (the official endpoint reports its formula, not a
+  // reward), and what the sale changes in its own weight is in the trait rows below.
+  // What buying each listing does, from one model per listing (NakaPortfolio.impact; with no holdings, the piece alone): the
+  // piece's own weekly output once bought; with holdings, my weekly change, which also counts how the sale moves my other
+  // pieces; under the figure it divides, what each 0.001 BTC of the ask adds to my week (Best buy's measure; with no
+  // holdings, to the piece's own output); then my week after buying. None for a piece not listed, or a listing already
+  // closing (nobody's to buy). Each row's label names its unit, so the cells hold the figures alone.
+  const impacts=new Map(entries.filter(e=>e&&e.listing==='listed'&&e.closing===null).map(e=>[e.id,H.impact(snap,holdings,e.id,'sale',model)])),ready=e=>impacts.get(e.id)?.state==='ready'?impacts.get(e.id):null;
+  row(c.pieceWeek,(td,e)=>{const x=ready(e);td.textContent=x!==null&&x.allocation.pieceCounts?U.shn(x.allocation.piece,true):'—';td.title=c.pieceWeekHint;},'ws-piece');
+  if(holdings.length)row(c.forMe,(td,e)=>{const x=ready(e);if(x===null){td.textContent='—';return;}const d=x.allocation.delta;td.textContent=U.shn(d,true);td.dataset.change=trend(d);},'ws-gain');
+  row(c.perMilli,(td,e)=>{const x=ready(e);if(x===null){td.textContent='—';return;}const d=x.allocation.delta,k=1e5/e.sale.price,per={lo:d.lo*k,hi:d.hi*k};td.textContent=U.shn(per,true);td.dataset.change=trend(per);td.title=holdings.length?c.perMilliHint:c.perMilliPieceHint;},'ws-rate');
+  if(holdings.length)row(c.weeklyAfterBuy,(td,e)=>{const x=ready(e);td.textContent=x===null?'—':U.shn(x.allocation.after.weekly);},'ws-before');
   const guide=n('tr','ws-trait-guide'),cell=n('th','',c.traitGuide);cell.colSpan=entries.length+1;guide.append(cell);body.append(guide);
   const types=[...new Set(entries.flatMap(e=>e?.before.traits.map(t=>t.type)??[]))];
   for(const type of types)row(type==='Hair And Headwear'?t.headwear:type,(td,e)=>{const a=e.before.traits.find(x=>x.type===type);if(!a){td.textContent='—';return;}if(e.sale.state==='no-floor'){td.append(n('span','ws-trait-name',a.value),n('span','ws-bonus','—'));return;}const b=e.sale.state==='ready'?e.result.traits.find(x=>x.type===type):a;td.append(n('span','ws-trait-name',a.value));const pct=P.traitPct,value=n('span','ws-bonus');const changed=e.sale.state==='ready'?P.traitChange(a,b,e.sale.beforeFloor,e.sale.afterFloor):null;
@@ -5386,7 +5755,7 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
    const top=n('div','ws-holding-top');top.append(n('strong','',`#${e.number}`));
    const ask=n('p','ws-listing-ask',I.btc(e.sale.price));ask.append(n('span','',' BTC'));
    const gain=n('p','ws-holding-weekly ws-listing-gain'),label=n('span',''),value=n('b','');gain.append(value,label);
-   const credits=P.relayCredits(snap,e.id),sub=n('small','ws-holding-sub',credits?`${T().relayCredits} ${credits}`:'');if(credits)sub.title=T().relayCreditsMeaning;
+   const credits=P.relayCredits(snap,e.id),sub=n('small','ws-holding-sub',credits!==null?`${T().relayCredits} ${credits}`:'');if(credits!==null)sub.title=T().relayCreditsMeaning;
    if(e.closing===null){
     // One of my own listings shows what reclaiming it does (as on My holdings), anyone else's what buying it does.
     const reclaim=mine?cancelModel().get(e.id):null,scenario=mine?reclaim:priors.length?sequenceModel(priors).get(e.id):e.sale,next=scenario.state==='ready'?scenario.result:null,shown=mine||priors.length?next:e.result;
@@ -5507,25 +5876,26 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  function render(){hideFloat();const c=C(),t=T();document.documentElement.lang=lang==='zh'?'zh-CN':'en';document.title=`Naka Sigil · ${c.page}`;for(const b of document.querySelectorAll('[data-lang]'))b.setAttribute('aria-pressed',String(b.dataset.lang===lang));
   for(const [id,key]of Object.entries({heading:'heading',intro:'intro',clear:'clear',browseTitle:'browse',filterLabel:'filter',compareTitle:'compare',compareAddLabel:'addCompareTitle',aboutTitle:'aboutTitle'}))$(id).textContent=c[key];
   // When a listing bought now starts earning is the same for every card: said once, in the section's note.
-  {const w=R.startWeek(snap.snapshot.height+1);$('browseNote').textContent=c.browseNote+(w<R.RULES.weeks?(lang==='zh'?` · 现在买入，第 ${w+1} 周起有奖励`:` · bought now, it earns from week ${w+1}`):'');}
+  {const w=R.startWeek(snap.snapshot.height+1),phase=R.rewardPhase(snap.snapshot),from=t.rateFrom(w+1,phase.state==='active'?phase.week:null);$('browseNote').textContent=c.browseNote+(w<R.RULES.weeks?(lang==='zh'?` · 现在买入，${from}有奖励`:` · bought now, it earns ${from}`):'');}
   $('version').textContent=version?`v${version}`:'';$('version').hidden=!version;
   // The previous worker still runs (files replaced, extension not reloaded): one card in place of the page's sections.
   document.body.classList.toggle('is-stale',workerCurrent===false);$('updateCard').hidden=workerCurrent!==false;
   $('updateTitle').textContent=t.updateTitle;$('updateText').replaceChildren(n('span','',t.updateText(S.BUILD)),n('span','',t.updateKeep));$('updateReload').textContent=t.updateReload;$('updateHint').textContent=t.updateHint;
-  const height=n('span','ws-block-number');height.append(n('span','ws-height-text',I.int(snap.snapshot.height)),NakaPixel.digits(I.int(snap.snapshot.height),'ws-block-digits'));$('block').replaceChildren(n('span','ws-block-label',t.snapBlock('')),height);$('block').setAttribute('aria-label',t.snapBlock(I.int(snap.snapshot.height)));$('age').textContent=I.blockAgeShort(t,snap.snapshot);$('age').title=I.blockTimeTitle(t,snap.snapshot);$('source').title=lang==='zh'?'产量按所示数据区块测算':'Output is estimated at the shown data block';$('source').textContent=demo?c.local:source==='live'?t.modeLive:t.srcBundled;
+  const height=n('span','ws-block-number');height.append(n('span','ws-height-text',I.int(snap.snapshot.height)),NakaPixel.digits(I.int(snap.snapshot.height),'ws-block-digits'));$('block').replaceChildren(n('span','ws-block-label',t.snapBlock('')),height);$('block').setAttribute('aria-label',t.snapBlock(I.int(snap.snapshot.height)));$('age').textContent=I.blockAgeShort(t,snap.snapshot);$('age').title=I.blockTimeTitle(t,snap.snapshot);$('source').title=lang==='zh'?'产量按所示数据区块测算':'Output is estimated at the shown data block';$('source').textContent=demo?c.local:source==='live'?t.modeLive:t.srcBundled;paintUpdating();
   $('pips').replaceChildren(...Array.from({length:E.MAX},(_,i)=>n('i',i<ids.length?'is-on':'')));
   $('scrollHint').textContent=c.scroll;$('legend').textContent=c.legend;$('demoNote').hidden=!demo;$('demoNote').textContent=demo?c.bundledNote:'';$('selectionCount').textContent=c.count(ids.length);$('clear').disabled=!ids.length;$('compareAdd').disabled=ids.length===E.MAX;$('compareAdd').title=ids.length===E.MAX?c.fullHere:c.addHint;$('status').textContent=message;$('assumption').textContent=c.independent;const phase=R.rewardPhase(snap.snapshot);$('limits').textContent=c.limits+' '+(['before','boundary'].includes(phase.state)?t.phaseNotStarted:phase.state==='active'?(phase.week===R.RULES.weeks?t.noFutureWeekNote:t.buyEligibilityNote):phase.state==='closed'?t.rewardClosed:t.phaseEnded)+(ids.some(id=>E.entry(snap,model,id)?.result?.unmeasured)?' '+c.unknownNote:'');$('filter').options[0].textContent=c.any;$('filter').title=c.filterNote;$('filter').value=String(minimum);
   $('market').textContent=c.market;$('market').href=`https://ord-dropz.xyz/secondary/collections/${snap.collection.slug}`;
   applyClassicSection();
-  renderTabs();portfolioUI();planner.render();comparison();catalog();about();weightPopover.validate();listingPopover.validate();if(classicRepaint&&classicContextLang!==lang)classicRepaint();
+  renderTabs();portfolioUI();planner.render();comparison();catalog();about();weightPopover.validate();listingPopover.validate();paintCardButtons();if(classicRepaint&&classicContextLang!==lang)classicRepaint();
   document.body.classList.remove('is-manage');
   {let notes=$('compareNotes');if(!notes){notes=n('details','ws-notes');notes.id='compareNotes';const sum=n('summary','');sum.id='compareNotesSum';notes.append(sum,$('legend'),$('assumption'),$('limits'));$('compare').append(notes);}$('compareNotesSum').textContent=lang==='zh'?'这些比较怎么读':'How to read this comparison';}
-  if(document.body.dataset.section==='history'&&!$('history').querySelector('.nl-select'))paintHistory();
+  if(document.body.dataset.section==='history'&&historyIdentity()!==historyKey)paintHistory();
  }
 
  $('catalog').addEventListener('click',ev=>{if($('catalog').getAttribute('aria-busy')==='true'){ev.preventDefault();ev.stopImmediatePropagation();}},true);
 
- $('brand').append(NakaPixel.sigil(''),n('span','','Naka Sigil'));$('updateSigil').append(NakaPixel.sigil(''));
+ $('brand').append(NakaPixel.sigil('',{turn:true}),n('span','','Naka Sigil'));$('updateSigil').append(NakaPixel.sigil(''));
+ const updatingMark=Object.assign(NakaPixel.busy('ws-busy',''),{hidden:true});$('age').after(updatingMark);
  $('clear').addEventListener('click',()=>change(null,true));$('filter').addEventListener('change',()=>{minimum=Number($('filter').value);showAll=false;catalog();});$('more').addEventListener('click',()=>{showAll=true;catalog();});
  document.querySelector('.ws-lang').addEventListener('click',ev=>{const b=ev.target.closest('[data-lang]');if(!b)return;if(demo){lang=b.dataset.lang;message='';persist();render();}else chrome.storage.local.set({[I.STORAGE_KEY]:b.dataset.lang});});
  // Where the popup or a link sends this page: a section, one Raise weight tab, or the simulator or the 400% plan for one
@@ -5544,8 +5914,33 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  function applyClassicSection(){if(location.hash==='#manage')history.replaceState(history.state,'',location.pathname+location.search+'#holdings');const raw=location.hash.replace('#','');const known=['holdings','planner','compare','listings','about','history'];const section=raw==='left'||raw==='manage'?'holdings':known.includes(raw)?raw:(/^(planner-(buy|plan|lock|sim)|plan-\d+|sim-\d+)$/.test(raw)?'planner':'holdings');document.body.dataset.section=section;document.body.classList.remove('is-manage');activeSection=section==='history'||section==='about'?'':section;for(const a of tabs.children)a.toggleAttribute('aria-current',a.dataset.section===activeSection);}
  // The holding history page: a header like every other section (back to holdings, the title, the week select on the right),
  // then the report.
- function paintHistory(){const box=$('history');box.replaceChildren();const head=n('div','ws-section-head nl-page-head'),back=n('a','ws-back',lang==='zh'?'我的持仓':'My holdings'),title=n('h2','',lang==='zh'?'持仓历史':'Holding history'),tools=n('div','nl-page-tools');back.href='#holdings';title.id='historyTitle';head.append(back,title,tools);box.append(head,n('div','mg-history'));NakaLedgerUI.history(snap,lang,'fleet',box.lastChild,tools);}
- addEventListener('hashchange',()=>{applyClassicSection();const section=document.body.dataset.section;if(section==='history'){document.title=`Naka Sigil · ${lang==='zh'?'持仓历史':'Holding history'}`;paintHistory();window.scrollTo(0,0);}else{document.title='Naka Sigil';scrollSection(section);}});
+ // The history page follows the language, the block and my records (holdings, recorded intervals, pieces that left):
+ // when any of them changes it is painted again, on the week that was selected.
+ let historyKey=null;
+ const historyIdentity=()=>JSON.stringify([lang,snap.snapshot.height,snap.snapshot.generatedAt,holdings,stored[NakaLedger.KEY]??null,stored[H.LEFT]??null]);
+ // Opening the page paints it from scratch (its reading shows). A repaint for newer data is read off-screen and swapped in
+ // once ready, with the week chosen, the weeks opened, the scroll place and the focused control kept: the page never
+ // empties under the viewer. Only the latest repaint is swapped in.
+ let historyTurn=0;
+ function paintHistory(fresh=false){
+  const box=$('history'),chosen=box.querySelector('.nl-select')?.value??null,turn=++historyTurn;
+  const opened=new Set([...box.querySelectorAll('details.nl-history-week[open]>summary>b')].map(b=>b.textContent)),backfill=box.querySelector('details.nl-backfill')?.open===true;
+  const active=box.contains(document.activeElement)?document.activeElement:null,cls=active&&typeof active.className==='string'&&active.className.trim()?'.'+active.className.trim().split(/\s+/).join('.'):null,at=cls?[...box.querySelectorAll(cls)].indexOf(active):-1;
+  historyKey=historyIdentity();
+  if(fresh)box.replaceChildren();
+  const head=n('div','ws-section-head nl-page-head'),back=n('a','ws-back',lang==='zh'?'我的持仓':'My holdings'),title=n('h2','',lang==='zh'?'持仓历史':'Holding history'),tools=n('div','nl-page-tools'),host=n('div','mg-history');back.href='#holdings';head.append(back,title,tools);
+  const stage=box.childNodes.length?n('div'):box;if(stage!==box){stage.hidden=true;box.append(stage);}else title.id='historyTitle';
+  stage.append(head,host);
+  NakaLedgerUI.history(snap,lang,'fleet',host,tools).then(()=>{
+   if(turn!==historyTurn){if(stage!==box)stage.remove();return;}
+   const select=tools.querySelector('.nl-select');if(chosen!==null&&select&&select.value!==chosen&&[...select.options].some(o=>o.value===chosen)){select.value=chosen;select.dispatchEvent(new Event('change'));}
+   if(stage!==box){const y=scrollY;box.replaceChildren(...stage.childNodes);title.id='historyTitle';scrollTo(scrollX,y);}
+   for(const d of host.querySelectorAll('details.nl-history-week'))if(opened.has(d.querySelector(':scope>summary>b')?.textContent))d.open=true;
+   const fold=host.querySelector('details.nl-backfill');if(fold&&backfill)fold.open=true;
+   if(cls&&at>=0)box.querySelectorAll(cls)[at]?.focus({preventScroll:true});
+  });
+ }
+ addEventListener('hashchange',()=>{applyClassicSection();const section=document.body.dataset.section;if(section==='history'){document.title=`Naka Sigil · ${lang==='zh'?'持仓历史':'Holding history'}`;paintHistory(true);window.scrollTo(0,0);}else{document.title='Naka Sigil';scrollSection(section);}});
  let classicContextStarted=false,classicContextLang=null,classicRepaint=null;
  function showClassicContext(){
   const params=new URLSearchParams(location.search);if(params.get('skin')!=='classic'||(!params.has('inspect')&&!params.has('history')))return false;if(classicContextStarted)return true;classicContextStarted=true;document.body.classList.add('has-classic-context');const panel=n('section','ws-classic-context');panel.id='classicContext';document.querySelector('main').prepend(panel);
@@ -5565,15 +5960,19 @@ globalThis.SHNAKAS_SNAPSHOT = {"format":1,"collection":{"slug":"shielded-nakas-m
  if(demo){
   let data=null;try{data=JSON.parse(localStorage.getItem('nakaWeb')||'null');}catch{message=C().addError;}
   if(data){holdings=H.normalize(data.portfolio);ids=E.normalize(data.compare);lang=I.resolveLang(data.lang);}
-  else holdings=exampleHoldings(snap);
+  // A first visit compares Best buy's first three for the example holdings, as the example selection would.
+  else{holdings=exampleHoldings(snap);ids=planner.bestBuys().slice(0,3);}
   render();arrive();
  }else{
   const KEYS=[S.KEYS.live,S.KEYS.closing,I.STORAGE_KEY,E.KEY,H.KEY,A.KEY,A.STATUS,A.OBSERVED,A.WEEKS,H.LEFT,H.EVENTS,H.META,H.ABSENT,NakaLedger.KEY];
   // A worker from before shn-build leaves it unanswered (undefined); a rejection means no worker took it: neither runs this code.
-  chrome.storage.local.get(KEYS).then(got=>{stored=got;adopt();render();arrive();chrome.runtime.sendMessage({type:'shn-build'}).then(a=>S.sameBuild(a),()=>false).then(same=>{workerCurrent=same;render();});});
+  // A sale's block on a card here opens the block lookup in place; one from the market arrives as ?lookup=&at= (worker).
+  P.setLookup((number,height)=>NakaLedgerUI.inspect(snap,lang,number,height));
+  const lookupFromAddress=()=>{const p=new URLSearchParams(location.search);if(!p.has('lookup'))return;const number=Number(p.get('lookup')),height=Number(p.get('at'));p.delete('lookup');p.delete('at');history.replaceState(history.state,'',location.pathname+(p.size?'?'+p:'')+location.hash);if(Number.isSafeInteger(number)&&number>=0&&Number.isSafeInteger(height)&&height>=0)NakaLedgerUI.inspect(snap,lang,number,height);};
+  Promise.all([chrome.storage.local.get(KEYS),chrome.storage.session.get(S.SESSION_UPDATING)]).then(([got,ses])=>{stored=got;updating=ses[S.SESSION_UPDATING];adopt();render();arrive();lookupFromAddress();chrome.runtime.sendMessage({type:'shn-build'}).then(a=>S.sameBuild(a),()=>false).then(same=>{workerCurrent=same;render();});});
   // Reload asks the new worker to open this page again at the same section (Chrome closes it on reload).
   $('updateReload').addEventListener('click',()=>{$('updateReload').disabled=true;chrome.storage.local.set({[S.REOPEN]:{page:'workspace',section:location.hash.slice(1),at:Date.now()}}).then(()=>chrome.runtime.reload());});
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(Object.hasOwn(changes,TEAM_KEY))planner.extrasChanged(teamOf(changes[TEAM_KEY].newValue));let relevant=false;for(const key of KEYS)if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area==='session'){if(Object.hasOwn(changes,S.SESSION_UPDATING)){updating=changes[S.SESSION_UPDATING].newValue;paintUpdating();}return;}if(area!=='local')return;if(Object.hasOwn(changes,TEAM_KEY))planner.extrasChanged(teamOf(changes[TEAM_KEY].newValue));let relevant=false;for(const key of KEYS)if(Object.hasOwn(changes,key)){stored[key]=changes[key].newValue;relevant=true;}if(relevant){adopt();render();}});
   const beat=()=>{if(document.visibilityState==='visible'&&chrome.runtime.id)chrome.runtime.sendMessage({type:'shn-visible'}).catch(()=>{});};
   beat();setInterval(beat,S.HEARTBEAT_MS);document.addEventListener('visibilitychange',beat);
  }
