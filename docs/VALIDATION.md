@@ -1,5 +1,14 @@
 # Validation record
 
+## v0.13.2 — The Vault tab's detail dialog, 2026-11-05
+
+- Reproduced on the released v0.13.1 build, in an isolated throwaway profile with a stand-in collection page carrying the official detail dialog as the site renders it (example #314): the panels nested, the second inside the first panel's artwork column, until the check closed the dialog at 20; a page that removes the panel the moment it appears froze the tab (no answer for 15 s).
+- On v0.13.2: one panel under the dialog's title, none nested, nothing stopped. With the page that removes the panel, the extension stopped after 60 changing runs, took off every mark and showed its note, and the page kept answering.
+- Unit tests: 270 pass in each repository. Interaction stability (real mouse, data refreshed underneath): 329 pass, 4 skipped where a narrow window leaves no room for the layout being tested, 0 fail. On the official collection page: 63 of 63 recognised cards take a badge; Activity agrees with the market, 0 failures.
+- Before release, 2026-11-05: the upgrade from the released v0.13.1 package, both ways. Replace and Reload: every user key byte-identical right after the upgrade step and after the block was rebuilt; every popup view opens, showing version 0.13.2. Replace and only restart: the pages showed the update card and every user key stayed identical; after Reload on the card's advice the new worker ran and every user key was identical after the upgrade step and after the rebuild. No page errors either way. Privacy check: 168 files pass.
+
+中文：在已发布的 v0.13.1 构建上复现：独立的临时浏览器配置，合集页替身里放了和官网渲染一样的详情浮层（示例 #314），面板一层套一层，第二块插在第一块面板的作品图旁边那一栏里，检查脚本在 20 块时关掉浮层才停下；页面一出现面板就删掉它时，标签页卡死（15 秒没有响应）。v0.13.2：浮层标题下只有一块面板，没有嵌套，也没有停止标注；页面不断删面板时，插件改了 60 遍后停下，撤掉全部标注并显示提示，页面一直能响应。单元测试两个仓库各 270 项通过。交互稳定性（真实鼠标、底下数据刷新）：通过 329 项，窄窗口放不下被测版面的 4 项跳过，失败 0 项。官网合集页：认得出的 63 张卡片都挂上了标签；动态页与市场页一致，失败 0 项。发布前（11 月 5 日）：从已发布的 v0.13.1 安装包两种方式升级。替换后点“重新加载”：升级步骤之后和区块重建之后用户数据都逐字节相同，弹窗各页都能打开、显示版本 0.13.2。替换后只重启浏览器：页面显示需要重新加载的提示，用户数据不变；按提示重新加载后新后台运行，升级步骤之后和区块重建之后用户数据都相同。两种方式都没有页面错误。隐私检查：168 个文件通过。
+
 ## v0.13.1 — The popup's sort as a row of buttons, 2026-11-03
 
 - Unit tests: 270 pass in each repository.

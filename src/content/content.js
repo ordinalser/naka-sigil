@@ -300,9 +300,15 @@
     return rowEl && rowEl.classList.contains('group') && rowEl.className.includes('grid-cols-') ? cell : null;
   }
 
+  /** Everything this script adds to a page sits under an element with an shn- class (badge, panel, card, scope bar, tools,
+   * notes); the site's own classes never start with shn-. */
+  const OWN_UI = '[class^="shn-"],[class*=" shn-"]';
+
   /**
    * 扫描页面上的藏品图，认领到的徽章 / 面板记进 keepBadges / keepPanels。
    * 一个槽位只认文档顺序里的第一张铭文图，避免两张图来回改写同一个徽章。
+   * 只认站点自己的图：面板和卡片里有我们画的作品图（同一种官方地址），把它当成站点的图会在面板里再插面板，
+   * 每次扫描多一层、永不停止（2026-11-05 合集页金库详情浮层卡死）。
    */
   function scanImages(onCollection, keepBadges, keepPanels) {
     const slots = new Set();
@@ -310,6 +316,7 @@
     if(onCollection)for(const img of document.querySelectorAll('img[src*="/api/shielded/art/"],img[src^="https://assets.ord-dropz.xyz/snapshots/"]'))images.add(img);
     if(WALLET_PATH.test(location.pathname))for(const img of document.querySelectorAll('.sv-shell .sv-piece-grid button.sv-tile > .aspect-square > img,.ps-wrap[role="dialog"] .ps-art > img'))images.add(img);
     for (const img of images) {
+      if (img.closest(OWN_UI)) continue;
       const id = idFromSrc(img.getAttribute('src'));
       if (id === null) continue;
       const vaultOk = onCollection || Boolean(SNAP.items[id]);
@@ -729,7 +736,34 @@
     for(const line of lines.slice(2))box.append(el('small','',line));
   }
 
+  // A scan brings the page to how it should look; when it changed the page it runs again at once to confirm, and the second
+  // run normally changes nothing. Still changing after SETTLE_PASSES runs in a row, or after WRITES_PER_TASK changing runs
+  // before the page gets a turn, means the page and this script keep rewriting each other (a site change it reads wrongly).
+  // That loop runs in microtasks, so the page never paints or answers a click again: it freezes. The script stops marking
+  // this page instead, takes its marks off and says so; reloading the page starts it again.
+  const SETTLE_PASSES = 6, WRITES_PER_TASK = 60;
+  let halted = false, observer = null, taskWrites = 0, taskEnd = null;
+  function settle() {
+    if (halted) return;
+    for (let pass = 0; pass < SETTLE_PASSES; pass++) {
+      scan();
+      if (!observer.takeRecords().length) return;
+      if (taskEnd === null) taskEnd = setTimeout(() => { taskWrites = 0; taskEnd = null; }, 0);
+      if (++taskWrites > WRITES_PER_TASK) { halt(`${taskWrites} changing scans before the page got a turn`); return; }
+    }
+    halt(`still changing the page after ${SETTLE_PASSES} scans in a row`);
+  }
+  function halt(reason) {
+    halted = true;
+    observer.disconnect();
+    finding = null; popover.hide(); clearFx();
+    for (const n of document.querySelectorAll(OWN_UI)) if (n.isConnected) n.remove();
+    console.warn(`Naka Sigil stopped marking ${location.pathname}: ${reason}`);
+    findNote(exploreCopy().haltNote, null, false);
+  }
+
   function scan() {
+    if (halted) return;
     const path = location.pathname;
     const c = COLLECTION_PATH.exec(path);
     const keepBadges = new Set();
@@ -755,7 +789,7 @@
   // 不用 requestAnimationFrame：站点加载大数据时帧会停摆十几秒（2026-10-08 实测 rAF 12 秒只跑了 6 次），
   // 期间重渲染出来的卡片会一直没有徽章。实测滚到 1743 张卡片时单次全量扫描约 1.5ms，
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
-  // 自己写 DOM 也会触发一次回调，但那次扫描发现一切已就位，不再写 DOM，不会循环。
+  // 扫描自己写的 DOM 由 settle() 用 takeRecords() 收走、紧接着再扫一遍确认，不另起回调；反复改个不停时 settle() 停掉本页标注。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
   chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS,NakaLedger.KEY]).then((got) => {
     comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);minerWeek=got[NakaRewards.KEY];minerObserved=got[NakaRewards.OBSERVED];minerEvents=got[HOLD.EVENTS];minerLedger=got[NakaLedger.KEY];
@@ -763,10 +797,11 @@
     stored.live = got[K.live];
     stored.closing = got[K.closing];
     useData();
-    new MutationObserver(scan).observe(document.documentElement, {
+    observer = new MutationObserver(settle);
+    observer.observe(document.documentElement, {
       childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href'],
     });
-    scan();readFind();
+    settle();readFind();
   });
   // 实时数据更新或切换语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
   chrome.storage.onChanged.addListener((changes, area) => {

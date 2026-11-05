@@ -573,3 +573,13 @@ Reported: the popup's sort menu opened the system's own list, long and in anothe
 - The row is built once per language and only restated after, so a refresh leaves it alone and the button just pressed keeps the focus; the arrow keys move between the buttons. The choice is still the one setting shared with the extension page.
 
 中文：起因是弹窗的排序菜单一打开就是系统自己的长列表，样式和弹窗不一样，还盖在卡片上；菜单本身单独占一行、靠右，和弹窗的版面对不齐。现在弹窗也用独立页那四个按钮，排成一行、和卡片一样宽：**排序** · **加入时间** · **编号** · **权重** · **本周**。选中的亮起并显示方向，再点一次反过来，每个按钮的悬停提示写明顺序；中英文在弹窗宽度下都放得下，不截字。按钮每种语言只建一次，之后只改状态，刷新不重建，刚点的按钮保留焦点；左右方向键在按钮间移动。选择仍是和独立页共用的那一个设置。
+
+## v0.13.2 — what changed since v0.13.1 / 相对 v0.13.1 的变化
+
+### The Vault tab's detail dialog no longer freezes the collection page / 合集页金库详情浮层不再卡死
+
+- **Cause.** On the collection page the Vault tab opens a piece in the official detail dialog, and the extension puts its weight panel under the dialog's title. Since v0.13.0 the panel shows the piece's artwork from the official snapshot address, which the collection page reads as a piece. The next scan took the panel's own artwork for the dialog's and put a panel inside the panel, and so on at every scan, inside the MutationObserver's microtasks: the page never painted or answered a click again. The standalone wallet was not affected: its dialog takes a badge, not a panel.
+- **Fix.** Scans read only the site's images. Everything the extension adds sits under an element with an `shn-` class (badges, panels, cards, the scope bar, tools, notes), and images there are skipped.
+- **The page is never frozen.** A scan that changed the page runs again at once to confirm, and that run normally changes nothing. Still changing after six runs in a row, or after 60 changing runs before the page gets a turn, means the page and the extension keep rewriting each other (a site change the extension reads wrongly). The extension then stops marking that page, takes its marks off and says so in a note that stays until closed; reloading the page starts it again.
+
+中文：合集页的“金库”标签点开一件藏品，会弹出官方详情浮层，插件在浮层标题下面插一块权重面板。v0.13.0 起面板里有这件作品的图，用的是官方快照地址，而合集页会把这种地址认成藏品图；下一次扫描就把面板自己的图当成浮层的图，在面板里再插一块面板，每次扫描多一层，一直在 MutationObserver 的微任务里跑，页面再也画不出来、点不动。独立钱包页不受影响：那里的浮层挂的是标签，不是面板。修复：扫描只认站点自己的图，插件加的东西都在带 `shn-` 类名的元素下面（标签、面板、卡片、范围栏、工具条、提示），里面的图一律跳过。另外加了一道保护：一次扫描改了页面，就立刻再扫一遍确认，正常第二遍什么都不改；连续六遍还在改，或在页面轮到下一个任务之前改了 60 遍，说明页面和插件在反复改同一处（比如站点改版后插件认错了位置），插件就停止标注这一页、撤掉已加的标注，并留一条提示（关掉前一直在）；刷新页面会重新开始。

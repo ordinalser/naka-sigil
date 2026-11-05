@@ -115,7 +115,7 @@
   absentTitle:'Not on your Wallet page at the last sync',absentLine:n=>`#${n}: the Wallet page shows no row of it; it may have been sent away privately.`,absentGone:'It left',absentKeep:'Still mine',absentFailed:'Not saved: sync again, then retry.',
   findSearching:n=>`Naka Sigil: finding #${n} on the market…`,findFound:(n,after,gain)=>`Found #${n}: ${after} once you buy it${gain?`, your weekly SHNAKAS ${gain}`:''}`,findFoundHeld:(n,w)=>`Found #${n}: not for sale, weight ${w}`,
   findPending:n=>`#${n} is being bought by someone (spinner on its card): it confirms in the next block, so buying it now fails`,findGone:n=>`#${n} is no longer listed: just bought or reclaimed`,findSearchBtn:'Search by number',
-  findNoGrid:n=>`The market grid did not load: search for #${n} yourself`,fxAfter:'After buying',fxGain:v=>`${v} / week`,fxWeight:'Weight',findMissing:n=>`#${n} does not show after the search: it may have just sold (with “Listed only” on, sold pieces are hidden)`,findNoSearch:n=>`The market’s search box was not found: type ${n} into it`,findNotInData:n=>`#${n} is not in Naka Sigil’s data`},
+  haltNote:'Naka Sigil stopped marking this page: the page and the extension kept changing the same spot, and going on would freeze the page. Reload the page to start again.',findNoGrid:n=>`The market grid did not load: search for #${n} yourself`,fxAfter:'After buying',fxGain:v=>`${v} / week`,fxWeight:'Weight',findMissing:n=>`#${n} does not show after the search: it may have just sold (with “Listed only” on, sold pieces are hidden)`,findNoSearch:n=>`The market’s search box was not found: type ${n} into it`,findNotInData:n=>`#${n} is not in Naka Sigil’s data`},
  zh:{
   heading:'找到你的 Naka，增加你的权重',intro:'先看持仓每周能分到多少 SHNAKAS，再按权重、挂价和属性比较挂单',page:'Shielded Nakas · 持仓与比较',local:'本地快照',
   compare:'比较',open:'打开比较页',market:'打开市场 ↗',colMarket:'前往市场 ↗',
@@ -231,7 +231,7 @@
   absentTitle:'钱包页同步时没有看到这些 Naka',absentLine:n=>`#${n}：钱包页没有它的任何一行，可能已私下转出。`,absentGone:'已离手',absentKeep:'仍持有',absentFailed:'没保存：请重新同步后再试。',
   findSearching:n=>`Naka Sigil：正在市场里找 #${n}…`,findFound:(n,after,gain)=>`找到 #${n}：买入后 ${after}${gain?`，我每周 ${gain}`:''}`,findFoundHeld:(n,w)=>`找到 #${n}：未挂单，权重 ${w}`,
   findPending:n=>`#${n} 正在被别人购买（卡片右上角在转圈）：等下一块确认，现在买会失败`,findGone:n=>`#${n} 已不在挂单里：刚被买走或撤单`,findSearchBtn:'按编号搜索',
-  findNoGrid:n=>`市场网格没有加载出来：请自己搜索 #${n}`,fxAfter:'买入后',fxGain:v=>`每周 ${v}`,fxWeight:'权重',findMissing:n=>`搜索后没有显示 #${n}：可能刚被买走（勾选了“仅看在售”时，已售出的不显示）`,findNoSearch:n=>`没找到市场的搜索框：请在搜索框输入 ${n}`,findNotInData:n=>`插件数据里没有 #${n}`}};
+  haltNote:'Naka Sigil 已停止标注这一页：页面和插件在反复改同一处，再继续会卡住页面。刷新页面会重新开始。',findNoGrid:n=>`市场网格没有加载出来：请自己搜索 #${n}`,fxAfter:'买入后',fxGain:v=>`每周 ${v}`,fxWeight:'权重',findMissing:n=>`搜索后没有显示 #${n}：可能刚被买走（勾选了“仅看在售”时，已售出的不显示）`,findNoSearch:n=>`没找到市场的搜索框：请在搜索框输入 ${n}`,findNotInData:n=>`插件数据里没有 #${n}`}};
  const pick=lang=>copy[lang==='zh'?'zh':'en'];
  const GITHUB='https://github.com/ordinalser/naka-sigil';
  /** The Naka community group on Telegram: where wanted posts go, and the popup's About links to it. */
