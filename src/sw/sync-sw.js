@@ -8,12 +8,17 @@
  * A failed check records why (shown in the popup), keeps the data it has, and backs off 1/2/4/8/16/30 minutes or as the
  * server's Retry-After says.
  *
+ * SHNAKAS pouches (pouchTick): while a pouch page (the SHNAKAS market, the vault) is visible, the market's listings and
+ * sales at most once a minute and the dollar price at most every 5 minutes, kept for the pages (lib/pouch.js KEY,
+ * PRICE_KEY). A failed read keeps what was kept (the pages stop using it once it is old) and is tried again on the next
+ * minute; the dollar price from the site's own three sources, in its order, the first that answers.
+ *
  * Also here: this week's and finished weeks' official accumulators, My holdings bookkeeping (anchors, public records,
  * pieces that left), the wallet eligibility import, one-off historical inspections and the popup's chain clock.
  * Storage keys: lib/source.js KEYS, lib/portfolio.js (META, LEFT, EVENTS, ABSENT), lib/rewards.js (KEY, STATUS, OBSERVED, WEEKS).
  */
 'use strict';
-importScripts('../lib/rules.js', '../lib/snapshot-core.js', '../lib/source.js', '../data/snapshot.js', '../lib/purchase.js', '../lib/explore.js', '../lib/portfolio.js', '../lib/rewards.js','../lib/ledger.js','../lib/mining.js');
+importScripts('../lib/rules.js', '../lib/snapshot-core.js', '../lib/source.js', '../data/snapshot.js', '../lib/purchase.js', '../lib/explore.js', '../lib/portfolio.js', '../lib/rewards.js','../lib/ledger.js','../lib/mining.js','../lib/pouch.js');
 
 const CORE = self.ShnakasSnapshot;
 const SRC = self.ShnakasSource;
@@ -193,8 +198,57 @@ async function closingTick(snap, pulse) {
 }
 
 chrome.alarms.onAlarm.addListener((a) => {
-  if (a.name === ALARM) liveTick();
+  if (a.name === ALARM) { liveTick(); pouchTick(); }
 });
+
+// ------------------------------------------------------------ SHNAKAS pouches
+
+const POUCH = self.NakaPouch;
+let pouchBusy = false, pouchMarketTriedAt = 0, pouchPriceTriedAt = 0;
+/** A JSON answer within 6 s (as the site asks its price sources), else an error. */
+async function quickJson(url) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(6000), cache: 'no-store' });
+  if (!r.ok) throw new Error(`${new URL(url).host} ${r.status}`);
+  return r.json();
+}
+async function pouchTick() {
+  if (pouchBusy) return;
+  pouchBusy = true; // claimed before the first await: alarm and heartbeat can arrive together
+  try {
+    const now = Date.now();
+    const { [POUCH.SESSION_VISIBLE]: seenAt } = await chrome.storage.session.get(POUCH.SESSION_VISIBLE);
+    if (!Number.isFinite(seenAt) || now - seenAt > SRC.VISIBLE_MS) return;
+    const got = await chrome.storage.local.get([POUCH.KEY, POUCH.PRICE_KEY]);
+    // tried at most once a minute (the price every 5 minutes) whether the read worked or not: a failing source is not
+    // asked again and again
+    if (now - pouchMarketTriedAt >= POUCH.MARKET_EVERY_MS && !(now - (got[POUCH.KEY]?.fetchedAt ?? 0) < POUCH.MARKET_EVERY_MS)) {
+      pouchMarketTriedAt = now;
+      try {
+        const kept = got[POUCH.KEY];
+        // the sales from a few blocks before the newest kept (a sale a block holds, read again, is the same sale); all of
+        // them when none are kept (the first read, or a market kept by an earlier version, which kept no sales)
+        const since = Array.isArray(kept?.sold) && Number.isSafeInteger(kept?.lastHeight) ? Math.max(0, kept.lastHeight - 6) : 0;
+        const [listings, sales] = await Promise.all([quickJson(`${CORE.API}/rewards/rune/listings`), quickJson(`${CORE.API}/rewards/rune/sales?since=${since}`)]);
+        const market = POUCH.marketOf(listings, sales, Date.now());
+        market.sold = POUCH.mergeSold(kept?.sold, market.sold);
+        await chrome.storage.local.set({ [POUCH.KEY]: market });
+      } catch (e) { console.warn(`pouch market: ${e && e.message}`); }
+    }
+    if (now - pouchPriceTriedAt >= POUCH.PRICE_EVERY_MS && !(now - (got[POUCH.PRICE_KEY]?.at ?? 0) < POUCH.PRICE_EVERY_MS)) {
+      pouchPriceTriedAt = now;
+      for (const source of POUCH.PRICE_SOURCES) {
+        try {
+          const usd = POUCH.priceFrom(source, await quickJson(source.url));
+          if (usd !== null) { await chrome.storage.local.set({ [POUCH.PRICE_KEY]: { usd, at: Date.now(), source: source.name } }); break; }
+        } catch (e) { console.warn(`btc price ${source.name}: ${e && e.message}`); }
+      }
+    }
+  } catch (e) {
+    console.warn(`pouch tick: ${e && e.message}`); // storage unreadable: nothing kept is changed, the next minute tries again
+  } finally {
+    pouchBusy = false;
+  }
+}
 
 // ------------------------------------------------------------ Reward weeks
 
@@ -495,6 +549,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Answer at once, or the page's sendMessage fails with "message port closed before a response was received".
     sendResponse({ ok: true });
     chrome.storage.session.set({ [SRC.SESSION_VISIBLE]: Date.now() }).then(liveTick);
+    if (msg.pouch === true) chrome.storage.session.set({ [POUCH.SESSION_VISIBLE]: Date.now() }).then(pouchTick);
     return false;
   }
   return false;

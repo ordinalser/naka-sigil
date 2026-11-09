@@ -248,3 +248,33 @@ button:has(> .shn-badge--vault) { position:relative; container-type:inline-size;
 .shn-pop__notice .shn-pop__refresh{margin:0 0 0 auto;padding:2px 3px;width:auto;border:0;box-shadow:none;background:transparent;color:#f4d39b;font:inherit;cursor:pointer}
 .shn-pop__notice .shn-pop__refresh:focus-visible{outline:2px solid #f4d39b;outline-offset:1px}
 @media(max-height:620px){.shn-pop__notice{bottom:-9px;margin:8px -9px -9px;padding:5px 9px}}
+/* SHNAKAS pouch marks (lib/pouch.js). A figure is the dollars the site does not write, set beside or under its own
+   figure in the monospace face and soft gold (#e5bd7d, the brand colour, about as bright as the site's green dollars):
+   no sigil beside it (it would read as the figure's unit), no box, no underline. The sigil appears once on a page: in
+   the market's tab bar mark, and before the tokens tab's balance. It is drawn on its 24-cell grid at 12 px: one cell
+   to a device pixel on a Retina screen. */
+.shn-pouch{box-sizing:border-box;font-family:ui-monospace,"SFMono-Regular",Consolas,"PingFang SC","Microsoft YaHei",monospace;font-variant-numeric:tabular-nums;letter-spacing:0;text-transform:none;text-align:left}
+.shn-pouch-sigil{flex:none;width:12px;height:12px;color:#d4ae6a}
+/* two class names: the site's own rules for the element a figure sits in (.pp-card-main > span) would win over one */
+.shn-pouch.shn-pouch-tag{font-family:ui-monospace,"SFMono-Regular",Consolas,"PingFang SC","Microsoft YaHei",monospace;letter-spacing:0;text-transform:none;display:inline-flex;align-items:baseline;max-width:100%;color:#e5bd7d;font-size:12px;font-weight:600;line-height:18px;white-space:nowrap;vertical-align:baseline;overflow:hidden}
+.shn-pouch-tag__body{display:inline-flex;align-items:baseline;min-width:0}
+.shn-pouch-tag__label{margin-right:6px;color:#a69a86;font-weight:500}
+.shn-pouch-tag__unit{margin-left:8px;color:#a69a86;font-weight:500}
+.shn-pouch-tag--row{margin-left:9px}
+.shn-pouch-tag--caption{flex:none}
+.shn-pouch.shn-pouch-tag--line{align-self:flex-start;flex:none;margin-top:3px;font-size:11.5px}
+.shn-pouch.shn-pouch-tag--lot,.shn-pouch.shn-pouch-tag--balance{display:flex;width:fit-content}
+.shn-pouch.shn-pouch-tag--lot{margin-top:6px;font-size:11.5px}
+.shn-pouch-tag--lot .shn-pouch-tag__body{flex-wrap:wrap;white-space:normal}
+.shn-pouch-tag--lot .shn-pouch-tag__body > span{white-space:nowrap}
+.shn-pouch.shn-pouch-tag--balance{margin-top:10px;font-size:13px;line-height:22px}
+.shn-pouch-tag--balance .shn-pouch-sigil{align-self:center;margin-right:6px}
+/* the market page's one mark, in the free end of its tab bar */
+.shn-pouch-mark{display:inline-flex;align-items:center;align-self:center;gap:5px;margin-left:auto;padding-top:5px;color:#9a8d72;font-size:11px;font-weight:600;letter-spacing:.03em;line-height:16px;white-space:nowrap;cursor:default;user-select:none}
+/* a figure on a line of its own (the change-price dialog), as the last line of a sheet's head, in the buy dialog's
+   price line; and the list and change-price dialogs' warning */
+.shn-pouch.shn-pouch-tag--sheet{display:flex;width:fit-content;margin-top:8px;font-size:12.5px}
+.shn-pouch.shn-pouch-tag--head{display:flex;width:fit-content;margin-top:4px;font-size:12px}
+.shn-pouch.shn-pouch-tag--small{font-size:11px}
+.shn-pouch-warn{display:block;margin-top:6px;padding:4px 8px;border-left:2px solid #c9973a;background:rgba(201,151,58,.12);color:#efc56a;font-size:12px;font-weight:600;line-height:1.4}
+.shn-pouch-warn::before{content:"⚠ "}

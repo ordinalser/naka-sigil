@@ -54,6 +54,32 @@
   const ITEM_PATH = /^\/secondary\/item\/([0-9a-f]{64}i\d+)\/?$/;
   const SLUG = BUNDLED.collection.slug;
 
+  // ------------------------------------------------------------ SHNAKAS pouches (lib/pouch.js)
+  // The pouch market's dollar prices per SHNAKAS, its buy panel and dialog, the vault's list / change-price dialogs, its
+  // tokens tab and a pouch's sheet: only the dollars the site does not write, in its own terms (lib/pouch.js). A figure
+  // carries no sigil (beside a number it reads as its unit); the sigil (POUCH_ICON) names Naka Sigil once, in the market
+  // page's tab bar, and before the tokens tab's balance. It runs on its own: a pass
+  // that throws turns the pouch marks off for this page (they are taken off, the rest of the script goes on), so a site
+  // change it cannot read never stops the page or the other marks. The site rewrites a price's text in place (no DOM
+  // node added), which the observer does not see: on a page with pouch elements a light timer runs a pass every
+  // POUCH_CHECK_MS, and typing a price runs one at once.
+  const POUCH = globalThis.NakaPouch;
+  const POUCH_CHECK_MS = 2000;
+  let pouchOff = !POUCH, pouchUsd = null, pouchMarket = null;
+  const POUCH_ICON = () => globalThis.NakaPixel.sigil('shn-pouch-sigil');
+  function pouchPass() {
+    if (pouchOff) return;
+    try {
+      const now = Date.now();
+      POUCH.decorate(document, { lang: exploreLang, usd: POUCH.usdOf(pouchUsd, now), market: POUCH.freshMarket(pouchMarket, now), icon: POUCH_ICON });
+    } catch (e) {
+      pouchOff = true;
+      for (const n of document.querySelectorAll('.shn-pouch')) n.remove();
+      console.warn(`Naka Sigil stopped marking SHNAKAS pouches on ${location.pathname}: ${e && e.message}`);
+    }
+  }
+  const pouchElements = () => document.querySelector('table.pp-table, .pp-tile, .pp-card, .pp-sum, .pp-modal-art, .pm-sheet-head, .pm-grid, .tk-balance, .tk-lot') !== null;
+
   // ------------------------------------------------------------ 当前数据（本地同步优先）
 
   let SNAP = BUNDLED;
@@ -779,7 +805,7 @@
     }
     for (const b of document.querySelectorAll('.shn-badge')) if (!keepBadges.has(b)) b.remove();
     for (const p of document.querySelectorAll('.shn-panel')) if (!keepPanels.has(p)) p.remove();
-    scanTools(onCollection,onActivity);scanRewardEligibility();scanHoldings();
+    scanTools(onCollection,onActivity);scanRewardEligibility();scanHoldings();pouchPass();
     if(onCollection)placeFx();else clearFx();
     auditMarket(onCollection);paintDebug(onCollection);
     popover.validate();
@@ -791,7 +817,8 @@
   // 页面空闲时 10 秒内没有任何变更批次，逐批全量扫描的开销可以忽略。
   // 扫描自己写的 DOM 由 settle() 用 takeRecords() 收走、紧接着再扫一遍确认，不另起回调；反复改个不停时 settle() 停掉本页标注。
   // 先读本地数据与语言设置再开始标注，避免先画内置数据 / 默认语言、再闪成别的
-  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS,NakaLedger.KEY]).then((got) => {
+  chrome.storage.local.get([K.live, K.closing, I.STORAGE_KEY, EXP.KEY,HOLD.KEY,NakaRewards.KEY,NakaRewards.OBSERVED,HOLD.EVENTS,NakaLedger.KEY, ...(POUCH ? [POUCH.KEY, POUCH.PRICE_KEY] : [])]).then((got) => {
+    if (POUCH) { pouchMarket = got[POUCH.KEY] ?? null; pouchUsd = got[POUCH.PRICE_KEY] ?? null; }
     comparisonIds=EXP.normalize(got[EXP.KEY]);holdings=HOLD.normalize(got[HOLD.KEY]);minerWeek=got[NakaRewards.KEY];minerObserved=got[NakaRewards.OBSERVED];minerEvents=got[HOLD.EVENTS];minerLedger=got[NakaLedger.KEY];
     useLang(got[I.STORAGE_KEY]);
     stored.live = got[K.live];
@@ -802,6 +829,11 @@
       childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href'],
     });
     settle();readFind();
+    // a price typed into a pouch dialog, and a price's text rewritten in place: a pass (see pouchPass)
+    if (POUCH) {
+      document.addEventListener('input', (e) => { if (!halted && !pouchOff && e.target instanceof HTMLInputElement && e.target.closest('[role="dialog"]')) settle(); }, true);
+      setInterval(() => { if (!halted && !pouchOff && document.visibilityState === 'visible' && pouchElements()) settle(); }, POUCH_CHECK_MS);
+    }
   });
   // 实时数据更新或切换语言：换数据 / 文案并原地重画（GEN 变了，所有徽章/面板都会重画）
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -809,6 +841,11 @@
     const has = (k) => Object.prototype.hasOwnProperty.call(changes, k);
     const dataChanged = has(K.live) || has(K.closing);
     if(has(EXP.KEY)){comparisonIds=EXP.normalize(changes[EXP.KEY].newValue);updateCompare();}
+    if (POUCH && (has(POUCH.KEY) || has(POUCH.PRICE_KEY))) {
+      if (has(POUCH.KEY)) pouchMarket = changes[POUCH.KEY].newValue ?? null;
+      if (has(POUCH.PRICE_KEY)) pouchUsd = changes[POUCH.PRICE_KEY].newValue ?? null;
+      if (!halted && observer !== null) settle(); // before the first read of storage there is nothing marked yet
+    }
     if(has(HOLD.KEY)){holdings=HOLD.normalize(changes[HOLD.KEY].newValue);if(!holdings.length)boostOnly=false;refresh();for(const b of document.querySelectorAll('.shn-holding-add[data-id]'))paintHoldingButton(b);}
     const mineChanged=has(NakaRewards.KEY)||has(NakaRewards.OBSERVED)||has(HOLD.EVENTS)||has(NakaLedger.KEY);if(has(NakaRewards.KEY))minerWeek=changes[NakaRewards.KEY].newValue;if(has(NakaRewards.OBSERVED))minerObserved=changes[NakaRewards.OBSERVED].newValue;if(has(HOLD.EVENTS))minerEvents=changes[HOLD.EVENTS].newValue;if(has(NakaLedger.KEY))minerLedger=changes[NakaLedger.KEY].newValue;if(mineChanged)refresh();
     if (!dataChanged && !has(I.STORAGE_KEY)&&!has(HOLD.KEY)&&!mineChanged) return;
@@ -827,7 +864,7 @@
   let beatTimer = null;
   function beat() {
     if (chrome.runtime.id === undefined) { clearInterval(beatTimer); return; }
-    if (document.visibilityState === 'visible') chrome.runtime.sendMessage({ type: 'shn-visible' });
+    if (document.visibilityState === 'visible') chrome.runtime.sendMessage({ type: 'shn-visible', pouch: Boolean(POUCH) && POUCH.pouchPage(location.pathname) });
   }
   beatTimer = setInterval(beat, SRC.HEARTBEAT_MS);
   setInterval(refreshBlockClock, 30000);

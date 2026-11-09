@@ -1,4 +1,4 @@
-# Classic projections · v0.13.2
+# Classic projections · v0.14.0
 
 Classic is the only interface. The former mining skin and selector are removed. The internal `mining.js` module retains pure projection helpers for compatibility; it does not change weights into hashrate.
 

@@ -27,7 +27,7 @@
    * After the folder's files are replaced, Chrome loads the new pages at once but keeps running the previous worker until
    * the extension is reloaded: a page asks the worker which version it runs (shn-build), and a worker from before this
    * check does not answer at all. */
-  const BUILD = '0.13.2';
+  const BUILD = '0.14.0';
   // Kept in the worker handshake beside BUILD; one release, one value.
   const REVISION = BUILD;
   /** Whether the worker runs this code, from its answer to shn-build (undefined when it sent none). */

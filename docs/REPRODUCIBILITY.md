@@ -2,7 +2,7 @@
 
 ## Current rule revision
 
-Version 0.13.2 follows the [on-chain reward programme](https://ordinals.com/content/30adf5233d1a0eec4d3c836f195e3966acf634cf96634444358ccfe8c7c961a9i0), the official wallet and the engine it loads, and the [public current-weight endpoint](https://shielded-api.ord-dropz.xyz/api/shielded/rewards/weights/now). Together they correct the old single-sale proxy and show that weights are scored every block: neither the engine nor the official accumulator has a weekly or quarterly snapshot block (rules audit, v0.11.3). Base100% + trait bonuses + highest number bonus, capped400%; inclusive ratios1.25/1.5/2/3 yield25/50/75/100%. Number cutoffs are strictly below10/100/1000. Reward weeks are1,008blocks.
+Version 0.14.0 follows the [on-chain reward programme](https://ordinals.com/content/30adf5233d1a0eec4d3c836f195e3966acf634cf96634444358ccfe8c7c961a9i0), the official wallet and the engine it loads, and the [public current-weight endpoint](https://shielded-api.ord-dropz.xyz/api/shielded/rewards/weights/now). Together they correct the old single-sale proxy and show that weights are scored every block: neither the engine nor the official accumulator has a weekly or quarterly snapshot block (rules audit, v0.11.3). Base100% + trait bonuses + highest number bonus, capped400%; inclusive ratios1.25/1.5/2/3 yield25/50/75/100%. Number cutoffs are strictly below10/100/1000. Reward weeks are1,008blocks.
 
 The bundled block is **971547** with **183** active listings and **159000 sats** floor. Its official trait units are accepted only after matching the same block, floor, catalog and all **3327** known piece totals. Canonical trait supplies include the six unminted catalog pieces from the programme's piece table. Including them, all programme units are **28,881** and the per-unit block rate is **915,909** base units, both equal to the official endpoint. For traits held by fewer than 20 pieces, the only ones scored from sales, the snapshot keeps the newest public sales (price and block): three, plus any tied with the third in the same block (173 traits in the bundled block). Raw notes, seller scripts and wallet data are excluded.
 
@@ -30,14 +30,14 @@ Run npm test and npm run package:chrome. Open demo/naka-sigil-demo.html to inspe
 
 ## 中文
 
-v0.13.2 以链上奖励规则、官方钱包及其加载的引擎和当前权重接口为依据，修正单笔成交代理；权重逐块计算，引擎和官方累计表都没有周或季度快照块（见规则核对 v0.11.3）。公式按所选区块计算，奖励周为1,008块；基础100%，特征加成与最高编号加成叠加，封顶400%。比值门槛含等号，编号门槛严格小于。内置区块971547、183挂单、地板159000聪；接受官方特征依据前先核对区块、地板、目录及全部3327枚总权重。计入6枚尚未铸造的目录藏品后，全目录权重单位28,881、每单位每块915,909基础单位，均与官方接口一致。快照只为不足20件、按成交计分的特征保存最新公开成交（价格和区块）：三笔，加上与第三笔同区块的并列成交（内置区块共173个特征）。
+v0.14.0 以链上奖励规则、官方钱包及其加载的引擎和当前权重接口为依据，修正单笔成交代理；权重逐块计算，引擎和官方累计表都没有周或季度快照块（见规则核对 v0.11.3）。公式按所选区块计算，奖励周为1,008块；基础100%，特征加成与最高编号加成叠加，封顶400%。比值门槛含等号，编号门槛严格小于。内置区块971547、183挂单、地板159000聪；接受官方特征依据前先核对区块、地板、目录及全部3327枚总权重。计入6枚尚未铸造的目录藏品后，全目录权重单位28,881、每单位每块915,909基础单位，均与官方接口一致。快照只为不足20件、按成交计分的特征保存最新公开成交（价格和区块）：三笔，加上与第三笔同区块的并列成交（内置区块共173个特征）。
 
 上表各列独立移除一笔挂单，重算地板。小型特征失去最后挂单时，假设成交作为最新一笔，按最近三笔成交价中位数（两笔取平均、一笔取该笔、无成交为0%）对比成交后集合地板；该口径与971546、971547两个区块官方按成交计分的特征全部一致，但官方未公布算法。同区块成交顺序会改变窗口时保留范围。每周分配 = 区块时未挂单持仓的权重单位 × v × 1,008 ÷ 10⁸，v = floor(26,664,000,000,000 ÷ 1,008 ÷ 全目录权重单位)，即官方接口的整数每块速率；买入或撤单会同时重算两者。新持仓从下一奖励周起有奖励；挂单、卖出或转出的那一周这一枚整周没有奖励（见规则核对 v0.11.3），私下转账、隐私领取和没人能领的份额去向不建模。所有主要百分比含基础100%；未挂单不自动证明完整周资格。隐私领取为基础100%，展示藏品可领取全部权重。挂单或卖出之前的完整周仍可领取。
 
 中继额度取 API 提供的当前挂单余额，数据里零与未知区分；页面显示读到的每个余额，0 也显示，读不到的不显示；不计入权重，不推断未挂单的隐私余额。运行 npm test、npm run package:chrome；演示文件为同引擎历史数据，可直接本地打开。安装包可复现：条目排序、文件权限固定、所有时间取快照生成时间、不含额外字段。中英文安装与 SHA-256 均在 release/README.md、release/SHA256SUMS。
 
 
-## Eligibility and Raise weight (v0.11.3–v0.13.2)
+## Eligibility and Raise weight (v0.11.3–v0.14.0)
 
 Holding status follows the official engine's note weeks (see the rules audit, v0.11.3): a note made at block h (mint, purchase, reclaim, transfer) earns from week `ceil((h − 971700) ÷ 1008)` (week 0 at or before 971700), and a note spent at block t (listed, sold, sent) keeps only the weeks before `floor((t − 1 − 971700) ÷ 1008)`. Reproduce it from `/state?since=999999999` listing records (`height`, `soldHeight`, `claimHeight`) with `ShnakasRules.startWeek`, `spendWeek`, `notesOf` and `ownership` (one owner's run of notes from an anchor block) and `NakaPortfolio.attribution` / `runWeeks`; `saleToConfirm` names the one sale the records cannot attribute (a listing already open when the piece was added, later sold), which the owner settles. Finished weeks use `/rewards/weights/{week}` tables with `complete: true`.
 

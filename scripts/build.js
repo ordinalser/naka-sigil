@@ -42,13 +42,14 @@ const manifest = {
   default_locale: 'en',
   icons: ICONS,
   permissions: ['storage', 'alarms'],
-  host_permissions: [`${new URL(API).origin}/*`, `${new URL(BLOCK_API).origin}/*`],
+  // the dollar price for SHNAKAS pouches comes from the same three sources the site itself asks (lib/pouch.js)
+  host_permissions: [`${new URL(API).origin}/*`, `${new URL(BLOCK_API).origin}/*`, ...require('../src/lib/pouch.js').PRICE_SOURCES.map((s) => `${new URL(s.url).origin}/*`)],
   background: { service_worker: 'sw/sync-sw.js' },
   action: { default_popup: 'popup/popup.html', default_title: '__MSG_extName__', default_icon: ICONS },
   content_scripts: [{
     // 整站匹配：站点是 Next.js 单页应用，从首页点进集合页不会重新注入脚本，脚本自己按路由决定是否工作
     matches: ['https://ord-dropz.xyz/*'],
-    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/portfolio.js','lib/rewards.js','lib/ledger.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'lib/popover.js','lib/mining.js','lib/ledger-ui.js', 'content/content.js'],
+    js: ['data/snapshot.js', 'lib/rules.js', 'lib/purchase.js','lib/portfolio.js','lib/rewards.js','lib/ledger.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js','lib/explore.js', 'lib/explore-ui.js', 'lib/popover.js','lib/mining.js','lib/ledger-ui.js', 'lib/pouch.js', 'content/content.js'],
     css: ['content/content.css', 'lib/purchase.css'],
     run_at: 'document_idle',
   }],
@@ -57,7 +58,7 @@ const manifest = {
 const FILES = [
   'lib/mining.js','lib/rewards.js','lib/ledger.js','lib/ledger-ui.js','lib/planner.js','lib/popover.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/planner-ui.js', 'workspace/workspace.js', 'workspace/workspace.css',
   'data/snapshot.js', 'lib/rules.js', 'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'lib/i18n.js', 'lib/tier.js', 'lib/source.js', 'lib/snapshot-core.js', 'sw/sync-sw.js',
-  'content/content.js', 'content/content.css',
+  'content/content.js', 'content/content.css', 'lib/pouch.js',
   'popup/popup.html', 'popup/popup.js', 'popup/popup.css',
   '_locales/zh_CN/messages.json', '_locales/en/messages.json',
   ...Object.values(ICONS),

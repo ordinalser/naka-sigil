@@ -2,7 +2,7 @@
 
 **Find your Naka. Raise your weight.**
 
-A read-only Chrome extension for [Shielded Nakas on Ord Dropz](https://ord-dropz.xyz/secondary/collections/shielded-nakas-mupv6wja): what your Nakas earn each week, what a purchase changes, and the cheapest way to raise your weight.
+A read-only Chrome extension for [Shielded Nakas on Ord Dropz](https://ord-dropz.xyz/secondary/collections/shielded-nakas-mupv6wja): what your Nakas earn each week, what a purchase changes, and the cheapest way to raise your weight; on the SHNAKAS market, each pouch's price in dollars.
 
 **[Join the Naka Telegram Chinese group](https://t.me/+fRT4yVcxZ6VlNTBl)** for questions, feedback and wanted posts.
 
@@ -13,6 +13,7 @@ A read-only Chrome extension for [Shielded Nakas on Ord Dropz](https://ord-dropz
 ![Reach 400%: each piece's own cheapest plan, and one combined plan for the pieces ticked](docs/screenshots/planner.png)
 ![My holdings on the extension page](docs/screenshots/workspace.png)
 ![Compare four Nakas](docs/screenshots/compare.png)
+![SHNAKAS market: each pouch's dollars per SHNAKAS beside its sats, and the buy panel's price per SHNAKAS and total in dollars](docs/screenshots/pouch.png)
 
 ## Four tabs · 四个分页
 
@@ -26,6 +27,7 @@ A read-only Chrome extension for [Shielded Nakas on Ord Dropz](https://ord-dropz
 - **Raise weight.** The popup gives the answers in one screen: the two best listings to buy, the two pieces cheapest to take to 400% and the two traits closest to owning, one click from the market card or the full plan. The extension page does the planning. *Best buy*: the listings that add the most weekly SHNAKAS per 0.001 BTC. *Reach 400%*: one row per piece with its own cheapest plan, best value first; tick several for one combined plan, a teammate's numbers included. *Own a trait*: the traits buying listings makes yours and how long their bonus then lasts; for the others, the numbers to ask for privately, copied as a wanted post for the Naka Telegram Chinese group. *Simulate*: what a listing, sale or reclaim does to you and everyone.
 - **On the market.** After-sale weight on every listing and what buying it does to your holdings; listings someone is already buying are marked. Hover a weight for its details — the artwork, the block, the weight after the sale with the week it starts earning, its per-week and remaining output, every trait, and the piece's past sales on request, each sale's block opening the piece's weight at that block — with Compare and My holdings one click away. Activity shows each piece as it stands at the same block, the same figure as the market; a listing still open there reads *If bought now*. Every link to one Naka scrolls the market to its card and highlights it, so a piece sold a moment ago shows as sold instead of failing at checkout. The extension page lists the same listings as cards and can assume a short buy sequence.
 - **Look up and compare.** The magnifier opens Look up over any popup tab: any number at the latest block or a past one, with the same details as on the market; up to four Nakas side by side.
+- **SHNAKAS pouches.** The site writes a pouch's price per SHNAKAS in sats only. On the SHNAKAS market and in the vault's pouch market every pouch also gets its dollars per SHNAKAS, worked out from the pouch's exact price (the site rounds the sats), in gold, with Naka Sigil named once at the end of the market's tab bar. The buy panel and the buy dialog add the dollars of the price per SHNAKAS and of the total; the vault's buy sheet, list and change-price dialogs and a pouch's sheet add the price per SHNAKAS in dollars in the site's own words, and listing a pouch under half the floor asks whether a zero was dropped. The tokens tab values your balance and your unlisted pouches at the floor. Nothing is worked out in other terms than the site's: no price with the fees in, no percentage against the floor. The bitcoin price comes from the sources the site itself asks (CoinGecko, Coinbase, mempool.space), read only while a pouch page is open; with no fresh price there are no dollars.
 
 Read-only: no wallet connection, login, approval or signature. English and 中文.
 
@@ -46,11 +48,11 @@ Then open **chrome://extensions**, turn on **Developer mode**, choose **Load unp
 - **Weekly SHNAKAS** = your units × v × 1,008 ÷ 10⁸, with v = floor(26,664,000,000,000 ÷ 1,008 ÷ K) and K the units of all 3,333 pieces (100% = 4 units). This week's amount is read from the official accumulator, not estimated.
 - **Who is paid.** A week pays only a holder who kept the piece the whole week without listing or sending it: a Naka bought, reclaimed or received in a week counts from the next week; the week a piece is listed, sold or sent pays nobody for it. Public listings, sales and reclaims are read from the public records; transfer events are public but their NFT identities are encrypted, so amounts stay a **reference** until you sync the official Wallet page. Unclaimed weeks can wait until block 1,102,740.
 
-Every case and the evidence behind it: [rules audit](docs/RULES_AUDIT.md). Worked examples: [reproducibility](docs/REPRODUCIBILITY.md). Checks: [validation](docs/VALIDATION.md). What is stored and sent: [privacy](docs/PRIVACY.md). Screenshots use example holdings (#6, #314, #888, #1500, #2700), example added numbers (#379, #640, #1200) and public data.
+Every case and the evidence behind it: [rules audit](docs/RULES_AUDIT.md). Worked examples: [reproducibility](docs/REPRODUCIBILITY.md). Checks: [validation](docs/VALIDATION.md). What is stored and sent: [privacy](docs/PRIVACY.md). Screenshots use example holdings (#6, #314, #888, #1500, #2700), example added numbers (#379, #640, #1200) and public data; the pouch one shows the public SHNAKAS market.
 
 ## 中文说明
 
-**找到你的 Naka，增加你的权重。** 只读的 Chrome 插件：看清每枚 Shielded Naka 每周能分到多少 SHNAKAS、买一单会带来什么变化，以及最省钱的加权重方案。
+**找到你的 Naka，增加你的权重。** 只读的 Chrome 插件：看清每枚 Shielded Naka 每周能分到多少 SHNAKAS、买一单会带来什么变化，以及最省钱的加权重方案；在 SHNAKAS 市场上，每个钱袋都标出美元价。
 
 **[进入 Naka Telegram 中文交流群](https://t.me/+fRT4yVcxZ6VlNTBl)**：提问、反馈和求购。
 
@@ -58,6 +60,7 @@ Every case and the evidence behind it: [rules audit](docs/RULES_AUDIT.md). Worke
 - **增加权重**：弹窗一屏直接给结论：最划算的 2 单挂单、单独冲 400% 最划算的 2 枚、最接近垄断的 2 个特征，一点就到市场上的那张卡或完整方案。完整规划在独立页。*买哪单划算*：每 0.001 BTC 换来每周增量最多的挂单。*冲 400%*：每枚一行，是它单独冲的最省钱做法，按性价比排序；勾选几枚（可加入队友编号）合起来算一份方案。*垄断特征*：买下挂单就能垄断的特征，以及垄断后加成能维持多久；其余的列出需要私下收购的编号，一键复制成求购信息，发到 Naka Telegram 中文交流群。*模拟*：挂单、成交或撤单对自己和全网的影响。
 - **市场页**：每个挂单显示成交后权重和对持仓的影响；别人正在买的挂单会标出来。悬停权重看详情：头像、区块、成交后权重和第几周起有奖励、每周和剩余产量、每个特征，点开还能看这一枚的历史成交，点某笔的区块就按那一块还原它当时的权重；加入比较和我的持仓一键完成。动态页按同一区块的现状显示，和市场页同一个数；还在挂单的写“现在买入后”。所有跳到某一枚的链接都会把市场页滑到那张卡片并高亮，刚被买走的直接显示已售，不会到结账时才失败。独立页把同样的挂单排成卡片，还可以假设连买几单。
 - **查询与比较**：弹窗右上角的放大镜在任何页面都能打开查询：任意编号的最新区块或过去区块，详情与市场页一致；最多四枚并排比较。
+- **SHNAKAS 钱袋**：官网每枚只写聪。插件在 SHNAKAS 市场和金库的钱袋市场给每个钱袋加上每枚美元价，按这一袋的精确价格算（官网写的聪数是取整的），用金色显示，Naka Sigil 只在市场标签栏右端署名一次。购买侧栏和确认框补每枚价格和总计的美元；金库的购买弹窗、上架和改价弹窗、钱袋详情照官网的说法补一行每枚美元，上架价不到地板价一半时提醒是不是少打了一个 0；代币页按地板价估算余额和没挂单的钱袋。口径和官网一致：不算含费的每枚价，也不显示和地板价比的百分比。BTC 价和官网取自同样的来源（CoinGecko、Coinbase、mempool.space），只在钱袋页面打开时读；没有新鲜价格就不显示美元。
 
 只读：不连接钱包，不需要登录、授权或签名。中英文界面。
 
@@ -65,4 +68,4 @@ Every case and the evidence behind it: [rules audit](docs/RULES_AUDIT.md). Worke
 
 **数字怎么来的**：权重 = 基础 100% + 特征加成 + 最高一档编号加成，封顶 400%，按每个区块之后剩下的挂单逐块计算；特征加成按特征地板 ÷ 集合地板（1.25×、1.5×、2×、3× 对应 +25% 到 +100%），零挂单特征满 20 件 +100%，不足 20 件按最近三笔成交；没有周或季度快照。每周 SHNAKAS = 你的权重单位 × v × 1,008 ÷ 10⁸，v = floor(26,664,000,000,000 ÷ 1,008 ÷ K)，K 是全部 3,333 枚的单位合计（100% = 4 单位）；本周累计直接读官方累计表。一周的奖励只给整周持有、这一周没挂单也没转出的一方：本周买入、撤单取回或收到的从下一周起有奖励，挂单、卖出或转出的那一周这一枚谁都没有奖励。公开挂单、成交和撤单从公开记录读取；转移事件公开，但 NFT 身份在密文中，所以在官方钱包页同步之前金额标为“参考”。没领的周可以攒到区块 1,102,740 前一次领。
 
-各种情况与依据见[规则核对](docs/RULES_AUDIT.md)，复算示例见[复现文档](docs/REPRODUCIBILITY.md)，检查记录见[验证文档](docs/VALIDATION.md)，存储与网络见[隐私说明](docs/PRIVACY.md)。截图用的是示例持仓（#6、#314、#888、#1500、#2700）、示例添加编号（#379、#640、#1200）和公开数据。
+各种情况与依据见[规则核对](docs/RULES_AUDIT.md)，复算示例见[复现文档](docs/REPRODUCIBILITY.md)，检查记录见[验证文档](docs/VALIDATION.md)，存储与网络见[隐私说明](docs/PRIVACY.md)。截图用的是示例持仓（#6、#314、#888、#1500、#2700）、示例添加编号（#379、#640、#1200）和公开数据；钱袋那张是公开的 SHNAKAS 市场。

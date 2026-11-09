@@ -7,9 +7,9 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const downloads = require('./package-chrome.js');
 const ROOT = path.join(__dirname, '..');
-const screenshots=['market','find','compare','popup','raise','lookup','workspace','planner'].map(n=>'docs/screenshots/'+n+'.png');
+const screenshots=['market','find','compare','popup','raise','lookup','workspace','planner','pouch'].map(n=>'docs/screenshots/'+n+'.png');
 const files = [...screenshots,
-  'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js','test/portfolio.test.js', 'test/programme.test.js','test/rewards.test.js','test/ledger.test.js','test/mining.test.js','test/planner.test.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js',
+  'demo/index.html', 'demo/naka-sigil-demo.html', 'scripts/package-demo.js','test/portfolio.test.js', 'test/programme.test.js','test/rewards.test.js','test/ledger.test.js','test/mining.test.js','test/planner.test.js', 'docs/REPRODUCIBILITY.md', 'test/explore.test.js', 'test/pouch.test.js',
   '.gitignore', 'LICENSE', 'README.md', 'package.json',
   'docs/DESIGN.md','docs/MINING.md', 'docs/ADVERSARIAL_AUDIT.md', 'docs/RULES_AUDIT.md', 'docs/PRIVACY.md', 'docs/VALIDATION.md',
   'scripts/build.js', 'scripts/snapshot.js', 'scripts/gen-icons.js', 'scripts/gen-sigil-turn.js', 'scripts/privacy.js', 'scripts/release.js', 'scripts/package-chrome.js',
@@ -17,7 +17,7 @@ const files = [...screenshots,
 ];
 const source = [
   'lib/mining.js','lib/rewards.js','lib/ledger.js','lib/ledger-ui.js','lib/planner.js','lib/popover.js','lib/portfolio.js','lib/explore.js', 'lib/explore-ui.js', 'workspace/index.html', 'workspace/planner-ui.js', 'workspace/workspace.js', 'workspace/workspace.css',
-  'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'data/snapshot.js', 'lib/rules.js', 'lib/snapshot-core.js', 'lib/source.js', 'lib/i18n.js', 'lib/tier.js',
+  'lib/purchase.js', 'lib/purchase.css', 'lib/lookup.js', 'lib/pixel.js', 'data/snapshot.js', 'lib/rules.js', 'lib/snapshot-core.js', 'lib/source.js', 'lib/i18n.js', 'lib/tier.js', 'lib/pouch.js',
   'content/content.js', 'content/content.css', 'popup/popup.html', 'popup/popup.css', 'popup/popup.js',
   'sw/sync-sw.js', '_locales/en/messages.json', '_locales/zh_CN/messages.json',
   ...[16,32,48,128].map(n => `icons/icon${n}.png`),
@@ -135,11 +135,12 @@ if (fs.existsSync(manifestPath)) {
   assert(Object.keys(m).sort().join()===manifestKeys.sort().join(), 'Unexpected manifest fields');
   assert(m.manifest_version===3 && m.minimum_chrome_version==='105' && m.default_locale==='en' && m.name==='__MSG_extName__' && m.description==='__MSG_extDesc__' && m.version===require('../package.json').version, 'Unexpected manifest metadata');
   assert(JSON.stringify(m.background)===JSON.stringify({service_worker:'sw/sync-sw.js'}), 'Unexpected background entry');
-  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/portfolio.js','lib/rewards.js','lib/ledger.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','lib/explore.js','lib/explore-ui.js','lib/popover.js','lib/mining.js','lib/ledger-ui.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
+  const scripts=[{matches:['https://ord-dropz.xyz/*'],js:['data/snapshot.js','lib/rules.js','lib/purchase.js','lib/portfolio.js','lib/rewards.js','lib/ledger.js','lib/pixel.js','lib/i18n.js','lib/tier.js','lib/source.js','lib/explore.js','lib/explore-ui.js','lib/popover.js','lib/mining.js','lib/ledger-ui.js','lib/pouch.js','content/content.js'],css:['content/content.css','lib/purchase.css'],run_at:'document_idle'}];
   assert(JSON.stringify(m.content_scripts)===JSON.stringify(scripts), 'Unexpected content script configuration');
 
   assert(JSON.stringify(m.permissions)===JSON.stringify(['storage','alarms']), 'Unexpected permissions');
-  assert(JSON.stringify(m.host_permissions)===JSON.stringify(['https://shielded-api.ord-dropz.xyz/*','https://blockstream.info/*']), 'Unexpected API host permissions');
+  // the protocol API, block times, and the dollar price for SHNAKAS pouches from the site's own three sources (lib/pouch.js)
+  assert(JSON.stringify(m.host_permissions)===JSON.stringify(['https://shielded-api.ord-dropz.xyz/*','https://blockstream.info/*','https://api.coingecko.com/*','https://api.coinbase.com/*','https://mempool.space/*']), 'Unexpected API host permissions');
 }
 if (sourceZip) {
   const names = execFileSync('unzip', ['-Z1', sourceZip], { encoding:'utf8' }).trim().split('\n').sort();
